@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('nama');
             $table->string('alamat');
+            $table->string('keahlian');
             $table->string('no_hp')->unique();
             // status Tukang
             $table->boolean('is_aktif')->default(false);
