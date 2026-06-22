@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pesanan extends Model
 {
-     // 1. Daftarin kolom mana aja yang boleh diisi
     protected $fillable = [
         'user_id',
         'tukang_id',
@@ -15,11 +14,18 @@ class Pesanan extends Model
         'status',
         'alasan_penolakan'
     ];
-    // 2. Kasih tau tali pengikat ke User (Pelanggan)
+
+    /**
+     * Relasi ke model User (Pelanggan)
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Relasi ke model Tukang
+     */
     public function tukang()
     {
         return $this->belongsTo(Tukang::class);
