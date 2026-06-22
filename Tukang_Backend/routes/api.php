@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TukangController;
 use App\Http\Controllers\Api\PesananController;
+use App\Http\Controllers\Api\UlasanController;
 
 
 Route::get('/user', function (Request $request) {
@@ -17,3 +18,6 @@ Route::put('/tukang/{id}/status', [TukangController::class, 'update']);
 Route::get('/tukang/{id}/pesanan', [PesananController::class, 'getPesananTukang']);
 Route::put('/pesanan/{id}/tawar', [PesananController::class, 'kasihPenawaran']);
 Route::put('/pesanan/{id}/tolak', [PesananController::class, 'tolakPesanan']);
+
+// --- Rute Fitur Ulasan untuk Tukang ---
+Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
