@@ -9,4 +9,4 @@ Route::get('/', function () {
 });
 
 Route::get('/', [homeController::class, 'landing'])->name('home.landing');
-Route::get('/login', [loginController::class, 'index'])->name('login');
+Route::get('/login', [loginController::class, 'index'])->name('login');     
