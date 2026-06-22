@@ -14,6 +14,25 @@ class TukangSeeder extends Seeder
      */
     public function run(): void
     {
-        
+        // 1. Bikin akun login bohongan
+        $user = User::create([
+            'name' => 'Bang rehan tes',
+            'email' => 'bangrehan@gmail.com',
+            'password' => Hash::make('12345678'),
+            'role' => 'tukang',
+        ]);
+
+        // 2. Bikin profil tukangnya
+        Tukang::create([
+            'user_id' => $user->id,
+            'nama' => 'Bang Rehan',
+            'alamat' => 'Jl. Veteran No. 123',
+            'keahlian' => 'Tukang Las dan Tukang Pipa',
+            'no_hp' => '085156090756',
+            'is_aktif' => false,
+            'saldo' => 100000,
+            'rating' => 5.00
+        ]);
+
     }
 }
