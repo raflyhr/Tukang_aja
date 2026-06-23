@@ -61,4 +61,37 @@ class PesananController extends Controller
 
         return response()->json(['message' => 'Pesanan berhasil ditolak.', 'data' => $pesanan], 200);
     }
+    /**
+     * Selesaikan pekerjaan dan tambahkan saldo ke Tukang.
+     */
+    public function selesaikanPekerjaan($id)
+    {
+        $pesanan = Pesanan::find($id);
+        if (!$pesanan) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+        }
+
+        if ($pesanan->status === 'selesai') {
+            return response()->json(['message' => 'Pesanan ini sudah diselesaikan sebelumnya'], 400);
+        }
+
+        // 1. Ubah status pesanan
+        $pesanan->status = 'selesai';
+        $pesanan->save();
+
+        // 2. Tambahkan saldo ke Tukang
+        // Karena kita sudah mendefinisikan relasi tukang() di model Pesanan, kita bisa langsung akses
+        $tukang = $pesanan->tukang;
+        if ($tukang) {
+            // Asumsi harga_penawaran adalah harga akhir yang disetujui
+            $tukang->saldo += $pesanan->harga_penawaran;
+            $tukang->save();
+        }
+
+        return response()->json([
+            'message' => 'Pekerjaan selesai! Saldo Tukang berhasil ditambahkan.',
+            'data' => $pesanan,
+            'saldo_sekarang' => $tukang->saldo ?? 0
+        ], 200);
+    }
 }
