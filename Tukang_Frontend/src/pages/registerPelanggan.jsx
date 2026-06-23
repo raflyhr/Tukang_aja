@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 function RegisterPelanggan() {
+  const navigate = useNavigate();
   const [noteText, setNoteText] = useState("");
   const [activeStep, setActiveStep] = useState("profile");
   const isScrollingRef = useRef(false);
@@ -62,6 +64,8 @@ function RegisterPelanggan() {
     if (currentIndex < steps.length - 1) {
       const nextStep = steps[currentIndex + 1];
       scrollToSection(nextStep);
+    } else {
+      navigate("/pelanggan/dashboard");
     }
   };
 
@@ -71,6 +75,11 @@ function RegisterPelanggan() {
       const prevStep = steps[currentIndex - 1];
       scrollToSection(prevStep);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    navigate("/pelanggan/dashboard");
   };
 
   return (
@@ -83,10 +92,10 @@ function RegisterPelanggan() {
           </span>
         </div>
         <div className="flex items-center gap-sm">
-          <button className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer">
+          <button onClick={() => navigate("/bantuan")} className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer">
             <span className="material-symbols-outlined">help</span>
           </button>
-          <button className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer relative">
+          <button onClick={() => navigate("/notifikasi")} className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer relative">
             <span className="material-symbols-outlined">notifications</span>
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full"></span>
           </button>
@@ -174,7 +183,7 @@ function RegisterPelanggan() {
             </div>
 
             {/* Registration Form Area */}
-            <form className="space-y-xl" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-xl" onSubmit={handleSubmit}>
               {/* Section 1: Profil & Data Diri */}
               <section id="profile" className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter">
                 <div className="flex items-center gap-3 mb-base border-b border-surface-variant/10 pb-4">

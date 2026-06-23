@@ -106,12 +106,6 @@ function Home() {
               Masuk/Daftar
             </button>
           </Link>
-          <Link
-            to="/register-tukang"
-            className="bg-surface-container-high border border-outline-variant text-on-surface px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer hover:bg-secondary hover:text-black"
-          >
-            Daftar Sebagai Tukang
-          </Link>
         </div>
       </nav>
 
@@ -405,7 +399,7 @@ function Home() {
               </div>
               <p className="text-on-surface-variant text-xs md:text-sm leading-relaxed font-medium">
                 "Sangat terbantu! Pipa wastafel bocor jam 9 malam, langsung
-                dapat tukang lewat tombol emergency. Datangnya cepat, kerjanya
+                dapat tukang. Datangnya cepat, kerjanya
                 rapi banget."
               </p>
             </div>
