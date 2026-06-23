@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { adminData } from "./adminData";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -125,13 +126,13 @@ function AdminDashboard() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img 
                   className="w-full h-full object-cover" 
-                  alt="Super Admin" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBptQCBhIVkNm2XczCHyaEWm7xor36dHEkGaOhsjsuLkFPJ-JhXUY9RNh7B9La-S8mH3aenNWIwcNT0Hgywql2RVPcWFngWxNw0IXczpplDGiYdECoST8JQVlLOQyuXPvsB9Ygiz56bBrl72G_tQoL3R36-ioHzMFWZJJ7kJAdlSfe7pVKBgluV4BSTDcqHuOoDc_Xa-Tp8GrGXLfY7a-j6W2ql6QTka6ObhwJe6qJOkilQKUm6I5S6YoGFxAYxY4Nq_B1I02iICNRP"
+                  alt={adminData.name} 
+                  src={adminData.avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Super Admin</h4>
-                <p className="text-xs text-on-surface-variant/60 truncate">admin@tukangaja.id</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{adminData.name}</h4>
+                <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">{adminData.role}</p>
               </div>
             </div>
             <Link to="/" className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer" title="Keluar">

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { adminData } from "./adminData";
 
 function VerifikasiTukang() {
   const navigate = useNavigate();
@@ -133,13 +134,13 @@ function VerifikasiTukang() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img 
                   className="w-full h-full object-cover" 
-                  alt="Admin Utama" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1_nAD4iWZh-y4Oa_P3cdVTJqjwvepeKi2Z62gULmGnO_UIOTLGzFiNhPPNQf_3vOIfgiVWoM1utMJNzPfWuIAOEaE7RVt_izWSjMNWi4wCzyh1mlU-G-WcDqGGipVZbnahM9gWLBvbQIU3QK2CX7Ac4NISIDrJN_XchMMRm_lqwleMlQzI8zR43IcZuD70rRrIgMZ_gOmLfohPm-lmYdC4T0S1OyL4EE1pFjeMyvLoyNqLmfub0fXIoLv6uBXZv_CoGyh0vMw643e"
+                  alt={adminData.name} 
+                  src={adminData.avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Admin Utama</h4>
-                <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">Super Administrator</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{adminData.name}</h4>
+                <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">{adminData.role}</p>
               </div>
             </div>
             <Link to="/" className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer" title="Keluar">

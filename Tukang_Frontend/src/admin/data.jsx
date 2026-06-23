@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { adminData } from "./adminData";
 
 function DataTukang() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -182,13 +183,13 @@ function DataTukang() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img 
                   className="w-full h-full object-cover" 
-                  alt="Super Admin" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSTqGhb4RjOSZcRd_yUppzK5nxOyWm47BZblGHTMKIvHRf74MTmyUM3mLR9wk6BOEA-ZWfKGRy4Gw30Sb4bnOjyNj3BH-vF--MrjF7nsei-FdGZavcuZHrQmcpn0W8mhkHjILBNxFvml8BHe4aChG9BvAq93iRJ0UonsSxiVL-uAEMZGFoC_Rfqk3D1soa9onuUgkb5gAUHKfZmzie8InzGwA9MjaXIexaFzLYj6qo9KHKUESxuMIS1V4vZNiE4EgRzgHT0XhRezXt"
+                  alt={adminData.name} 
+                  src={adminData.avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Budi Santoso</h4>
-                <p className="text-xs text-on-surface-variant/60 truncate">Super Admin</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{adminData.name}</h4>
+                <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">{adminData.role}</p>
               </div>
             </div>
             <Link to="/" className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer" title="Keluar">

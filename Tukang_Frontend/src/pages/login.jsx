@@ -1,21 +1,94 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState(""); // "success" | "error"
+  const [showToast, setShowToast] = useState(false);
+
+  const navigate = useNavigate();
+
+  // Temporary frontend-only dummy authentication system for UI/UX testing and navigation
+  // Will be replaced with real backend API integration later.
+  const dummyUsers = [
+    { 
+      email: "admin@tukangaja.com", 
+      password: "admin123", 
+      role: "admin", 
+      path: "/admin/dashboard", 
+      message: "Login berhasil sebagai Admin" 
+    },
+    { 
+      email: "tukang@tukangaja.com", 
+      password: "tukang123", 
+      role: "tukang", 
+      path: "/tukang/dashboard", 
+      message: "Login berhasil sebagai Tukang" 
+    },
+    { 
+      email: "user@tukangaja.com", 
+      password: "user123", 
+      role: "pelanggan", 
+      path: "/pelanggan/dashboard", 
+      message: "Login berhasil sebagai Pelanggan" 
+    }
+  ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Submit:", { email, password, rememberMe });
+    
+    // Check credentials against dummy data
+    const matchedUser = dummyUsers.find(
+      (user) => user.email.toLowerCase() === email.toLowerCase() && user.password === password
+    );
+
+    if (matchedUser) {
+      setToastType("success");
+      setToastMessage(matchedUser.message);
+      setShowToast(true);
+      
+      // Delay navigation slightly so user can see the success toast notification
+      setTimeout(() => {
+        navigate(matchedUser.path);
+      }, 1200);
+    } else {
+      setToastType("error");
+      setToastMessage("Email atau password salah");
+      setShowToast(true);
+      
+      // Automatically hide error toast after 3 seconds
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    }
   };
 
   return (
     <div className="bg-background font-body-md text-on-surface min-h-screen flex items-center justify-center relative select-none">
+      
+      {/* Toast Notification Bar */}
+      {showToast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+          toastType === "success" 
+            ? "bg-secondary text-on-secondary" 
+            : "bg-red-500/10 border border-red-500/30 text-red-400 backdrop-blur-md"
+        }`}>
+          <span className="material-symbols-outlined">
+            {toastType === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="text-sm font-bold">{toastMessage}</span>
+        </div>
+      )}
+
       <main className="w-full max-w-7xl mx-auto px-6 md:px-12 py-12 flex min-h-screen items-center z-10">
         <div className="bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col md:flex-row w-full min-h-[700px] shadow-2xl border border-surface-variant/20">
+          
           {/* Left Side: Visual Illustration (Hidden on Mobile) */}
           <div className="hidden md:flex md:w-1/2 bg-[#0d0d0d] relative p-12 flex-col justify-between overflow-hidden border-r border-surface-variant/20">
             {/* Abstract Background Pattern */}
@@ -149,14 +222,14 @@ function Login() {
                     <input
                       className="w-full pl-10 pr-10 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all text-sm text-on-surface placeholder:text-on-surface-variant/40"
                       id="password"
-                      placeholder="••••••••"
+                      placeholder="•••••••"
                       required
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer bg-transparent border-none"
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                     >
@@ -190,7 +263,7 @@ function Login() {
 
                 {/* Submit Button */}
                 <button
-                  className="w-full py-3.5 bg-secondary text-on-secondary font-bold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-secondary/15 cursor-pointer"
+                  className="w-full py-3.5 bg-secondary text-on-secondary font-bold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-secondary/15 cursor-pointer border-none"
                   type="submit"
                 >
                   <span className="font-bold text-sm">Masuk Sekarang</span>
