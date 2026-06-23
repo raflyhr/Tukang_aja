@@ -13,9 +13,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Bikin akun Admin
+        User::create([
+            'name' => 'Super Admin',
+            'email' => 'admin@tukangaja.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
+            'role' => 'admin',
         ]);
 
         $this->call(TukangSeeder::class);

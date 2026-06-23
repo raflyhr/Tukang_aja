@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -18,13 +19,6 @@ function Login() {
   // Will be replaced with real backend API integration later.
   const dummyUsers = [
     { 
-      email: "admin@tukangaja.com", 
-      password: "admin123", 
-      role: "admin", 
-      path: "/admin/dashboard", 
-      message: "Login berhasil sebagai Admin" 
-    },
-    { 
       email: "tukang@tukangaja.com", 
       password: "tukang123", 
       role: "tukang", 
@@ -40,29 +34,37 @@ function Login() {
     }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check credentials against dummy data
-    const matchedUser = dummyUsers.find(
-      (user) => user.email.toLowerCase() === email.toLowerCase() && user.password === password
-    );
+    try {
+      // Panggil API Login Admin yang ada di Laravel
+      const response = await axios.post("http://localhost:8000/api/auth/admin/login", {
+        email: email,
+        password: password
+      });
 
-    if (matchedUser) {
-      setToastType("success");
-      setToastMessage(matchedUser.message);
-      setShowToast(true);
-      
-      // Delay navigation slightly so user can see the success toast notification
-      setTimeout(() => {
-        navigate(matchedUser.path);
-      }, 1200);
-    } else {
+      // Kalo sukses dapet token dari Laravel
+      if (response.data.access_token) {
+        // Simpen token sama data admin di localStorage
+        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user_role", response.data.data.role); // Bakal diset 'admin'
+
+        setToastType("success");
+        setToastMessage(response.data.message || "Login berhasil sebagai Admin");
+        setShowToast(true);
+        
+        // Pindah ke halaman admin dashboard
+        setTimeout(() => {
+          navigate("/admin/dashboard");
+        }, 1200);
+      }
+    } catch (error) {
+      // Nangkep error dari Laravel (misal 401 atau 403)
       setToastType("error");
-      setToastMessage("Email atau password salah");
+      setToastMessage(error.response?.data?.message || "Email atau password salah");
       setShowToast(true);
       
-      // Automatically hide error toast after 3 seconds
       setTimeout(() => {
         setShowToast(false);
       }, 3000);
