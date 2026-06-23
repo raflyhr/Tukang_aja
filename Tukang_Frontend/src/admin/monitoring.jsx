@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { adminData } from "./adminData";
 
 function MonitoringRating() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -121,13 +122,13 @@ function MonitoringRating() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img 
                   className="w-full h-full object-cover" 
-                  alt="Super Admin" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnYMxT1hyJ5w3_SUWU6Nqq9e070KEllvdRpTIE5KF5fVtSwce7N6W046hrBWuToISqMOdjA_LQEq8k4bTmYTUQyhjO_yOyyrWaZpqylBcW6ECTG2gTrGLyE86_J_Sxh-ENiOFWzo13kxnfIPppXj_A2W2LHc6Wj_UXedeHPhPS-d7sBlqwWsYkRZ4f0gi6RvRs7RDkOigQrKODfMpr0pKr0AX9ODctm2UgKXPuqajAeLLjw59hteqGEcpFkSWw6sucDJ2PhuMJFUNV"
+                  alt={adminData.name} 
+                  src={adminData.avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Admin Utama</h4>
-                <p className="text-xs text-on-surface-variant/60 truncate">Superuser Access</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{adminData.name}</h4>
+                <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">{adminData.role}</p>
               </div>
             </div>
             <Link to="/" className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer" title="Keluar">
