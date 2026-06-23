@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 function RegisterTukang() {
+  const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState("profile");
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
@@ -90,12 +92,14 @@ function RegisterTukang() {
         </div>
         <div className="flex items-center gap-6">
           <span
+            onClick={() => navigate("/bantuan")}
             className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary transition-colors"
             data-icon="help"
           >
             help
           </span>
           <span
+            onClick={() => navigate("/notifikasi")}
             className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary transition-colors relative"
             data-icon="notifications"
           >
@@ -150,11 +154,11 @@ function RegisterTukang() {
               <span className="font-label-md text-label-md">Layanan</span>
             </div>
 
-            {/* Documents Step */}
+            {/* Documents & Verification Step */}
             <div
               onClick={() => scrollToSection("documents")}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg active:opacity-80 transition-all cursor-pointer ${
-                activeStep === "documents"
+                activeStep === "documents" || activeStep === "verification"
                   ? "text-secondary font-bold bg-surface-container-highest"
                   : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50"
               }`}
@@ -165,25 +169,7 @@ function RegisterTukang() {
               >
                 description
               </span>
-              <span className="font-label-md text-label-md">Dokumen</span>
-            </div>
-
-            {/* Verification Step */}
-            <div
-              onClick={() => scrollToSection("verification")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg active:opacity-80 transition-all cursor-pointer ${
-                activeStep === "verification"
-                  ? "text-secondary font-bold bg-surface-container-highest"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50"
-              }`}
-            >
-              <span
-                className="material-symbols-outlined"
-                data-icon="verified_user"
-              >
-                verified_user
-              </span>
-              <span className="font-label-md text-label-md">Verifikasi</span>
+              <span className="font-label-md text-label-md">Dokumen & Verifikasi</span>
             </div>
           </nav>
         </aside>
@@ -201,7 +187,7 @@ function RegisterTukang() {
               </p>
             </div>
 
-            <form className="space-y-xl" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-xl" onSubmit={(e) => { e.preventDefault(); navigate("/tukang/dashboard"); }}>
               {/* Section 1: Personal Info */}
               <section
                 id="profile"
