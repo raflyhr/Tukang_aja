@@ -26,14 +26,19 @@ class TukangRegisterController extends Controller
 ]);
 
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
-            'no_hp' => $request->no_hp,
             'email' => $request->email,
-            'keahlian' => $request->keahlian,
-            'alamat' => $request->alamat,
             'password' => Hash::make($request->password),
             'role' => 'tukang',
+        ]);
+
+        \App\Models\Tukang::create([
+            'user_id' => $user->id,
+            'nama' => $request->name,
+            'no_hp' => $request->no_hp,
+            'alamat' => $request->alamat,
+            'keahlian' => $request->keahlian,
         ]);
 
 

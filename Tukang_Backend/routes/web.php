@@ -22,4 +22,3 @@ Route::get('/register/tukang', [tukangRegisterController::class, 'index'])->name
 Route::post('/register/tukang', [tukangRegisterController::class, 'store']);
 
 Route::get('/detail/tukang', [detailTukang::class, 'index'])->name('detailTukang');
-

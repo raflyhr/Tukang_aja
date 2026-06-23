@@ -14,16 +14,16 @@ class User extends Authenticatable
 
 
     protected $fillable = [
-
         'name',
-        'no_hp',
         'email',
-        'keahlian',
-        'alamat',
         'password',
         'role',
-
     ];
+
+    public function tukang()
+    {
+        return $this->hasOne(Tukang::class);
+    }
 
 
     protected $hidden = [
