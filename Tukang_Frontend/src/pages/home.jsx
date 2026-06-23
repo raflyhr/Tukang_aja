@@ -102,16 +102,16 @@ function Home() {
 
         <div className="flex items-center gap-4">
           <Link to="/login">
-            <button className="bg-surface-container-high border border-outline-variant text-on-surface px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer">
+            <button className="bg-surface-container-high border border-outline-variant text-on-surface px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer hover:bg-secondary hover:text-black">
               Masuk/Daftar
             </button>
           </Link>
-           <Link
-                  to="/register-tukang"
-                  className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
-                >
-                  Daftar Sebagai Tukang
-                </Link>
+          <Link
+            to="/register-tukang"
+            className="bg-surface-container-high border border-outline-variant text-on-surface px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer hover:bg-secondary hover:text-black"
+          >
+            Daftar Sebagai Tukang
+          </Link>
         </div>
       </nav>
 
@@ -199,40 +199,8 @@ function Home() {
 
                 {/* Divider Line */}
                 <div className="h-px bg-surface-variant/20 w-full"></div>
-
-                {/* Bottom Emergency Area */}
-                <div className="flex justify-between items-center py-1">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-error font-extrabold text-lg tracking-wide">
-                      Butuh Segera?
-                    </h3>
-                    <p className="text-xs text-on-surface-variant font-medium">
-                      Tukang darurat tiba dalam &lt; 30 menit
-                    </p>
-                  </div>
-
-                  {/* Warning Diamond Button */}
-                  <button className="w-12 h-12 rounded-full bg-error-container hover:bg-error/20 flex items-center justify-center transition-all shadow-lg cursor-pointer">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill="#ffb4ab" />
-                      <path
-                        d="M12 8V13"
-                        stroke="#93000a"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="12" cy="16.5" r="1.25" fill="#93000a" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
             </div>
+          </div>
           </div>
         </section>
       </main>
@@ -522,7 +490,7 @@ function Home() {
               Ingin Menambah Penghasilan?
             </h2>
             <p className="text-on-surface-variant mt-4 max-w-xl text-sm md:text-base leading-relaxed font-medium">
-              Bergabunglah dengan 12.000+ mitra tukang kami. Dapatkan akses ke
+              Bergabunglah dengan 12.000+ tukang mandiri kami. Dapatkan akses ke
               ribuan pesanan setiap harinya dan atur waktu kerja Anda sendiri.
             </p>
 
@@ -546,10 +514,11 @@ function Home() {
                 Fleksibilitas Waktu Kerja
               </li>
             </ul>
-
-            <button className="bg-secondary text-on-secondary px-7 py-3.5 rounded-2xl font-bold mt-10 shadow-lg shadow-secondary/10 hover:opacity-90 active:scale-95 transition-all cursor-pointer">
-              Daftar Jadi Mitra Tukang
-            </button>
+            <Link to="/register-tukang">
+              <button className="bg-secondary text-on-secondary px-7 py-3.5 rounded-2xl font-bold mt-10 shadow-lg shadow-secondary/10 hover:opacity-90 active:scale-95 transition-all cursor-pointer">
+                Daftar Jadi Tukang Mandiri
+              </button>
+            </Link>
           </div>
 
           <div className="w-full lg:w-auto flex justify-center z-10 shrink-0">
@@ -557,7 +526,7 @@ function Home() {
               <div className="absolute -inset-1 bg-gradient-to-r from-secondary/20 to-transparent rounded-3xl blur opacity-75"></div>
               <img
                 src="/mitra_tukang.png"
-                alt="Mitra Tukang"
+                alt="Tukang Mandiri"
                 className="w-full max-w-[340px] md:max-w-[400px] h-[320px] md:h-[360px] object-cover rounded-3xl border border-surface-variant/30 shadow-2xl relative"
               />
             </div>
