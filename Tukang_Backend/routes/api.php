@@ -6,7 +6,19 @@ use App\Http\Controllers\Api\TukangController;
 use App\Http\Controllers\Api\PesananController;
 use App\Http\Controllers\Api\UlasanController;
 use App\Http\Controllers\Api\PortofolioController;
+use App\Http\Controllers\Api\PenarikanController;
+use App\Http\Controllers\Api\AuthController;
 
+// --- Rute Otentikasi Tukang (Login & Register) ---
+Route::post('/auth/tukang/register', [AuthController::class, 'registerTukang']);
+Route::post('/auth/tukang/login', [AuthController::class, 'loginTukang']);
+
+// --- Rute Otentikasi Pelanggan / User Biasa ---
+Route::post('/auth/user/register', [AuthController::class, 'registerUser']);
+Route::post('/auth/user/login', [AuthController::class, 'loginUser']);
+
+// --- Rute Otentikasi Admin ---
+Route::post('/auth/admin/login', [AuthController::class, 'loginAdmin']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -27,3 +39,7 @@ Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
 // --- Rute Fitur Portofolio (Upload Foto) ---
 Route::post('/tukang/{id}/portofolio', [PortofolioController::class, 'store']);
 Route::get('/tukang/{id}/portofolio', [PortofolioController::class, 'getPortofolioTukang']);
+
+// --- Rute Fitur Dompet (Penarikan Dana) ---
+Route::post('/tukang/{id}/tarik-dana', [PenarikanController::class, 'tarikDana']);
+Route::get('/tukang/{id}/riwayat-tarik', [PenarikanController::class, 'getRiwayatPenarikan']);
