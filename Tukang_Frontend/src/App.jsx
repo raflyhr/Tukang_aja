@@ -19,6 +19,7 @@ import AdminDashboard from "./admin/dashboard";
 import VerifikasiTukang from "./admin/verifikasi";
 import DataTukang from "./admin/data";
 import MonitoringRating from "./admin/monitoring";
+import ProfilAdmin from "./admin/profil";
 
 import "./index.css";
 
@@ -52,6 +53,7 @@ function App() {
         <Route path="/admin/verifikasi" element={<VerifikasiTukang />} />
         <Route path="/admin/data" element={<DataTukang />} />
         <Route path="/admin/rating" element={<MonitoringRating />} />
+        <Route path="/admin/profil" element={<ProfilAdmin />} />
 
         {/* General Pages */}
         <Route path="/notifikasi" element={<Notifications />} />

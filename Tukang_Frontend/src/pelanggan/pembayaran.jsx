@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import LogoutModal from "../components/LogoutModal";
 
 function Pembayaran() {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -146,9 +149,13 @@ function Pembayaran() {
                 <p className="text-xs text-on-surface-variant/60 truncate">chaostknight483@gmail.com</p>
               </div>
             </div>
-            <Link to="/" className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer" title="Log Out">
+            <button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer bg-transparent border-none" 
+              title="Log Out"
+            >
               <span className="material-symbols-outlined">logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -412,6 +419,13 @@ function Pembayaran() {
         <div className="absolute -top-[10%] -left-[5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[10%] right-[0%] w-[30%] h-[30%] bg-secondary/5 rounded-full blur-[120px]"></div>
       </div>
+
+      <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={() => navigate("/")} 
+        role="pelanggan" 
+      />
     </div>
   );
 }

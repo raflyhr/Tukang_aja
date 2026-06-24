@@ -5,6 +5,9 @@ function RegisterPelanggan() {
   const navigate = useNavigate();
   const [noteText, setNoteText] = useState("");
   const [activeStep, setActiveStep] = useState("profile");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
 
@@ -86,16 +89,33 @@ function RegisterPelanggan() {
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans select-none custom-scrollbar">
       {/* Top Navigation Bar (Shared Component Logic) */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 shadow-sm h-20 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
-        <div className="flex items-center gap-2">
-          <span className="font-headline-md text-headline-md font-bold text-secondary">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 px-3 py-1.5 text-on-surface-variant hover:text-secondary hover:bg-surface-variant/50 transition-all rounded-lg text-sm font-semibold active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span className="hidden sm:inline">Kembali ke Beranda</span>
+          </button>
+          <span className="h-6 w-px bg-surface-variant/30 hidden sm:block"></span>
+          <span
+            onClick={() => navigate("/")}
+            className="font-headline-md text-headline-md font-bold text-secondary cursor-pointer hover:opacity-90 transition-opacity"
+          >
             TukangAja
           </span>
         </div>
         <div className="flex items-center gap-sm">
-          <button onClick={() => navigate("/bantuan")} className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer">
+          <button
+            onClick={() => navigate("/bantuan")}
+            className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer"
+          >
             <span className="material-symbols-outlined">help</span>
           </button>
-          <button onClick={() => navigate("/notifikasi")} className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer relative">
+          <button
+            onClick={() => navigate("/notifikasi")}
+            className="p-2 text-on-surface-variant hover:text-secondary transition-colors duration-200 active:scale-95 cursor-pointer relative"
+          >
             <span className="material-symbols-outlined">notifications</span>
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full"></span>
           </button>
@@ -137,7 +157,9 @@ function RegisterPelanggan() {
               }`}
             >
               <span className="material-symbols-outlined">location_on</span>
-              <span className="font-label-md text-label-md">Alamat & Lokasi</span>
+              <span className="font-label-md text-label-md">
+                Alamat & Lokasi
+              </span>
             </div>
 
             {/* Step 3: Catatan Tambahan */}
@@ -150,7 +172,9 @@ function RegisterPelanggan() {
               }`}
             >
               <span className="material-symbols-outlined">description</span>
-              <span className="font-label-md text-label-md">Catatan Tambahan</span>
+              <span className="font-label-md text-label-md">
+                Catatan Tambahan
+              </span>
             </div>
           </nav>
         </aside>
@@ -161,9 +185,15 @@ function RegisterPelanggan() {
             {/* Mobile Stepper Indicator */}
             <div className="md:hidden flex items-center justify-between mb-8 bg-surface-container rounded-xl p-4 border border-surface-variant/20">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${activeStep === "profile" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}></div>
-                <div className={`w-2 h-2 rounded-full ${activeStep === "address" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}></div>
-                <div className={`w-2 h-2 rounded-full ${activeStep === "notes" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${activeStep === "profile" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}
+                ></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${activeStep === "address" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}
+                ></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${activeStep === "notes" ? "bg-secondary w-6" : "bg-on-surface-variant/30"} transition-all duration-300`}
+                ></div>
               </div>
               <span className="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider">
                 {activeStep === "profile" && "Langkah 1: Data Diri"}
@@ -177,15 +207,18 @@ function RegisterPelanggan() {
                 Detail Profil Pelanggan
               </h1>
               <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
-                Lengkapi informasi berikut untuk memudahkan para tukang profesional kami
-                mengenali Anda dan memberikan layanan terbaik.
+                Lengkapi informasi berikut untuk memudahkan para tukang
+                profesional kami mengenali Anda dan memberikan layanan terbaik.
               </p>
             </div>
 
             {/* Registration Form Area */}
             <form className="space-y-xl" onSubmit={handleSubmit}>
               {/* Section 1: Profil & Data Diri */}
-              <section id="profile" className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter">
+              <section
+                id="profile"
+                className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter"
+              >
                 <div className="flex items-center gap-3 mb-base border-b border-surface-variant/10 pb-4">
                   <span className="material-symbols-outlined text-secondary">
                     person
@@ -221,7 +254,8 @@ function RegisterPelanggan() {
                       Foto Profil
                     </h3>
                     <p className="font-label-md text-label-md text-on-surface-variant text-sm">
-                      Gunakan foto asli agar tukang merasa lebih aman. Max 5MB (JPG/PNG).
+                      Gunakan foto asli agar tukang merasa lebih aman. Max 5MB
+                      (JPG/PNG).
                     </p>
                   </div>
                 </div>
@@ -261,11 +295,63 @@ function RegisterPelanggan() {
                       />
                     </div>
                   </div>
+
+                  {/* Email */}
+                  <div className="space-y-base focus-within:scale-[1.01] transition-transform duration-200">
+                    <label className="font-label-md text-label-md text-on-surface-variant ml-1">
+                      Alamat Email
+                    </label>
+                    <div className="relative group">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors">
+                        mail
+                      </span>
+                      <input
+                        className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
+                        placeholder="contoh@email.com"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-base focus-within:scale-[1.01] transition-transform duration-200">
+                    <label className="font-label-md text-label-md text-on-surface-variant ml-1">
+                      Kata Sandi (Password)
+                    </label>
+                    <div className="relative group">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors">
+                        lock
+                      </span>
+                      <input
+                        className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-12 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
+                        placeholder="••••••••"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none"
+                      >
+                        <span className="material-symbols-outlined text-lg">
+                          {showPassword ? "visibility_off" : "visibility"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </section>
 
               {/* Section 2: Alamat & Lokasi */}
-              <section id="address" className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter">
+              <section
+                id="address"
+                className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter"
+              >
                 <div className="flex items-center gap-3 mb-base border-b border-surface-variant/10 pb-4">
                   <span className="material-symbols-outlined text-secondary">
                     location_on
@@ -327,7 +413,9 @@ function RegisterPelanggan() {
                         className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center shadow-lg border border-outline-variant hover:bg-surface-variant cursor-pointer text-on-surface"
                         type="button"
                       >
-                        <span className="material-symbols-outlined">remove</span>
+                        <span className="material-symbols-outlined">
+                          remove
+                        </span>
                       </button>
                     </div>
                     <div className="absolute top-4 left-4">
@@ -346,7 +434,10 @@ function RegisterPelanggan() {
               </section>
 
               {/* Section 3: Catatan Tambahan */}
-              <section id="notes" className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter">
+              <section
+                id="notes"
+                className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-gutter"
+              >
                 <div className="flex items-center gap-3 mb-base border-b border-surface-variant/10 pb-4">
                   <span className="material-symbols-outlined text-secondary">
                     description

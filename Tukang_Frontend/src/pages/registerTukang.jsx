@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 function RegisterTukang() {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState("profile");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
 
@@ -87,8 +89,21 @@ function RegisterTukang() {
     <div className="bg-surface text-on-surface min-h-screen flex flex-col font-sans select-none custom-scrollbar">
       {/* TopNavBar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 shadow-sm h-20 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
-        <div className="font-headline-md text-headline-md font-bold text-secondary dark:text-secondary">
-          TukangAja
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 px-3 py-1.5 text-on-surface-variant hover:text-secondary hover:bg-surface-variant/50 transition-all rounded-lg text-sm font-semibold active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span className="hidden sm:inline">Kembali ke Beranda</span>
+          </button>
+          <span className="h-6 w-px bg-surface-variant/30 hidden sm:block"></span>
+          <span
+            onClick={() => navigate("/")}
+            className="font-headline-md text-headline-md font-bold text-secondary dark:text-secondary cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            TukangAja
+          </span>
         </div>
         <div className="flex items-center gap-6">
           <span
@@ -240,6 +255,7 @@ function RegisterTukang() {
                           className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
                           placeholder="budi@email.com"
                           type="email"
+                          required
                         />
                       </div>
                       <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
@@ -251,6 +267,30 @@ function RegisterTukang() {
                           placeholder="+62 812..."
                           type="tel"
                         />
+                      </div>
+                      <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
+                        <label className="font-label-md text-label-md text-on-surface-variant px-1">
+                          Kata Sandi (Password)
+                        </label>
+                        <div className="relative">
+                          <input
+                            className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md pr-10 py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
+                            placeholder="••••••••"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-lg">
+                              {showPassword ? "visibility_off" : "visibility"}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                       <div className="md:col-span-2 flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                         <label className="font-label-md text-label-md text-on-surface-variant px-1">
