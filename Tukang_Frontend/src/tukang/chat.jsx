@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import LogoutModal from "../components/LogoutModal";
 
 function TukangChat() {
   const navigate = useNavigate();
@@ -7,6 +8,7 @@ function TukangChat() {
   const [isNegoPanelOpen, setIsNegoPanelOpen] = useState(false); // Default to false to keep chat spacious
   const [activeChatId, setActiveChatId] = useState(1);
   const [inputText, setInputText] = useState("");
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const textareaRef = useRef(null);
 
@@ -192,9 +194,13 @@ function TukangChat() {
                 <p className="text-xs text-secondary truncate">Elite Technician</p>
               </div>
             </div>
-            <Link to="/" className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer" title="Log Out">
+            <button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer bg-transparent border-none" 
+              title="Log Out"
+            >
               <span className="material-symbols-outlined">logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -497,6 +503,12 @@ function TukangChat() {
 
       </div>
 
+      <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={() => navigate("/")} 
+        role="teknisi" 
+      />
     </div>
   );
 }

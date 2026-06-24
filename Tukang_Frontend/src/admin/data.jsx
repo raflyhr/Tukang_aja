@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
+import LogoutModal from "../components/LogoutModal";
 
 function DataTukang() {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("Terbaru");
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   // Toast state
   const [toastMessage, setToastMessage] = useState("");
@@ -192,9 +195,13 @@ function DataTukang() {
                 <p className="text-[10px] text-on-surface-variant/60 truncate uppercase tracking-wider">{adminData.role}</p>
               </div>
             </div>
-            <Link to="/" className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer" title="Keluar">
+            <button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="text-on-surface-variant p-1 flex items-center justify-center cursor-pointer bg-transparent border-none" 
+              title="Keluar"
+            >
               <span className="material-symbols-outlined">logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -479,6 +486,12 @@ function DataTukang() {
         <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[30%] bg-primary/5 blur-[80px] rounded-full"></div>
       </div>
 
+      <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={() => navigate("/")} 
+        role="admin" 
+      />
     </div>
   );
 }

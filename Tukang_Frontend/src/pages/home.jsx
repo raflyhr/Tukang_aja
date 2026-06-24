@@ -103,7 +103,7 @@ function Home() {
         <div className="flex items-center gap-4">
           <Link to="/login">
             <button className="bg-surface-container-high border border-outline-variant text-on-surface px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer hover:bg-secondary hover:text-black">
-              Masuk/Daftar
+              Masuk akun
             </button>
           </Link>
         </div>
@@ -145,7 +145,7 @@ function Home() {
                   to="/register-pelanggan"
                   className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
                 >
-                  Cari Tukang
+                  Daftar sebagai pelanggan
                 </Link>
                 <Link
                   to="/register-tukang"

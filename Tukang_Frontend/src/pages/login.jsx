@@ -14,8 +14,7 @@ function Login() {
 
   const navigate = useNavigate();
 
-  // Temporary frontend-only dummy authentication system for UI/UX testing and navigation
-  // Will be replaced with real backend API integration later.
+  // Temporary frontend-only dummyusers
   const dummyUsers = [
     { 
       email: "admin@tukangaja.com", 
@@ -162,14 +161,23 @@ function Login() {
           {/* Right Side: Login Form */}
           <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center bg-surface-container">
             <div className="max-w-md mx-auto w-full">
-              {/* Mobile Logo (Shown only on small screens) */}
-              <div className="md:hidden mb-8">
+              {/* Back to Home & Mobile Logo */}
+              <div className="flex items-center justify-between mb-8">
                 <Link
                   to="/"
-                  className="font-headline-md text-headline-md font-bold text-secondary"
+                  className="flex items-center gap-2 text-on-surface-variant hover:text-secondary transition-all text-sm font-semibold active:scale-95"
                 >
-                  TukangAja
+                  <span className="material-symbols-outlined text-lg">arrow_back</span>
+                  <span>Kembali ke Beranda</span>
                 </Link>
+                <div className="md:hidden">
+                  <Link
+                    to="/"
+                    className="font-headline-md text-headline-md font-bold text-secondary hover:opacity-90 transition-all"
+                  >
+                    TukangAja
+                  </Link>
+                </div>
               </div>
 
               <header className="mb-8">
@@ -310,13 +318,13 @@ function Login() {
 
               {/* Registration Link */}
               <footer className="mt-8 text-center">
-                <p className="text-sm text-on-surface-variant font-medium">
-                  Belum punya akun?{" "}
+                <p className="text-sm text-on-surface-variant font-medium flex items-center justify-center gap-1.5">
+                  Belum punya akun?
                   <Link
-                    className="text-secondary font-bold hover:underline transition-all"
+                    className="text-secondary font-bold hover:underline transition-all text-sm"
                     to="/"
                   >
-                    Daftar Sekarang
+                    Daftar sekarang
                   </Link>
                 </p>
               </footer>

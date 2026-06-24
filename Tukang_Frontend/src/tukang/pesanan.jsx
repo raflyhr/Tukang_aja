@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import LogoutModal from "../components/LogoutModal";
 
 function TukangPesanan() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("semua");
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   // Rejection reason select options
   const rejectReasons = [
@@ -158,9 +160,13 @@ function TukangPesanan() {
                 <p className="text-xs text-secondary truncate">Elite Technician</p>
               </div>
             </div>
-            <Link to="/" className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer" title="Log Out">
+            <button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer bg-transparent border-none" 
+              title="Log Out"
+            >
               <span className="material-symbols-outlined">logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -503,6 +509,13 @@ function RejectionCard({ order, rejectReasons, onSaveReason }) {
           </form>
         </div>
       </div>
+
+      <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={() => navigate("/")} 
+        role="teknisi" 
+      />
     </div>
   );
 }
