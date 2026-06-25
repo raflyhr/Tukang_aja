@@ -1,13 +1,215 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import GoogleMapPicker from "../components/GoogleMapPicker";
+
+const AVAILABLE_SKILLS = [
+  "Anti Bocor",
+  "Instalasi Pipa",
+  "Instalasi Listrik Rumah",
+  "Pasang AC Baru",
+  "Pembersihan Karpet",
+  "Pengecatan Dekoratif",
+  "Restorasi Kayu",
+  "Las Konstruksi",
+  "Pasang Keramik Dinding",
+  "Perawatan Taman",
+  "Perbaikan Pompa Air",
+  "Pemasangan Baja Ringan"
+];
 
 function RegisterTukang() {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState("profile");
+  
+  // Personal Info State
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Profile Photo State
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
+  const [profilePhotoDetails, setProfilePhotoDetails] = useState({ name: "", size: "" });
+
+  // Address
+  const [locationData, setLocationData] = useState({
+    address: "",
+    latitude: "",
+    longitude: "",
+  });
+
+  // Keahlian State
+  const [mainCategory, setMainCategory] = useState("Pilih kategori");
+  const [additionalSkills, setAdditionalSkills] = useState([]);
+  const [yearsExp, setYearsExp] = useState("");
+  const [jobDesc, setJobDesc] = useState("");
+
+  // Documents State
+  const [ktpFile, setKtpFile] = useState(null);
+  const [ktpPreview, setKtpPreview] = useState("");
+  const [ktpDetails, setKtpDetails] = useState({ name: "", size: "" });
+
+  const [portfolioFile, setPortfolioFile] = useState(null);
+  const [portfolioPreview, setPortfolioPreview] = useState("");
+  const [portfolioDetails, setPortfolioDetails] = useState({ name: "", size: "" });
+
+  // Work Radius State
+  const [workRadius, setWorkRadius] = useState("5 km");
+
+  // Consent State
+  const [consentCorrect, setConsentCorrect] = useState(false);
+  const [consentTerms, setConsentTerms] = useState(false);
+
+  // Submission & Validation States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const profileInputRef = useRef(null);
+  const ktpInputRef = useRef(null);
+  const portfolioInputRef = useRef(null);
+
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
+
+  // File Upload Handlers
+  const handleProfilePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedExtensions = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowedExtensions.includes(file.type)) {
+      setErrors(prev => ({ ...prev, profilePhoto: "Format file harus JPG, JPEG, atau PNG" }));
+      return;
+    }
+
+    setErrors(prev => ({ ...prev, profilePhoto: null }));
+    setProfilePhoto(file);
+    setProfilePhotoDetails({
+      name: file.name,
+      size: (file.size / 1024 / 1024).toFixed(2) + " MB"
+    });
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleKtpFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setKtpFile(file);
+    setKtpDetails({
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + " KB"
+    });
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setKtpPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setKtpPreview("");
+    }
+  };
+
+  const handlePortfolioFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setPortfolioFile(file);
+    setPortfolioDetails({
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + " KB"
+    });
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPortfolioPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPortfolioPreview("");
+    }
+  };
+
+  const handleToggleSkill = (skill) => {
+    if (additionalSkills.includes(skill)) {
+      setAdditionalSkills(additionalSkills.filter(s => s !== skill));
+    } else {
+      setAdditionalSkills([...additionalSkills, skill]);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = "Nama lengkap wajib diisi";
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      newErrors.email = "Alamat email wajib diisi";
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = "Format email tidak valid";
+    }
+
+    const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,11}$/;
+    if (!phone) {
+      newErrors.phone = "Nomor telepon wajib diisi";
+    } else if (!phoneRegex.test(phone)) {
+      newErrors.phone = "Format nomor telepon Indonesia tidak valid (misal: +62812... atau 0812...)";
+    }
+
+    if (!password) {
+      newErrors.password = "Kata sandi wajib diisi";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Konfirmasi kata sandi wajib diisi";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Kata sandi dan konfirmasi kata sandi tidak cocok";
+    }
+
+    if (yearsExp !== "" && Number(yearsExp) < 0) {
+      newErrors.yearsExp = "Tahun pengalaman tidak boleh kurang dari 0";
+    }
+
+    if (!consentCorrect) {
+      newErrors.consentCorrect = "Anda harus menyetujui pernyataan kebenaran data";
+    }
+    if (!consentTerms) {
+      newErrors.consentTerms = "Anda harus menyetujui Syarat & Ketentuan";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      // Scroll to Section 1
+      scrollToSection("profile");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      navigate("/tukang/dashboard");
+    }, 2000);
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -94,7 +296,9 @@ function RegisterTukang() {
             onClick={() => navigate("/")}
             className="flex items-center gap-2 px-3 py-1.5 text-on-surface-variant hover:text-secondary hover:bg-surface-variant/50 transition-all rounded-lg text-sm font-semibold active:scale-95 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span className="material-symbols-outlined text-lg">
+              arrow_back
+            </span>
             <span className="hidden sm:inline">Kembali ke Beranda</span>
           </button>
           <span className="h-6 w-px bg-surface-variant/30 hidden sm:block"></span>
@@ -184,7 +388,9 @@ function RegisterTukang() {
               >
                 description
               </span>
-              <span className="font-label-md text-label-md">Dokumen & Verifikasi</span>
+              <span className="font-label-md text-label-md">
+                Dokumen & Verifikasi
+              </span>
             </div>
           </nav>
         </aside>
@@ -202,7 +408,7 @@ function RegisterTukang() {
               </p>
             </div>
 
-            <form className="space-y-xl" onSubmit={(e) => { e.preventDefault(); navigate("/tukang/dashboard"); }}>
+            <form className="space-y-xl" onSubmit={handleSubmit}>
               {/* Section 1: Personal Info */}
               <section
                 id="profile"
@@ -221,18 +427,58 @@ function RegisterTukang() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
                   {/* Photo Upload */}
-                  <div className="md:col-span-4 flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl p-md bg-surface-container-low hover:border-secondary transition-colors cursor-pointer group">
-                    <div className="w-32 h-32 rounded-full bg-surface-variant flex items-center justify-center mb-sm overflow-hidden border-4 border-surface-container-high">
-                      <span
-                        className="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-secondary"
-                        data-icon="add_a_photo"
-                      >
-                        add_a_photo
-                      </span>
+                  <div
+                    onClick={() => profileInputRef.current.click()}
+                    className="md:col-span-4 flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl p-md bg-surface-container-low hover:border-secondary transition-colors cursor-pointer group"
+                  >
+                    <input
+                      ref={profileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleProfilePhotoChange}
+                      className="hidden"
+                    />
+                    <div className="w-32 h-32 rounded-full bg-surface-variant flex items-center justify-center mb-sm overflow-hidden border-4 border-surface-container-high relative">
+                      {profilePhotoPreview ? (
+                        <img
+                          src={profilePhotoPreview}
+                          alt="Preview Foto Profil"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-secondary"
+                          data-icon="add_a_photo"
+                        >
+                          add_a_photo
+                        </span>
+                      )}
                     </div>
-                    <span className="font-label-md text-label-md text-on-surface-variant">
-                      Unggah Foto Profil
-                    </span>
+                    {profilePhotoDetails.name ? (
+                      <div className="text-center">
+                        <p className="font-label-md text-xs text-on-surface font-semibold truncate max-w-[180px]">
+                          {profilePhotoDetails.name}
+                        </p>
+                        <p className="text-[10px] text-on-surface-variant">
+                          {profilePhotoDetails.size}
+                        </p>
+                        <span className="mt-1 inline-block text-xs font-bold text-secondary hover:underline">
+                          Ganti Foto
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="font-label-md text-label-md text-on-surface-variant text-center">
+                        Unggah Foto Profil
+                        <span className="block text-[10px] opacity-70 mt-0.5">
+                          Format: JPG, JPEG, PNG
+                        </span>
+                      </span>
+                    )}
+                    {errors.profilePhoto && (
+                      <span className="text-xs text-red-500 mt-1 text-center font-semibold">
+                        {errors.profilePhoto}
+                      </span>
+                    )}
                   </div>
                   {/* Inputs */}
                   <div className="md:col-span-8 space-y-gutter">
@@ -245,7 +491,14 @@ function RegisterTukang() {
                           className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
                           placeholder="misal Budi Santoso"
                           type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
                         />
+                        {errors.fullName && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5">
+                            {errors.fullName}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                         <label className="font-label-md text-label-md text-on-surface-variant px-1">
@@ -255,8 +508,14 @@ function RegisterTukang() {
                           className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
                           placeholder="budi@email.com"
                           type="email"
-                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                         />
+                        {errors.email && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5">
+                            {errors.email}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                         <label className="font-label-md text-label-md text-on-surface-variant px-1">
@@ -266,7 +525,14 @@ function RegisterTukang() {
                           className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
                           placeholder="+62 812..."
                           type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
                         />
+                        {errors.phone && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5">
+                            {errors.phone}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                         <label className="font-label-md text-label-md text-on-surface-variant px-1">
@@ -279,7 +545,6 @@ function RegisterTukang() {
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            required
                           />
                           <button
                             type="button"
@@ -291,41 +556,71 @@ function RegisterTukang() {
                             </span>
                           </button>
                         </div>
+                        {errors.password && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5">
+                            {errors.password}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
+                        <label className="font-label-md text-label-md text-on-surface-variant px-1">
+                          Konfirmasi Kata Sandi
+                        </label>
+                        <div className="relative">
+                          <input
+                            className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md pr-10 py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
+                            placeholder="••••••••"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-lg">
+                              {showConfirmPassword
+                                ? "visibility_off"
+                                : "visibility"}
+                            </span>
+                          </button>
+                        </div>
+                        {errors.confirmPassword && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5">
+                            {errors.confirmPassword}
+                          </span>
+                        )}
                       </div>
                       <div className="md:col-span-2 flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                         <label className="font-label-md text-label-md text-on-surface-variant px-1">
                           Alamat Domisili
                         </label>
                         <div className="relative">
-                          <input
-                            className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-lg pl-10 pr-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
-                            placeholder="Cari alamat atau geser pin di peta..."
-                            type="text"
+                          <GoogleMapPicker
+                            onLocationChange={(location) => {
+                              setLocationData(location);
+                              console.log(location);
+                            }}
                           />
-                          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-lg">
-                            search
-                          </span>
-                        </div>
-                        <div className="mt-sm w-full h-64 bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden relative">
-                          <div className="absolute inset-0 bg-surface-variant/20 flex items-center justify-center">
-                            <div className="flex flex-col items-center gap-2">
-                              <span className="material-symbols-outlined text-secondary text-4xl animate-bounce">
-                                location_on
-                              </span>
-                              <span className="text-xs text-on-surface-variant">
-                                Geser pin untuk lokasi presisi
-                              </span>
-                            </div>
-                          </div>
-                          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                            <button
-                              className="p-2 bg-surface-container-highest rounded-lg border border-outline-variant text-on-surface hover:bg-surface-variant transition-all shadow-lg cursor-pointer"
-                              type="button"
-                            >
-                              <span className="material-symbols-outlined">
-                                my_location
-                              </span>
-                            </button>
+                          <div className="mt-3 rounded-lg bg-surface-container-high p-3 border border-outline-variant">
+                            <p className="text-sm">
+                              <strong>Alamat:</strong>
+                              <br />
+                              {locationData.address || "-"}
+                            </p>
+
+                            <p className="text-sm mt-2">
+                              <strong>Latitude:</strong>{" "}
+                              {locationData.latitude || "-"}
+                            </p>
+
+                            <p className="text-sm">
+                              <strong>Longitude:</strong>{" "}
+                              {locationData.longitude || "-"}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -355,25 +650,71 @@ function RegisterTukang() {
                     <label className="font-label-md text-label-md text-on-surface-variant px-1">
                       Kategori Keahlian Utama
                     </label>
-                    <select className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md appearance-none cursor-pointer outline-none focus:border-secondary">
+                    <select
+                      value={mainCategory}
+                      onChange={(e) => setMainCategory(e.target.value)}
+                      className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md appearance-none cursor-pointer outline-none focus:border-secondary"
+                    >
                       <option>Pilih kategori</option>
                       <option>Plumbing (Pipa & Kran)</option>
                       <option>Electrical (Kelistrikan)</option>
                       <option>Masonry (Tukang Bangunan)</option>
-                      <option>Carpentry (Kayu)</option>
                       <option>AC Specialist (Pendingin)</option>
                       <option>Painting (Pengecatan)</option>
+                      <option>Carpentry (Kayu)</option>
+                      <option>Atap Rumah</option>
+                      <option>Keramik</option>
+                      <option>Pengelasan (Las)</option>
+                      <option>Cleaning Service</option>
+                      <option>Taman</option>
                     </select>
                   </div>
+
                   <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
                     <label className="font-label-md text-label-md text-on-surface-variant px-1">
-                      Keahlian Tambahan (Opsional)
+                      Radius Jangkauan Kerja
                     </label>
-                    <input
-                      className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
-                      placeholder="misal Anti Air, Pengelasan"
-                      type="text"
-                    />
+                    <select
+                      value={workRadius}
+                      onChange={(e) => setWorkRadius(e.target.value)}
+                      className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md appearance-none cursor-pointer outline-none focus:border-secondary"
+                    >
+                      <option value="5 km">5 km</option>
+                      <option value="10 km">10 km</option>
+                      <option value="15 km">15 km</option>
+                      <option value="20 km">20 km</option>
+                      <option value="25 km">25 km</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-xs md:col-span-2 mt-2">
+                    <label className="font-label-md text-label-md text-on-surface-variant px-1 mb-1">
+                      Keahlian Tambahan (Pilih beberapa)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {AVAILABLE_SKILLS.map((skill) => {
+                        const isSelected = additionalSkills.includes(skill);
+                        return (
+                          <button
+                            key={skill}
+                            type="button"
+                            onClick={() => handleToggleSkill(skill)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-all duration-200 cursor-pointer ${
+                              isSelected
+                                ? "bg-secondary text-on-secondary border-secondary shadow-md scale-95"
+                                : "bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-secondary hover:bg-surface-variant/20"
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-xs">
+                                check
+                              </span>
+                            )}
+                            {skill}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </section>
@@ -404,16 +745,31 @@ function RegisterTukang() {
                       min="0"
                       placeholder="0"
                       type="number"
+                      value={yearsExp}
+                      onChange={(e) => setYearsExp(e.target.value)}
                     />
+                    {errors.yearsExp && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5">
+                        {errors.yearsExp}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
-                    <label className="font-label-md text-label-md text-on-surface-variant px-1">
-                      Deskripsi Pekerjaan Sebelumnya
-                    </label>
+                    <div className="flex justify-between items-center px-1">
+                      <label className="font-label-md text-label-md text-on-surface-variant">
+                        Deskripsi Pekerjaan Sebelumnya
+                      </label>
+                      <span className="text-xs text-on-surface-variant/75">
+                        {jobDesc.length}/500 karakter
+                      </span>
+                    </div>
                     <textarea
                       className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all resize-none outline-none focus:border-secondary"
                       placeholder="Jelaskan secara singkat proyek atau keahlian utama Anda..."
                       rows={4}
+                      value={jobDesc}
+                      maxLength={500}
+                      onChange={(e) => setJobDesc(e.target.value)}
                     ></textarea>
                   </div>
                 </div>
@@ -438,51 +794,157 @@ function RegisterTukang() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
                   {/* KTP Upload */}
                   <div className="p-md bg-surface-container-low border border-outline-variant rounded-xl flex flex-col items-center text-center gap-sm">
-                    <span
-                      className="material-symbols-outlined text-secondary text-4xl"
-                      data-icon="badge"
-                    >
-                      badge
-                    </span>
+                    <input
+                      ref={ktpInputRef}
+                      type="file"
+                      onChange={handleKtpFileChange}
+                      className="hidden"
+                    />
+                    {ktpPreview ? (
+                      <div className="w-24 h-16 rounded overflow-hidden border border-outline-variant bg-surface-variant flex items-center justify-center">
+                        <img
+                          src={ktpPreview}
+                          alt="Preview KTP"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <span
+                        className="material-symbols-outlined text-secondary text-4xl"
+                        data-icon="badge"
+                      >
+                        badge
+                      </span>
+                    )}
                     <div>
                       <h4 className="font-label-md text-label-md text-on-surface font-bold">
                         Kartu Tanda Penduduk (KTP)
                       </h4>
-                      <p className="text-xs text-on-surface-variant">
-                        Scan atau foto KTP berkualitas tinggi
-                      </p>
+                      {ktpDetails.name ? (
+                        <div className="mt-1">
+                          <p className="text-xs text-on-surface font-semibold truncate max-w-[200px]">
+                            {ktpDetails.name}
+                          </p>
+                          <p className="text-[10px] text-on-surface-variant">
+                            {ktpDetails.size}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-on-surface-variant">
+                          Scan atau foto KTP berkualitas tinggi
+                        </p>
+                      )}
                     </div>
                     <button
                       className="mt-2 px-md py-2 bg-surface-container-high text-on-surface font-label-md rounded-lg border border-outline-variant hover:bg-surface-variant hover:border-secondary transition-all cursor-pointer"
                       type="button"
+                      onClick={() => ktpInputRef.current.click()}
                     >
-                      Pilih File
+                      {ktpDetails.name ? "Ganti File" : "Pilih File"}
                     </button>
                   </div>
                   {/* Certification Upload */}
                   <div className="p-md bg-surface-container-low border border-outline-variant rounded-xl flex flex-col items-center text-center gap-sm">
-                    <span
-                      className="material-symbols-outlined text-secondary text-4xl"
-                      data-icon="workspace_premium"
-                    >
-                      workspace_premium
-                    </span>
+                    <input
+                      ref={portfolioInputRef}
+                      type="file"
+                      onChange={handlePortfolioFileChange}
+                      className="hidden"
+                    />
+                    {portfolioPreview ? (
+                      <div className="w-24 h-16 rounded overflow-hidden border border-outline-variant bg-surface-variant flex items-center justify-center">
+                        <img
+                          src={portfolioPreview}
+                          alt="Preview Portofolio"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <span
+                        className="material-symbols-outlined text-secondary text-4xl"
+                        data-icon="workspace_premium"
+                      >
+                        workspace_premium
+                      </span>
+                    )}
                     <div>
                       <h4 className="font-label-md text-label-md text-on-surface font-bold">
                         CV atau Portofolio
                       </h4>
-                      <p className="text-xs text-on-surface-variant">
-                        Unggah CV atau contoh pekerjaan yang pernah Anda
-                        kerjakan
-                      </p>
+                      {portfolioDetails.name ? (
+                        <div className="mt-1">
+                          <p className="text-xs text-on-surface font-semibold truncate max-w-[200px]">
+                            {portfolioDetails.name}
+                          </p>
+                          <p className="text-[10px] text-on-surface-variant">
+                            {portfolioDetails.size}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-on-surface-variant">
+                          Unggah CV atau contoh pekerjaan yang pernah Anda
+                          kerjakan
+                        </p>
+                      )}
                     </div>
                     <button
                       className="mt-2 px-md py-2 bg-surface-container-high text-on-surface font-label-md rounded-lg border border-outline-variant hover:bg-surface-variant hover:border-secondary transition-all cursor-pointer"
                       type="button"
+                      onClick={() => portfolioInputRef.current.click()}
                     >
-                      Pilih File
+                      {portfolioDetails.name ? "Ganti File" : "Pilih File"}
                     </button>
                   </div>
+                </div>
+              </section>
+
+              {/* Consent Checkboxes */}
+              <section className="bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg space-y-md">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="material-symbols-outlined text-secondary"
+                    data-icon="fact_check"
+                  >
+                    fact_check
+                  </span>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">
+                    Persetujuan
+                  </h3>
+                </div>
+                <div className="space-y-sm">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={consentCorrect}
+                      onChange={(e) => setConsentCorrect(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-secondary bg-surface-container-high border-outline-variant rounded focus:ring-secondary/50 focus:ring-1"
+                    />
+                    <span className="font-body-md text-body-md text-on-surface">
+                      Saya menyatakan data yang saya isi benar.
+                    </span>
+                  </label>
+                  {errors.consentCorrect && (
+                    <p className="text-xs text-red-500 pl-7">
+                      {errors.consentCorrect}
+                    </p>
+                  )}
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={consentTerms}
+                      onChange={(e) => setConsentTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-secondary bg-surface-container-high border-outline-variant rounded focus:ring-secondary/50 focus:ring-1"
+                    />
+                    <span className="font-body-md text-body-md text-on-surface">
+                      Saya menyetujui Syarat & Ketentuan.
+                    </span>
+                  </label>
+                  {errors.consentTerms && (
+                    <p className="text-xs text-red-500 pl-7">
+                      {errors.consentTerms}
+                    </p>
+                  )}
                 </div>
               </section>
 
@@ -503,10 +965,36 @@ function RegisterTukang() {
                   </span>
                 </div>
                 <button
-                  className="w-full md:w-auto bg-secondary text-on-secondary font-headline-md px-xl py-md rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg cursor-pointer font-semibold"
+                  className="w-full md:w-auto bg-secondary text-on-secondary font-headline-md px-xl py-md rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg cursor-pointer font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="submit"
+                  disabled={isSubmitting}
                 >
-                  Kirim untuk Verifikasi
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-on-secondary"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Mengirim...
+                    </>
+                  ) : (
+                    "Kirim untuk Verifikasi"
+                  )}
                 </button>
               </section>
             </form>
