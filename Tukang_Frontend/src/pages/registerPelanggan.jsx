@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../components/LeafletMapPicker";
 
 function RegisterPelanggan() {
@@ -463,6 +463,19 @@ function RegisterPelanggan() {
                     Lanjut ke Verifikasi
                   </button>
                 </div>
+              </div>
+
+              {/* Sudah punya akun? Masuk */}
+              <div className="text-center mt-8 pb-4">
+                <p className="text-sm text-on-surface-variant font-medium flex items-center justify-center gap-1.5">
+                  Sudah punya akun?
+                  <Link
+                    className="text-secondary font-bold hover:underline transition-all text-sm"
+                    to="/login"
+                  >
+                    Masuk
+                  </Link>
+                </p>
               </div>
             </form>
           </main>
