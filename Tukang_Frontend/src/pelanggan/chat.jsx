@@ -290,9 +290,6 @@ const kirimRating = async () => {
                   <span className="material-symbols-outlined text-sm">call</span>
                 </button>
                 <button className="p-2 hover:bg-surface-container rounded-xl transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface">
-                  <span className="material-symbols-outlined text-sm">video_call</span>
-                </button>
-                <button className="p-2 hover:bg-surface-container rounded-xl transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface">
                   <span className="material-symbols-outlined text-sm">more_vert</span>
                 </button>
               </div>
@@ -328,8 +325,8 @@ const kirimRating = async () => {
 
             {/* Input area */}
             <div className="p-4 bg-surface-dim border-t border-surface-variant/10 shrink-0">
-              <div className="flex items-end gap-2 bg-surface-container-high rounded-2xl p-1.5">
-                <button className="p-2.5 text-on-surface-variant hover:text-secondary transition-colors cursor-pointer">
+              <div className="flex items-center gap-2 bg-surface-container-high rounded-2xl p-1.5">
+                <button className="p-2.5 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors cursor-pointer">
                   <span className="material-symbols-outlined text-lg">add_circle</span>
                 </button>
                 <textarea
@@ -340,7 +337,7 @@ const kirimRating = async () => {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyPress}
                 />
-                <button className="p-2.5 text-on-surface-variant hover:text-secondary transition-colors cursor-pointer">
+                <button className="p-2.5 flex items-center justify-center text-on-surface-variant hover:text-secondary transition-colors cursor-pointer">
                   <span className="material-symbols-outlined text-lg">sentiment_satisfied</span>
                 </button>
                 <button

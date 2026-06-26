@@ -11,6 +11,44 @@ use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
 {
     /**
+     * API Universal untuk Login (Admin, Tukang, Pelanggan)
+     */
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email atau Password salah.'
+            ], 401);
+        }
+
+        // Bikin token Sanctum
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil sebagai ' . $user->role,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role
+                ]
+            ]
+        ], 200);
+    }
+
+    /**
      * API untuk Register (Daftar) Tukang Baru.
      */
     public function registerTukang(Request $request)
@@ -22,6 +60,17 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'keahlian' => 'required|string',
             'alamat' => 'required|string',
+            // Field tambahan 
+            'keahlian_tambahan' => 'required|string',
+            'tahun_pengalaman' => 'required|integer|min:0',
+            'deskripsi_pengalaman' => 'required|string',
+            // Lokasi (otomatis dari peta, bukan diketik user)
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            // Upload file (semua wajib diisi saat register)
+            'foto_profil' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'foto_ktp' => 'required|file|mimes:pdf|max:5120',
+            'cv_portofolio' => 'required|file|mimes:pdf|max:5120',
         ]);
 
         // 1. Bikin akun User (buat login)
@@ -32,16 +81,40 @@ class AuthController extends Controller
             'role' => 'tukang',
         ]);
 
-        // 2. Bikin profil Tukang (buat nampung data kerjaan)
+        // 2. Handle upload file (simpan ke folder storage/app/public/...)
+        $fotoProfilPath = null;
+        if ($request->hasFile('foto_profil')) {
+            $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
+        }
+
+        $fotoKtpPath = null;
+        if ($request->hasFile('foto_ktp')) {
+            $fotoKtpPath = $request->file('foto_ktp')->store('tukang/ktp', 'public');
+        }
+
+        $cvPath = null;
+        if ($request->hasFile('cv_portofolio')) {
+            $cvPath = $request->file('cv_portofolio')->store('tukang/cv', 'public');
+        }
+
+        // 3. Bikin profil Tukang (buat nampung data kerjaan)
         $tukang = Tukang::create([
             'user_id' => $user->id,
             'nama' => $request->name,
             'no_hp' => $request->no_hp,
             'alamat' => $request->alamat,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
             'keahlian' => $request->keahlian,
+            'keahlian_tambahan' => $request->keahlian_tambahan,
+            'tahun_pengalaman' => $request->tahun_pengalaman ?? 0,
+            'deskripsi_pengalaman' => $request->deskripsi_pengalaman,
+            'foto_profil' => $fotoProfilPath,
+            'foto_ktp' => $fotoKtpPath,
+            'cv_portofolio' => $cvPath,
         ]);
 
-        // 3. Bikinin Token Akses
+        // 4. Bikinin Token Akses
         $token = $user->createToken('auth_token_tukang')->plainTextToken;
 
         return response()->json([
@@ -111,7 +184,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'user', // Role sebagai pelanggan biasa
+            'role' => 'user',
         ]);
 
         $token = $user->createToken('auth_token_user')->plainTextToken;

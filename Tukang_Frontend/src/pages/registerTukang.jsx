@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import GoogleMapPicker from "../components/GoogleMapPicker";
+import axios from "axios";
+import LeafletMapPicker from "../components/LeafletMapPicker";
 
 const AVAILABLE_SKILLS = [
   "Anti Bocor",
@@ -20,6 +21,11 @@ const AVAILABLE_SKILLS = [
 function RegisterTukang() {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState("profile");
+  
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState(""); // "success" | "error"
+  const [showToast, setShowToast] = useState(false);
   
   // Personal Info State
   const [fullName, setFullName] = useState("");
@@ -104,42 +110,36 @@ function RegisterTukang() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf") {
+      setErrors(prev => ({ ...prev, ktpFile: "Format KTP wajib PDF" }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, ktpFile: null }));
+
     setKtpFile(file);
     setKtpDetails({
       name: file.name,
       size: (file.size / 1024).toFixed(1) + " KB"
     });
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setKtpPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setKtpPreview("");
-    }
+    setKtpPreview("");
   };
 
   const handlePortfolioFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf") {
+      setErrors(prev => ({ ...prev, portfolioFile: "Format CV/Portofolio wajib PDF" }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, portfolioFile: null }));
+
     setPortfolioFile(file);
     setPortfolioDetails({
       name: file.name,
       size: (file.size / 1024).toFixed(1) + " KB"
     });
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPortfolioPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPortfolioPreview("");
-    }
+    setPortfolioPreview("");
   };
 
   const handleToggleSkill = (skill) => {
@@ -173,6 +173,8 @@ function RegisterTukang() {
 
     if (!password) {
       newErrors.password = "Kata sandi wajib diisi";
+    } else if (password.length < 8) {
+      newErrors.password = "Kata sandi minimal 8 karakter";
     }
 
     if (!confirmPassword) {
@@ -181,8 +183,38 @@ function RegisterTukang() {
       newErrors.confirmPassword = "Kata sandi dan konfirmasi kata sandi tidak cocok";
     }
 
-    if (yearsExp !== "" && Number(yearsExp) < 0) {
+    if (mainCategory === "Pilih kategori") {
+      newErrors.mainCategory = "Kategori utama wajib dipilih";
+    }
+
+    if (additionalSkills.length === 0) {
+      newErrors.additionalSkills = "Pilih minimal 1 keahlian tambahan";
+    }
+
+    if (yearsExp === "") {
+      newErrors.yearsExp = "Tahun pengalaman wajib diisi";
+    } else if (Number(yearsExp) < 0) {
       newErrors.yearsExp = "Tahun pengalaman tidak boleh kurang dari 0";
+    }
+
+    if (!jobDesc.trim()) {
+      newErrors.jobDesc = "Deskripsi pekerjaan wajib diisi";
+    }
+
+    if (!profilePhoto) {
+      newErrors.profilePhoto = "Foto profil wajib diunggah";
+    }
+
+    if (!ktpFile) {
+      newErrors.ktpFile = "Foto KTP wajib diunggah";
+    }
+
+    if (!portfolioFile) {
+      newErrors.portfolioFile = "CV/Portofolio wajib diunggah";
+    }
+
+    if (!locationData.address || !locationData.latitude || !locationData.longitude) {
+      newErrors.address = "Alamat dan titik lokasi di peta wajib diisi";
     }
 
     if (!consentCorrect) {
@@ -193,22 +225,76 @@ function RegisterTukang() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    };
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) {
+    const validation = validateForm();
+    if (!validation.isValid) {
+      setToastType("error");
+      setToastMessage("Tolong lengkapi persyaratan terlebih dahulu.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+      
       // Scroll to Section 1
       scrollToSection("profile");
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      const formData = new FormData();
+      formData.append("name", fullName);
+      formData.append("email", email);
+      formData.append("password", password);
+      formData.append("password_confirmation", confirmPassword);
+      formData.append("no_hp", phone);
+      formData.append("alamat", locationData.address || "");
+      formData.append("latitude", locationData.latitude || "");
+      formData.append("longitude", locationData.longitude || "");
+      formData.append("keahlian", mainCategory);
+      formData.append("keahlian_tambahan", additionalSkills.join(", "));
+      formData.append("tahun_pengalaman", yearsExp);
+      formData.append("deskripsi_pengalaman", jobDesc);
+      
+      if (profilePhoto) formData.append("foto_profil", profilePhoto);
+      if (ktpFile) formData.append("foto_ktp", ktpFile);
+      if (portfolioFile) formData.append("cv_portofolio", portfolioFile);
+
+      const response = await axios.post("http://localhost:8000/api/auth/tukang/register", formData, {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      console.log("Success:", response.data);
+      setToastType("success");
+      setToastMessage("Registrasi Tukang Berhasil! Silakan masuk (login).");
+      setShowToast(true);
       setIsSubmitting(false);
-      navigate("/tukang/dashboard");
-    }, 2000);
+      
+      setTimeout(() => {
+        setShowToast(false);
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      console.error("Registration Error:", error);
+      setIsSubmitting(false);
+      setToastType("error");
+      if (error.response && error.response.data && error.response.data.errors) {
+        setToastMessage("Gagal registrasi: Cek kembali data Anda.");
+      } else {
+        setToastMessage("Terjadi kesalahan saat menghubungi server.");
+      }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+    }
   };
 
   useEffect(() => {
@@ -288,7 +374,21 @@ function RegisterTukang() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col font-sans select-none custom-scrollbar">
+    <div className="bg-surface text-on-surface min-h-screen flex flex-col font-sans select-none custom-scrollbar relative">
+      {/* Toast Notification Bar */}
+      {showToast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+          toastType === "success" 
+            ? "bg-secondary text-on-secondary" 
+            : "bg-red-500/10 border border-red-500/30 text-red-400 backdrop-blur-md"
+        }`}>
+          <span className="material-symbols-outlined">
+            {toastType === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="text-sm font-bold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* TopNavBar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 shadow-sm h-20 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
         <div className="flex items-center gap-4">
@@ -599,10 +699,14 @@ function RegisterTukang() {
                           Alamat Domisili
                         </label>
                         <div className="relative">
-                          <GoogleMapPicker
-                            onLocationChange={(location) => {
-                              setLocationData(location);
-                              console.log(location);
+                          <LeafletMapPicker 
+                            onLocationChange={(data) => {
+                              setLocationData({
+                                address: data.address,
+                                latitude: data.latitude,
+                                longitude: data.longitude
+                              });
+                              setErrors(prev => ({ ...prev, address: null }));
                             }}
                           />
                           <div className="mt-3 rounded-lg bg-surface-container-high p-3 border border-outline-variant">
@@ -797,6 +901,7 @@ function RegisterTukang() {
                     <input
                       ref={ktpInputRef}
                       type="file"
+                      accept="application/pdf"
                       onChange={handleKtpFileChange}
                       className="hidden"
                     />
@@ -831,7 +936,7 @@ function RegisterTukang() {
                         </div>
                       ) : (
                         <p className="text-xs text-on-surface-variant">
-                          Scan atau foto KTP berkualitas tinggi
+                          Unggah file KTP dalam format PDF (Max 5MB)
                         </p>
                       )}
                     </div>
@@ -848,6 +953,7 @@ function RegisterTukang() {
                     <input
                       ref={portfolioInputRef}
                       type="file"
+                      accept="application/pdf"
                       onChange={handlePortfolioFileChange}
                       className="hidden"
                     />
@@ -882,8 +988,7 @@ function RegisterTukang() {
                         </div>
                       ) : (
                         <p className="text-xs text-on-surface-variant">
-                          Unggah CV atau contoh pekerjaan yang pernah Anda
-                          kerjakan
+                          Unggah CV/Portofolio format PDF (Max 5MB)
                         </p>
                       )}
                     </div>

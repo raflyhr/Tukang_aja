@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\PortofolioController;
 use App\Http\Controllers\Api\PenarikanController;
 use App\Http\Controllers\Api\AuthController;
 
+// --- Rute Otentikasi Universal (Satu Login untuk Semua Role) ---
+Route::post('/auth/login', [AuthController::class, 'login']);
+
 // --- Rute Otentikasi Tukang (Login & Register) ---
 Route::post('/auth/tukang/register', [AuthController::class, 'registerTukang']);
 Route::post('/auth/tukang/login', [AuthController::class, 'loginTukang']);

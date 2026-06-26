@@ -15,47 +15,38 @@ function Login() {
 
   const navigate = useNavigate();
 
-  // Temporary frontend-only dummyusers
-  const dummyUsers = [
-    { 
-      email: "tukang@tukangaja.com", 
-      password: "tukang123", 
-      role: "tukang", 
-      path: "/tukang/dashboard", 
-      message: "Login berhasil sebagai Tukang" 
-    },
-    { 
-      email: "user@tukangaja.com", 
-      password: "user123", 
-      role: "pelanggan", 
-      path: "/pelanggan/dashboard", 
-      message: "Login berhasil sebagai Pelanggan" 
-    }
-  ];
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      // Panggil API Login Admin yang ada di Laravel
-      const response = await axios.post("http://localhost:8000/api/auth/admin/login", {
+      // Panggil API Login Universal
+      const response = await axios.post("http://localhost:8000/api/auth/login", {
         email: email,
         password: password
       });
 
       // Kalo sukses dapet token dari Laravel
       if (response.data.access_token) {
-        // Simpen token sama data admin di localStorage
+        // Simpen token sama data user di localStorage
         localStorage.setItem("access_token", response.data.access_token);
-        localStorage.setItem("user_role", response.data.data.role); // Bakal diset 'admin'
+        
+        // Data response dari backend (kadang dibungkus di "user", kadang langsung)
+        const userData = response.data.data.user || response.data.data;
+        localStorage.setItem("user_role", userData.role);
 
         setToastType("success");
-        setToastMessage(response.data.message || "Login berhasil sebagai Admin");
+        setToastMessage(response.data.message || `Login berhasil sebagai ${userData.role}`);
         setShowToast(true);
         
-        // Pindah ke halaman admin dashboard
+        // Pindah ke halaman dashboard yang sesuai
         setTimeout(() => {
-          navigate("/admin/dashboard");
+          if (userData.role === "tukang") {
+            navigate("/tukang/dashboard");
+          } else if (userData.role === "admin") {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/pelanggan/dashboard");
+          }
         }, 1200);
       }
     } catch (error) {
@@ -324,7 +315,7 @@ function Login() {
                   Belum punya akun?
                   <Link
                     className="text-secondary font-bold hover:underline transition-all text-sm"
-                    to="/"
+                    to="/register"
                   >
                     Daftar sekarang
                   </Link>
