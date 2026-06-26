@@ -30,4 +30,8 @@ class Pesanan extends Model
     {
         return $this->belongsTo(Tukang::class);
     }
+    public function ulasan()
+{
+    return $this->hasOne(Ulasan::class);
+}
 }

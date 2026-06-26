@@ -94,4 +94,26 @@ class PesananController extends Controller
             'saldo_sekarang' => $tukang->saldo ?? 0
         ], 200);
     }
+
+   public function store(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'tukang_id' => 'required|exists:tukangs,id',
+        'deskripsi_masalah' => 'required|string',
+    ]);
+
+    $pesanan = Pesanan::create([
+        'user_id' => $request->user_id,
+        'tukang_id' => $request->tukang_id,
+        'deskripsi_masalah' => $request->deskripsi_masalah,
+        'status' => 'menunggu',
+    ]);
+
+    return response()->json([
+        'message' => 'Pesanan berhasil dibuat.',
+        'data' => $pesanan
+    ], 201);
+}
+
 }
