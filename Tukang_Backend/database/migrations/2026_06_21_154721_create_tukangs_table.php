@@ -16,14 +16,31 @@ return new class extends Migration
             // penghubung database dari login
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('nama');
-            $table->string('alamat');
-            $table->string('keahlian');
             $table->string('no_hp')->unique();
-            // status Tukang
+            $table->string('foto_profil')->nullable();
+
+            // Alamat + Lokasi Peta
+            $table->string('alamat');
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+
+            // Keahlian
+            $table->string('keahlian');
+            $table->string('keahlian_tambahan')->nullable();
+
+            // Pengalaman Kerja
+            $table->integer('tahun_pengalaman')->default(0);
+            $table->text('deskripsi_pengalaman')->nullable();
+
+            // Dokumen Legal
+            $table->string('foto_ktp')->nullable();
+            $table->string('cv_portofolio')->nullable();
+
+            // Status Tukang
             $table->boolean('is_aktif')->default(false);
-            // dompet tukang
+            // Dompet tukang
             $table->integer('saldo')->default(0);
-            // rating tukang
+            // Rating tukang
             $table->decimal('rating', 3, 2)->default(0.00);
             $table->timestamps();
         });

@@ -445,7 +445,12 @@ function TukangPesanan() {
           </Link>
         ))}
       </nav>
-
+     <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={() => navigate("/")} 
+        role="teknisi" 
+      />
     </div>
   );
 }
@@ -497,6 +502,8 @@ function RejectionCard({ order, rejectReasons, onSaveReason }) {
                 placeholder="Tulis alasan lebih detail..." 
                 rows="2"
               />
+
+ 
             </div>
             
             <button 
@@ -510,12 +517,6 @@ function RejectionCard({ order, rejectReasons, onSaveReason }) {
         </div>
       </div>
 
-      <LogoutModal 
-        isOpen={isLogoutModalOpen} 
-        onClose={() => setIsLogoutModalOpen(false)} 
-        onConfirm={() => navigate("/")} 
-        role="teknisi" 
-      />
     </div>
   );
 }

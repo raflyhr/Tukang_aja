@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import GoogleMapPicker from "../components/GoogleMapPicker";
 
 const AVAILABLE_SKILLS = [
@@ -173,6 +174,8 @@ function RegisterTukang() {
 
     if (!password) {
       newErrors.password = "Kata sandi wajib diisi";
+    } else if (password.length < 8) {
+      newErrors.password = "Kata sandi minimal 8 karakter";
     }
 
     if (!confirmPassword) {
@@ -181,8 +184,30 @@ function RegisterTukang() {
       newErrors.confirmPassword = "Kata sandi dan konfirmasi kata sandi tidak cocok";
     }
 
-    if (yearsExp !== "" && Number(yearsExp) < 0) {
+    if (mainCategory === "Pilih kategori") {
+      newErrors.mainCategory = "Kategori utama wajib dipilih";
+    }
+
+    if (additionalSkills.length === 0) {
+      newErrors.additionalSkills = "Pilih minimal 1 keahlian tambahan";
+    }
+
+    if (yearsExp === "") {
+      newErrors.yearsExp = "Tahun pengalaman wajib diisi";
+    } else if (Number(yearsExp) < 0) {
       newErrors.yearsExp = "Tahun pengalaman tidak boleh kurang dari 0";
+    }
+
+    if (!jobDesc.trim()) {
+      newErrors.jobDesc = "Deskripsi pekerjaan wajib diisi";
+    }
+
+    if (!profilePhoto) {
+      newErrors.profilePhoto = "Foto profil wajib diunggah";
+    }
+
+    if (!ktpFile) {
+      newErrors.ktpFile = "Foto KTP wajib diunggah";
     }
 
     if (!consentCorrect) {
@@ -193,22 +218,66 @@ function RegisterTukang() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    };
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) {
+    const validation = validateForm();
+    if (!validation.isValid) {
+      const errorList = Object.values(validation.errors).map(err => `- ${err}`).join("\n");
+      alert("Pendaftaran gagal karena ada data yang belum sesuai:\n\n" + errorList);
       // Scroll to Section 1
       scrollToSection("profile");
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      const formData = new FormData();
+      formData.append("name", fullName);
+      formData.append("email", email);
+      formData.append("password", password);
+      formData.append("password_confirmation", confirmPassword);
+      formData.append("no_hp", phone);
+      formData.append("alamat", locationData.address || "");
+      formData.append("latitude", locationData.latitude || "");
+      formData.append("longitude", locationData.longitude || "");
+      formData.append("keahlian", mainCategory);
+      formData.append("keahlian_tambahan", additionalSkills.join(", "));
+      formData.append("tahun_pengalaman", yearsExp);
+      formData.append("deskripsi_pengalaman", jobDesc);
+      
+      if (profilePhoto) formData.append("foto_profil", profilePhoto);
+      if (ktpFile) formData.append("foto_ktp", ktpFile);
+      if (portfolioFile) formData.append("cv_portofolio", portfolioFile);
+
+      const response = await axios.post("http://localhost:8000/api/auth/tukang/register", formData, {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      console.log("Success:", response.data);
+      alert("Registrasi Tukang Berhasil! Silakan masuk (login).");
       setIsSubmitting(false);
-      navigate("/tukang/dashboard");
-    }, 2000);
+      navigate("/login"); // Sesuaikan dengan rute login lu
+    } catch (error) {
+      console.error("Registration Error:", error);
+      setIsSubmitting(false);
+      if (error.response && error.response.data && error.response.data.errors) {
+        // Tampilkan error validasi dari backend
+        const errorMessages = Object.values(error.response.data.errors).flat().join('\n');
+        alert("Gagal registrasi karena:\n" + errorMessages);
+      } else {
+        alert("Terjadi kesalahan saat menghubungi server.");
+      }
+    }
   };
 
   useEffect(() => {
