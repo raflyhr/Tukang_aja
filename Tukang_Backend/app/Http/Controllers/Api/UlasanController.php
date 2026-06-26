@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Pesanan;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Ulasan;
@@ -34,4 +35,60 @@ class UlasanController extends Controller
             'data_ulasan' => $ulasan
         ], 200);
     }
+
+   public function store(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'tukang_id' => 'required|exists:tukangs,id',
+        'pesanan_id' => 'required|exists:pesanans,id',
+        'rating' => 'required|integer|min:1|max:5',
+        'komentar' => 'nullable|string'
+    ]);
+
+    // Cek apakah pesanan ada dan sudah selesai
+    $pesanan = \App\Models\Pesanan::where('id', $request->pesanan_id)
+        ->where('user_id', $request->user_id)
+        ->where('tukang_id', $request->tukang_id)
+        ->where('status', 'selesai')
+        ->first();
+
+    if (!$pesanan) {
+        return response()->json([
+            'message' => 'Pesanan belum selesai atau tidak ditemukan.'
+        ], 400);
+    }
+
+    // Cegah ulasan ganda
+    $cek = Ulasan::where('pesanan_id', $request->pesanan_id)->first();
+
+    if ($cek) {
+        return response()->json([
+            'message' => 'Pesanan ini sudah diberi ulasan.'
+        ], 400);
+    }
+
+    // Simpan ulasan
+    $ulasan = Ulasan::create([
+        'user_id' => $request->user_id,
+        'tukang_id' => $request->tukang_id,
+        'pesanan_id' => $request->pesanan_id,
+        'rating' => $request->rating,
+        'komentar' => $request->komentar
+    ]);
+
+    // Update rating rata-rata tukang
+    $rata = Ulasan::where('tukang_id', $request->tukang_id)->avg('rating');
+
+    $tukang = Tukang::find($request->tukang_id);
+    $tukang->rating = round($rata, 2);
+    $tukang->save();
+
+    return response()->json([
+        'message' => 'Ulasan berhasil dikirim.',
+        'rating_tukang' => $tukang->rating,
+        'data' => $ulasan
+    ], 201);
+}
+
 }

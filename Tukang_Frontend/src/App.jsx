@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Home from "./pages/home";
+import Register from "./pages/register";
 import RegisterPelanggan from "./pages/registerPelanggan";
 import RegisterTukang from "./pages/registerTukang";
 import Login from "./pages/login";
@@ -9,6 +10,11 @@ import Pesanan from "./pelanggan/pesanan";
 import Chat from "./pelanggan/chat";
 import Pembayaran from "./pelanggan/pembayaran";
 import Profil from "./pelanggan/profil";
+import DetailPesanan from "./pelanggan/detail-pesanan";
+import ProfilTukang from "./pelanggan/profil-tukang";
+import PostingPekerjaan from "./pages/postingPekerjaan";
+import CheckoutPembayaran from "./pelanggan/checkout";
+import RiwayatLogin from "./pelanggan/riwayat-login";
 import TukangDashboard from "./tukang/dashboard";
 import TukangPesanan from "./tukang/pesanan";
 import TukangChat from "./tukang/chat";
@@ -31,6 +37,7 @@ function App() {
         <Route path="/" element={<Home />} />
 
         {/* Authentication & Onboarding */}
+        <Route path="/register" element={<Register />} />
         <Route path="/register-pelanggan" element={<RegisterPelanggan />} />
         <Route path="/register-tukang" element={<RegisterTukang />} />
         <Route path="/login" element={<Login />} />
@@ -41,6 +48,11 @@ function App() {
         <Route path="/pelanggan/chat" element={<Chat />} />
         <Route path="/pelanggan/pembayaran" element={<Pembayaran />} />
         <Route path="/pelanggan/profil" element={<Profil />} />
+        <Route path="/pelanggan/detail-pesanan" element={<DetailPesanan />} />
+        <Route path="/pelanggan/profil-tukang" element={<ProfilTukang />} />
+        <Route path="/posting-pekerjaan" element={<PostingPekerjaan />} />
+        <Route path="/pelanggan/checkout" element={<CheckoutPembayaran />} />
+        <Route path="/pelanggan/riwayat-login" element={<RiwayatLogin />} />
 
         {/* Tukang (Technician) Routes */}
         <Route path="/tukang/dashboard" element={<TukangDashboard />} />
