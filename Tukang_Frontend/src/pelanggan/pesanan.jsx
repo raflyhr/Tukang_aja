@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function Pesanan() {
   const navigate = useNavigate();
@@ -37,64 +38,21 @@ function Pesanan() {
     { id: "riwayat", label: "Riwayat" },
   ];
 
-  // State-managed orders list for inline updates (e.g. ratings)
-  const [orders, setOrders] = useState([
-    {
-      id: "ORD-2023-9812",
-      service: "Perbaikan Pipa Bocor - Darurat",
-      specialist: "Budi Santoso",
-      schedule: "Hari ini, 14:00 WIB",
-      status: "Dalam Perjalanan",
-      statusType: "proses",
-      cost: "Rp 250.000",
-      icon: "plumbing",
-      badge: "AKTIF",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB6yWPnddSoXxHicpYNBtHEB9FXwtpuTluaIkKfA2eKT4jdvEjy8C7RCg9K1NnouBaRsuUFpfOL_FUKN1Irzlwnw-7qoBxPKbIbJzM8LHYLbfBqF8s-Mks4p6Q-WMrNp6Zda5KPxHzwVy6DNRaSZ8v_qnF9NJPLHu6CcE6Z_ARUIJl-QCp6UCA1st-XSPbyVy_K3GpPJ8UCvhln7dm55FhSFi-VgaIFVFtaKKcZE55BMCu6TAxbvYpHGgdlo3HGEpWzGkdhRNk4Wl9e",
-    },
-    {
-      id: "ORD-2023-9805",
-      service: "Instalasi Panel Listrik Baru",
-      specialist: "Andi Wijaya",
-      schedule: "Besok, 09:00 WIB",
-      status: "Pengerjaan",
-      statusType: "proses",
-      cost: "Rp 1.200.000",
-      icon: "electrical_services",
-      badge: "AKTIF",
-    },
-    {
-      id: "ORD-2023-9790",
-      service: "Pengecatan Ruang Tamu",
-      specialist: "Hadi Pratama",
-      schedule: "Selesai pada 12 Nov 2023",
-      status: "Selesai",
-      statusType: "selesai",
-      cost: "Rp 850.000",
-      icon: "format_paint",
-      rating: 5,
-      comment: "Sangat rapi dan bersih!",
-    },
-    {
-      id: "ORD-2023-9755",
-      service: "Deep Cleaning Apartemen",
-      specialist: "Siti Aminah",
-      schedule: "Selesai pada 5 Nov 2023",
-      status: "Selesai",
-      statusType: "selesai",
-      cost: "Rp 450.000",
-      icon: "cleaning_services",
-    },
-    {
-      id: "ORD-2023-9730",
-      service: "Perbaikan Atap Bocor",
-      specialist: "Joko Susilo",
-      schedule: "Dibatalkan pada 1 Nov 2023",
-      status: "Dibatalkan",
-      statusType: "dibatalkan",
-      cost: "Rp 600.000",
-      icon: "roofing",
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    getPesanan();
+  }, []);
+
+  const getPesanan = async () => {
+    try {
+      const userId = localStorage.getItem("user_id");
+      const res = await axios.get(`http://127.0.0.1:8000/api/user/${userId}/pesanan`);
+      setOrders(res.data.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   // Open rating modal and initialize values
   const handleOpenRatingEdit = (order) => {
@@ -115,17 +73,21 @@ function Pesanan() {
     setActiveRatingEdit(null);
   };
 
-  // Dynamic filter and search logic (updated to check status as well)
+  // Dynamic filter and search logic
   const filteredOrders = orders.filter((order) => {
+    const status = order.status ? order.status.toLowerCase() : "";
+    
     const matchesFilter =
       activeFilter === "semua" ||
-      (activeFilter === "riwayat" && (order.statusType === "selesai" || order.statusType === "dibatalkan")) ||
-      order.statusType === activeFilter;
+      (activeFilter === "riwayat" && (status === "selesai" || status === "ditolak" || status === "dibatalkan")) ||
+      (activeFilter === "proses" && status !== "selesai" && status !== "ditolak" && status !== "dibatalkan");
+    
     const matchesSearch =
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.specialist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.status.toLowerCase().includes(searchQuery.toLowerCase());
+      (order.id && order.id.toString().toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (order.deskripsi_masalah && order.deskripsi_masalah.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (order.tukang?.nama && order.tukang.nama.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      status.includes(searchQuery.toLowerCase());
+      
     return matchesFilter && matchesSearch;
   });
 
@@ -315,8 +277,8 @@ function Pesanan() {
           <div className="space-y-6">
             {displayedOrders.length > 0 ? (
               displayedOrders.map((order) => {
-                const isProses = order.statusType === "proses";
-                const isSelesai = order.statusType === "selesai";
+                const statusStr = order.status ? order.status.toLowerCase() : "";
+                const isSelesai = statusStr === "selesai";
 
                 return (
                   <div
@@ -331,7 +293,7 @@ function Pesanan() {
                       <div className="flex items-start gap-4">
                         <div className="w-16 h-16 rounded-xl bg-surface-container-highest flex items-center justify-center text-secondary shrink-0">
                           <span className="material-symbols-outlined text-[32px]">
-                            {order.icon}
+                            {order.icon || "handyman"}
                           </span>
                         </div>
                         <div>
@@ -346,23 +308,23 @@ function Pesanan() {
                             </span>
                           </div>
                           <h3 className="font-bold text-lg text-on-surface">
-                            {order.service}
+                            {order.deskripsi_masalah || order.service || "Pekerjaan Jasa"}
                           </h3>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-on-surface-variant">
                             {/* Specialist Link (Avatar & Name) */}
                             <span 
-                              onClick={() => navigate('/pelanggan/profil-tukang', { state: { specialistName: order.specialist } })}
+                              onClick={() => navigate('/pelanggan/profil-tukang', { state: { specialistName: order.tukang?.nama } })}
                               className="flex items-center gap-1.5 font-medium cursor-pointer hover:text-secondary group transition-colors"
                             >
                               <div className="w-5 h-5 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                                 <img
                                   className="w-full h-full object-cover"
-                                  alt={order.specialist}
+                                  alt={order.tukang?.nama || "Tukang"}
                                   src={order.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80&auto=format&fit=crop"}
                                 />
                               </div>
                               <span className="text-on-surface group-hover:text-secondary transition-colors">
-                                {order.specialist}
+                                {order.tukang?.nama || order.specialist || "Mitra Tukang"}
                               </span>
                             </span>
                             <span className="text-outline-variant hidden md:inline">
@@ -373,7 +335,7 @@ function Pesanan() {
                                 schedule
                               </span>
                               <span className="text-on-surface">
-                                {order.schedule}
+                                {order.created_at ? new Date(order.created_at).toLocaleDateString("id-ID") : "Tanggal tidak diketahui"}
                               </span>
                             </span>
                           </div>
@@ -390,19 +352,19 @@ function Pesanan() {
                             onClick={() => setActiveTimeline(order)}
                             title="Klik untuk lihat timeline pengerjaan"
                             className={`font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:scale-[1.03] transition-all ${
-                              order.status === "Dalam Perjalanan"
+                              statusStr === "dalam perjalanan"
                                 ? "bg-primary-container/20 text-primary"
-                                : order.status === "Pengerjaan"
+                                : statusStr === "pengerjaan"
                                   ? "bg-on-tertiary-fixed-variant/50 text-tertiary"
-                                  : order.status === "Dibatalkan"
+                                  : statusStr === "dibatalkan" || statusStr === "ditolak"
                                     ? "bg-red-500/10 text-red-400"
                                     : "bg-green-500/10 text-green-400"
                             }`}
                           >
-                            {order.status === "Dalam Perjalanan" && (
+                            {statusStr === "dalam perjalanan" && (
                               <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                             )}
-                            {order.status}
+                            {order.status || "Pending"}
                           </span>
                         </div>
                         <div className="md:text-right">
@@ -412,7 +374,7 @@ function Pesanan() {
                           <p
                             className={`font-bold text-xl ${isSelesai ? "text-on-surface" : "text-secondary"}`}
                           >
-                            {order.cost}
+                            {`Rp ${order.harga_penawaran ?? order.cost ?? 0}`}
                           </p>
                         </div>
                       </div>
@@ -422,7 +384,7 @@ function Pesanan() {
                     <div className="mt-6 pt-6 border-t border-surface-container-highest flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       {order.rating ? (
                         <div 
-                          onClick={() => order.statusType === 'selesai' && handleOpenRatingEdit(order)}
+                          onClick={() => isSelesai && handleOpenRatingEdit(order)}
                           className="flex flex-wrap items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity"
                           title="Klik untuk ubah rating"
                         >
@@ -464,7 +426,7 @@ function Pesanan() {
                             >
                               <img
                                 className="w-full h-full object-cover"
-                                alt="Plumbing preview"
+                                alt="Preview"
                                 src={order.image}
                               />
                             </div>
@@ -482,7 +444,7 @@ function Pesanan() {
                               Invoice
                             </button>
                             <button 
-                              onClick={() => navigate('/posting-pekerjaan', { state: { prefillService: order.service } })}
+                              onClick={() => navigate('/posting-pekerjaan', { state: { prefillService: order.deskripsi_masalah } })}
                               className="px-4 py-2 text-xs rounded-xl bg-surface-container-highest text-on-surface font-bold hover:brightness-110 transition-all cursor-pointer"
                             >
                               Pesan Lagi
@@ -491,7 +453,7 @@ function Pesanan() {
                         ) : (
                           <>
                             <button 
-                              onClick={() => navigate('/pelanggan/chat', { state: { orderId: order.id, specialistId: order.specialist } })}
+                              onClick={() => navigate('/pelanggan/chat', { state: { orderId: order.id, specialistId: order.tukang?.id } })}
                               className="px-4 py-2 text-xs rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all flex items-center gap-1.5 font-bold cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-sm">
@@ -585,8 +547,8 @@ function Pesanan() {
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <h4 className="font-extrabold text-sm text-secondary uppercase">TukangAja Invoice</h4>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">Invoice No: INV/2023/{activeInvoice.id.split("-")[2]}</p>
-                  <p className="text-[10px] text-on-surface-variant">Tanggal: {activeInvoice.schedule.replace("Selesai pada ", "")}</p>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">Invoice No: INV/2023/{activeInvoice.id.toString().split("-")[2] || activeInvoice.id}</p>
+                  <p className="text-[10px] text-on-surface-variant">Tanggal: {activeInvoice.created_at ? new Date(activeInvoice.created_at).toLocaleDateString("id-ID") : "Tanggal tidak diketahui"}</p>
                 </div>
                 <div className="text-right">
                   <span className="bg-green-500/10 border border-green-500/20 text-green-400 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
@@ -599,13 +561,13 @@ function Pesanan() {
               <div className="grid grid-cols-2 gap-4 pb-4 border-b border-surface-variant/10">
                 <div>
                   <p className="text-[10px] text-on-surface-variant font-medium">Ditagih Ke:</p>
-                  <p className="font-bold text-on-surface mt-1">Reze</p>
-                  <p className="text-[10px] text-on-surface-variant">chaostknight483@gmail.com</p>
-                  <p className="text-[10px] text-on-surface-variant">Jakarta, Indonesia</p>
+                  <p className="font-bold text-on-surface mt-1">Pelanggan</p>
+                  <p className="text-[10px] text-on-surface-variant">ID: {localStorage.getItem("user_id")}</p>
+                  <p className="text-[10px] text-on-surface-variant">Indonesia</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-on-surface-variant font-medium">Penyedia Jasa:</p>
-                  <p className="font-bold text-on-surface mt-1">{activeInvoice.specialist}</p>
+                  <p className="font-bold text-on-surface mt-1">{activeInvoice.tukang?.nama || activeInvoice.specialist}</p>
                   <p className="text-[10px] text-on-surface-variant">Mitra Terverifikasi TukangAja</p>
                 </div>
               </div>
@@ -615,26 +577,19 @@ function Pesanan() {
                 <p className="text-[10px] text-on-surface-variant font-medium">Rincian Pekerjaan:</p>
                 <div className="bg-surface-container-high/40 rounded-xl p-4 border border-outline-variant/15 space-y-2">
                   <div className="flex justify-between items-center text-on-surface">
-                    <span>{activeInvoice.service}</span>
-                    <span className="font-bold">{activeInvoice.cost}</span>
+                    <span>{activeInvoice.deskripsi_masalah || activeInvoice.service}</span>
+                    <span className="font-bold">{activeInvoice.harga_penawaran ?? activeInvoice.cost}</span>
                   </div>
                   <div className="flex justify-between items-center text-[10px] text-on-surface-variant">
                     <span>Biaya Layanan & Administrasi</span>
                     <span>Rp 10.000</span>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] text-on-surface-variant pb-2 border-b border-surface-variant/10">
-                    <span>PPN (11%)</span>
-                    <span>
-                      {"Rp " + (Math.round((parseInt(activeInvoice.cost.replace(/[^0-9]/g, "")) || 0) * 0.11)).toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-1 font-extrabold text-sm">
-                    <span className="text-on-surface">Total</span>
+                  <div className="flex justify-between items-center pt-1 font-extrabold text-sm border-t border-surface-variant/10 mt-2">
+                    <span className="text-on-surface">Total Biaya</span>
                     <span className="text-secondary">
                       {"Rp " + (
-                        (parseInt(activeInvoice.cost.replace(/[^0-9]/g, "")) || 0) + 
-                        10000 + 
-                        Math.round((parseInt(activeInvoice.cost.replace(/[^0-9]/g, "")) || 0) * 0.11)
+                        (parseInt((activeInvoice.harga_penawaran?.toString() || activeInvoice.cost?.toString() || "0").replace(/[^0-9]/g, "")) || 0) + 
+                        10000 
                       ).toLocaleString("id-ID")}
                     </span>
                   </div>
@@ -704,84 +659,7 @@ function Pesanan() {
                   </div>
                   <div>
                     <h5 className="font-bold text-on-surface text-xs">Tukang Ditugaskan</h5>
-                    <p className="text-[10px] text-on-surface-variant/80 mt-0.5">Mitra {activeTimeline.specialist} ditugaskan untuk keluhan Anda.</p>
-                  </div>
-                </div>
-
-                {/* Step 3 (Conditional Highlight based on status) */}
-                <div className="relative">
-                  <div className={`absolute -left-[31px] w-4 h-4 rounded-full border-4 flex items-center justify-center z-10 ${
-                    activeTimeline.status === "Dalam Perjalanan" || activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai"
-                      ? "bg-secondary border-background"
-                      : activeTimeline.status === "Dibatalkan"
-                        ? "bg-red-500/20 border-red-500"
-                        : "bg-surface-container border-outline-variant/30"
-                  }`}>
-                    {activeTimeline.status === "Dibatalkan" ? (
-                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
-                    ) : (
-                      (activeTimeline.status === "Dalam Perjalanan" || activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai") && (
-                        <span className="w-1.5 h-1.5 bg-background rounded-full"></span>
-                      )
-                    )}
-                  </div>
-                  <div>
-                    <h5 className={`font-bold text-xs ${
-                      activeTimeline.status === "Dibatalkan"
-                        ? "text-red-400"
-                        : activeTimeline.status === "Dalam Perjalanan" || activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai"
-                          ? "text-on-surface"
-                          : "text-on-surface-variant/40"
-                    }`}>
-                      {activeTimeline.status === "Dibatalkan" ? "Pesanan Dibatalkan" : "Dalam Perjalanan"}
-                    </h5>
-                    <p className="text-[10px] text-on-surface-variant/80 mt-0.5">
-                      {activeTimeline.status === "Dibatalkan" 
-                        ? "Pesanan telah dibatalkan oleh pengguna / mitra." 
-                        : `Mitra ${activeTimeline.specialist} sedang dalam perjalanan menuju lokasi.`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 4 */}
-                <div className="relative">
-                  <div className={`absolute -left-[31px] w-4 h-4 rounded-full border-4 flex items-center justify-center z-10 ${
-                    !activeTimeline.status.includes("Batal") && (activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai")
-                      ? "bg-secondary border-background"
-                      : "bg-surface-container border-outline-variant/30"
-                  }`}>
-                    {!activeTimeline.status.includes("Batal") && (activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai") && (
-                      <span className="w-1.5 h-1.5 bg-background rounded-full"></span>
-                    )}
-                  </div>
-                  <div>
-                    <h5 className={`font-bold text-xs ${
-                      !activeTimeline.status.includes("Batal") && (activeTimeline.status === "Pengerjaan" || activeTimeline.status === "Selesai")
-                        ? "text-on-surface"
-                        : "text-on-surface-variant/40"
-                    }`}>
-                      Pengerjaan
-                    </h5>
-                    <p className="text-[10px] text-on-surface-variant/80 mt-0.5">Perbaikan kerusakan sedang dikerjakan secara langsung oleh mitra.</p>
-                  </div>
-                </div>
-
-                {/* Step 5 */}
-                <div className="relative">
-                  <div className={`absolute -left-[31px] w-4 h-4 rounded-full border-4 flex items-center justify-center z-10 ${
-                    activeTimeline.status === "Selesai"
-                      ? "bg-secondary border-background"
-                      : "bg-surface-container border-outline-variant/30"
-                  }`}>
-                    {activeTimeline.status === "Selesai" && (
-                      <span className="w-1.5 h-1.5 bg-background rounded-full"></span>
-                    )}
-                  </div>
-                  <div>
-                    <h5 className={`font-bold text-xs ${activeTimeline.status === "Selesai" ? "text-on-surface" : "text-on-surface-variant/40"}`}>
-                      Selesai
-                    </h5>
-                    <p className="text-[10px] text-on-surface-variant/80 mt-0.5">Pekerjaan diselesaikan dengan baik dan invoice diterbitkan.</p>
+                    <p className="text-[10px] text-on-surface-variant/80 mt-0.5">Mitra {activeTimeline.tukang?.nama || activeTimeline.specialist} ditugaskan untuk keluhan Anda.</p>
                   </div>
                 </div>
               </div>

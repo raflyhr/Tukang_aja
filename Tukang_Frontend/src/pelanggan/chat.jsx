@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import axios from "axios";
 
 function Chat() {
   const navigate = useNavigate();
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -11,6 +13,9 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+const [rating, setRating] = useState(5);
+const [ulasan, setUlasan] = useState("");
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -38,6 +43,36 @@ function Chat() {
     setMessages([...messages, newMsg]);
     setInputText("");
   };
+
+const kirimRating = async () => {
+    try {
+        const response = await axios.post(
+            "http://127.0.0.1:8000/api/ulasan",
+            {
+                user_id: 1,
+    pesanan_id: 1,
+    rating: rating,
+    komentar: ulasan,
+    tukang_id: 1,
+            }
+        );
+
+        alert(response.data.message);
+
+        setShowRatingModal(false);
+        setRating(5);
+        setUlasan("");
+
+        navigate("/pelanggan/dashboard");
+
+    } catch (error) {
+    console.log(error);
+    console.log(error.response);
+    console.log(error.response?.data);
+
+    alert(JSON.stringify(error.response?.data));
+}
+};
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -182,7 +217,13 @@ function Chat() {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveFilter(tab.id)}
+                      onClick={() => {
+    setActiveFilter(tab.id);
+
+    if (tab.id === "selesai") {
+        setShowRatingModal(true);
+    }
+}}
                       className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
                         isActive
                           ? "bg-secondary/15 text-secondary border-secondary/20"
@@ -316,6 +357,56 @@ function Chat() {
         <div className="absolute -top-[10%] -left-[5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[10%] right-[0%] w-[30%] h-[30%] bg-secondary/5 rounded-full blur-[120px]"></div>
       </div>
+
+              {showRatingModal && (
+<div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="bg-surface-container p-6 rounded-xl w-[420px]">
+
+        <h2 className="text-xl font-bold mb-4">
+            Beri Penilaian
+        </h2>
+
+        <select
+            className="w-full border p-2 rounded mb-4"
+            value={rating}
+            onChange={(e)=>setRating(e.target.value)}
+        >
+            <option value="5">⭐⭐⭐⭐⭐</option>
+            <option value="4">⭐⭐⭐⭐</option>
+            <option value="3">⭐⭐⭐</option>
+            <option value="2">⭐⭐</option>
+            <option value="1">⭐</option>
+        </select>
+
+        <textarea
+            className="w-full border rounded p-2"
+            rows="4"
+            placeholder="Tulis ulasan..."
+            value={ulasan}
+            onChange={(e)=>setUlasan(e.target.value)}
+        />
+
+        <div className="flex justify-end gap-3 mt-4">
+
+            <button
+                onClick={()=>setShowRatingModal(false)}
+                className="px-4 py-2 rounded bg-gray-500"
+            >
+                Batal
+            </button>
+
+            <button
+                onClick={kirimRating}
+                className="px-4 py-2 rounded bg-orange-500"
+            >
+                Kirim
+            </button>
+
+        </div>
+
+    </div>
+</div>
+)}
 
       <LogoutModal 
         isOpen={isLogoutModalOpen} 
