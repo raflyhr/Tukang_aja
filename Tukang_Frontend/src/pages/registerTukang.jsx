@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import GoogleMapPicker from "../components/GoogleMapPicker";
+import LeafletMapPicker from "../components/LeafletMapPicker";
 
 const AVAILABLE_SKILLS = [
   "Anti Bocor",
@@ -668,10 +668,14 @@ function RegisterTukang() {
                           Alamat Domisili
                         </label>
                         <div className="relative">
-                          <GoogleMapPicker
-                            onLocationChange={(location) => {
-                              setLocationData(location);
-                              console.log(location);
+                          <LeafletMapPicker 
+                            onLocationSelect={(data) => {
+                              setLocationData({
+                                address: data.address,
+                                latitude: data.latitude,
+                                longitude: data.longitude
+                              });
+                              setErrors(prev => ({ ...prev, address: null }));
                             }}
                           />
                           <div className="mt-3 rounded-lg bg-surface-container-high p-3 border border-outline-variant">
