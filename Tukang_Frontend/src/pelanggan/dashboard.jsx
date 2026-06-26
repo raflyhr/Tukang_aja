@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import axios from "axios";
+import { useEffect} from "react";
 
 function Dashboard() {
+  const [tukangs, setTukangs] = useState([]);
+const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -37,6 +41,22 @@ function Dashboard() {
   const [bookingTime, setBookingTime] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("QRIS");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+  useEffect(() => {
+    getTukangs();
+}, []);
+
+  const getTukangs = async () => {
+    try {
+        const res = await axios.get("http://127.0.0.1:8000/api/tukang");
+
+        setTukangs(res.data.data);
+    } catch (err) {
+        console.log(err);
+    } finally {
+        setLoading(false);
+    }
+};
 
   // Active Orders (simulated state)
   const [activeOrders, setActiveOrders] = useState([

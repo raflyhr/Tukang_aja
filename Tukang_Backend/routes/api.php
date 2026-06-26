@@ -49,4 +49,4 @@ Route::get('/tukang/{id}/riwayat-tarik', [PenarikanController::class, 'getRiwaya
 Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
 Route::post('/ulasan', [UlasanController::class,'store']);
 
-
+Route::post('/pesanan', [PesananController::class, 'store']);
