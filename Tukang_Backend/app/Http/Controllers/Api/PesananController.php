@@ -116,4 +116,17 @@ class PesananController extends Controller
     ], 201);
 }
 
+public function getPesananUser($id)
+{
+    $pesanan = Pesanan::with('tukang')
+        ->where('user_id', $id)
+        ->latest()
+        ->get();
+
+    return response()->json([
+        'status' => 'Sukses',
+        'data' => $pesanan
+    ]);
+}
+
 }

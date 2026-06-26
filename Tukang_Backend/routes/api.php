@@ -50,3 +50,4 @@ Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
 Route::post('/ulasan', [UlasanController::class,'store']);
 
 Route::post('/pesanan', [PesananController::class, 'store']);
+Route::get('/user/{id}/pesanan', [PesananController::class, 'getPesananUser']);

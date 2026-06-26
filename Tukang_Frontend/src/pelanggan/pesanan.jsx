@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function Pesanan() {
   const navigate = useNavigate();
@@ -24,75 +25,36 @@ function Pesanan() {
     { id: "riwayat", label: "Riwayat" },
   ];
 
-  const ordersData = [
-    {
-      id: "ORD-2023-9812",
-      service: "Perbaikan Pipa Bocor - Darurat",
-      specialist: "Budi Santoso",
-      schedule: "Hari ini, 14:00 WIB",
-      status: "Dalam Perjalanan",
-      statusType: "proses",
-      cost: "Rp 250.000",
-      icon: "plumbing",
-      badge: "AKTIF",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB6yWPnddSoXxHicpYNBtHEB9FXwtpuTluaIkKfA2eKT4jdvEjy8C7RCg9K1NnouBaRsuUFpfOL_FUKN1Irzlwnw-7qoBxPKbIbJzM8LHYLbfBqF8s-Mks4p6Q-WMrNp6Zda5KPxHzwVy6DNRaSZ8v_qnF9NJPLHu6CcE6Z_ARUIJl-QCp6UCA1st-XSPbyVy_K3GpPJ8UCvhln7dm55FhSFi-VgaIFVFtaKKcZE55BMCu6TAxbvYpHGgdlo3HGEpWzGkdhRNk4Wl9e",
-    },
-    {
-      id: "ORD-2023-9805",
-      service: "Instalasi Panel Listrik Baru",
-      specialist: "Andi Wijaya",
-      schedule: "Besok, 09:00 WIB",
-      status: "Pengerjaan",
-      statusType: "proses",
-      cost: "Rp 1.200.000",
-      icon: "electrical_services",
-      badge: "AKTIF",
-    },
-    {
-      id: "ORD-2023-9790",
-      service: "Pengecatan Ruang Tamu",
-      specialist: "Hadi Pratama",
-      schedule: "Selesai pada 12 Nov 2023",
-      status: "Selesai",
-      statusType: "selesai",
-      cost: "Rp 850.000",
-      icon: "format_paint",
-      rating: 5,
-      comment: "Sangat rapi dan bersih!",
-    },
-    {
-      id: "ORD-2023-9755",
-      service: "Deep Cleaning Apartemen",
-      specialist: "Siti Aminah",
-      schedule: "Selesai pada 5 Nov 2023",
-      status: "Selesai",
-      statusType: "selesai",
-      cost: "Rp 450.000",
-      icon: "cleaning_services",
-    },
-    {
-      id: "ORD-2023-9730",
-      service: "Perbaikan Atap Bocor",
-      specialist: "Joko Susilo",
-      schedule: "Dibatalkan pada 1 Nov 2023",
-      status: "Dibatalkan",
-      statusType: "dibatalkan",
-      cost: "Rp 600.000",
-      icon: "roofing",
-    },
-  ];
+  useEffect(() => {
+    getPesanan();
+}, []);
+
+const getPesanan = async () => {
+    try {
+        const userId = localStorage.getItem("user_id");
+
+        const res = await axios.get(
+            `http://127.0.0.1:8000/api/user/${userId}/pesanan`
+        );
+
+        setOrdersData(res.data.data);
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+  const [ordersData, setOrdersData] = useState([]);
 
   // Dynamic filter and search logic
   const filteredOrders = ordersData.filter((order) => {
     const matchesFilter =
-      activeFilter === "semua" ||
-      (activeFilter === "riwayat" && (order.statusType === "selesai" || order.statusType === "dibatalkan")) ||
-      order.statusType === activeFilter;
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.specialist.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    activeFilter === "semua" ||
+    (activeFilter === "riwayat" &&
+        (order.status === "selesai" ||
+         order.status === "ditolak")) ||
+    (activeFilter === "proses" &&
+        order.status !== "selesai" &&
+        order.status !== "ditolak");
   });
 
   return (
@@ -306,7 +268,7 @@ function Pesanan() {
                             </span>
                           </div>
                           <h3 className="font-bold text-lg text-on-surface">
-                            {order.service}
+                            {order.deskripsi_masalah}
                           </h3>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-on-surface-variant">
                             <span className="flex items-center gap-1.5 font-medium">
@@ -314,7 +276,7 @@ function Pesanan() {
                                 person
                               </span>
                               <span className="text-on-surface">
-                                {order.specialist}
+                                {order.tukang?.nama}
                               </span>
                             </span>
                             <span className="text-outline-variant hidden md:inline">
@@ -325,7 +287,7 @@ function Pesanan() {
                                 schedule
                               </span>
                               <span className="text-on-surface">
-                                {order.schedule}
+                                {new Date(order.created_at).toLocaleDateString("id-ID")}
                               </span>
                             </span>
                           </div>
@@ -359,7 +321,7 @@ function Pesanan() {
                           <p
                             className={`font-bold text-xl ${isSelesai ? "text-on-surface" : "text-secondary"}`}
                           >
-                            {order.cost}
+                            {`Rp ${order.harga_penawaran ?? 0}`}
                           </p>
                         </div>
                       </div>
