@@ -10,10 +10,29 @@ class TukangController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        //
+    public function index(Request $request)
+{
+    $query = \App\Models\Tukang::query();
+
+    if ($request->has('alamat')) {
+        $query->where('alamat', 'like', '%' . $request->alamat . '%');
     }
+
+    if ($request->has('rating')) {
+        $query->where('rating', '>=', $request->rating);
+    }
+
+    if ($request->has('sort') && $request->sort == 'rating') {
+        $query->orderBy('rating', 'desc');
+    }
+
+    $tukang = $query->get();
+
+    return response()->json([
+        'status' => 'Sukses',
+        'data' => $tukang
+    ]);
+}
 
     /**
      * Store a newly created resource in storage.
@@ -27,9 +46,25 @@ class TukangController extends Controller
      * Display the specified resource.
      */
     public function show(string $id)
-    {
-        //
+{
+    $tukang = \App\Models\Tukang::with([
+        'user',
+        'ulasans',
+        'portofolios'
+    ])->find($id);
+
+    if (!$tukang) {
+        return response()->json([
+            'message' => 'Tukang tidak ditemukan'
+        ], 404);
     }
+
+    return response()->json([
+        'status' => 'Sukses',
+        'data' => $tukang
+    ]);
+}
+
 
     /**
      * Update the specified resource in storage.

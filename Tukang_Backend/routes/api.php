@@ -26,6 +26,8 @@ Route::get('/user', function (Request $request) {
 
 // Rute buat ganti status Tukang
 Route::put('/tukang/{id}/status', [TukangController::class, 'update']);
+Route::get('/tukang', [TukangController::class, 'index']);
+Route::get('/tukang/{id}', [TukangController::class, 'show']);
 
 // --- Rute Fitur Pesanan untuk Tukang ---
 Route::get('/tukang/{id}/pesanan', [PesananController::class, 'getPesananTukang']);
@@ -43,3 +45,8 @@ Route::get('/tukang/{id}/portofolio', [PortofolioController::class, 'getPortofol
 // --- Rute Fitur Dompet (Penarikan Dana) ---
 Route::post('/tukang/{id}/tarik-dana', [PenarikanController::class, 'tarikDana']);
 Route::get('/tukang/{id}/riwayat-tarik', [PenarikanController::class, 'getRiwayatPenarikan']);
+
+Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
+Route::post('/ulasan', [UlasanController::class,'store']);
+
+
