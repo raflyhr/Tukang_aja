@@ -59,18 +59,18 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'keahlian' => 'required|string',
-            'alamat' => 'nullable|string',
+            'alamat' => 'required|string',
             // Field tambahan 
             'keahlian_tambahan' => 'required|string',
             'tahun_pengalaman' => 'required|integer|min:0',
             'deskripsi_pengalaman' => 'required|string',
-            // Lokasi 
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-            // Upload file 
+            // Lokasi (otomatis dari peta, bukan diketik user)
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            // Upload file (semua wajib diisi saat register)
             'foto_profil' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'foto_ktp' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'cv_portofolio' => 'file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'foto_ktp' => 'required|file|mimes:pdf|max:5120',
+            'cv_portofolio' => 'required|file|mimes:pdf|max:5120',
         ]);
 
         // 1. Bikin akun User (buat login)

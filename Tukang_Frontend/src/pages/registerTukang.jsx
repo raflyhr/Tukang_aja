@@ -22,6 +22,11 @@ function RegisterTukang() {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState("profile");
   
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState(""); // "success" | "error"
+  const [showToast, setShowToast] = useState(false);
+  
   // Personal Info State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -105,42 +110,36 @@ function RegisterTukang() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf") {
+      setErrors(prev => ({ ...prev, ktpFile: "Format KTP wajib PDF" }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, ktpFile: null }));
+
     setKtpFile(file);
     setKtpDetails({
       name: file.name,
       size: (file.size / 1024).toFixed(1) + " KB"
     });
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setKtpPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setKtpPreview("");
-    }
+    setKtpPreview("");
   };
 
   const handlePortfolioFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf") {
+      setErrors(prev => ({ ...prev, portfolioFile: "Format CV/Portofolio wajib PDF" }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, portfolioFile: null }));
+
     setPortfolioFile(file);
     setPortfolioDetails({
       name: file.name,
       size: (file.size / 1024).toFixed(1) + " KB"
     });
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPortfolioPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPortfolioPreview("");
-    }
+    setPortfolioPreview("");
   };
 
   const handleToggleSkill = (skill) => {
@@ -210,6 +209,14 @@ function RegisterTukang() {
       newErrors.ktpFile = "Foto KTP wajib diunggah";
     }
 
+    if (!portfolioFile) {
+      newErrors.portfolioFile = "CV/Portofolio wajib diunggah";
+    }
+
+    if (!locationData.address || !locationData.latitude || !locationData.longitude) {
+      newErrors.address = "Alamat dan titik lokasi di peta wajib diisi";
+    }
+
     if (!consentCorrect) {
       newErrors.consentCorrect = "Anda harus menyetujui pernyataan kebenaran data";
     }
@@ -228,8 +235,11 @@ function RegisterTukang() {
     e.preventDefault();
     const validation = validateForm();
     if (!validation.isValid) {
-      const errorList = Object.values(validation.errors).map(err => `- ${err}`).join("\n");
-      alert("Pendaftaran gagal karena ada data yang belum sesuai:\n\n" + errorList);
+      setToastType("error");
+      setToastMessage("Tolong lengkapi persyaratan terlebih dahulu.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+      
       // Scroll to Section 1
       scrollToSection("profile");
       return;
@@ -264,19 +274,26 @@ function RegisterTukang() {
       });
 
       console.log("Success:", response.data);
-      alert("Registrasi Tukang Berhasil! Silakan masuk (login).");
+      setToastType("success");
+      setToastMessage("Registrasi Tukang Berhasil! Silakan masuk (login).");
+      setShowToast(true);
       setIsSubmitting(false);
-      navigate("/login"); // Sesuaikan dengan rute login lu
+      
+      setTimeout(() => {
+        setShowToast(false);
+        navigate("/login");
+      }, 2000);
     } catch (error) {
       console.error("Registration Error:", error);
       setIsSubmitting(false);
+      setToastType("error");
       if (error.response && error.response.data && error.response.data.errors) {
-        // Tampilkan error validasi dari backend
-        const errorMessages = Object.values(error.response.data.errors).flat().join('\n');
-        alert("Gagal registrasi karena:\n" + errorMessages);
+        setToastMessage("Gagal registrasi: Cek kembali data Anda.");
       } else {
-        alert("Terjadi kesalahan saat menghubungi server.");
+        setToastMessage("Terjadi kesalahan saat menghubungi server.");
       }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
     }
   };
 
@@ -357,7 +374,21 @@ function RegisterTukang() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col font-sans select-none custom-scrollbar">
+    <div className="bg-surface text-on-surface min-h-screen flex flex-col font-sans select-none custom-scrollbar relative">
+      {/* Toast Notification Bar */}
+      {showToast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+          toastType === "success" 
+            ? "bg-secondary text-on-secondary" 
+            : "bg-red-500/10 border border-red-500/30 text-red-400 backdrop-blur-md"
+        }`}>
+          <span className="material-symbols-outlined">
+            {toastType === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="text-sm font-bold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* TopNavBar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 shadow-sm h-20 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
         <div className="flex items-center gap-4">
@@ -669,7 +700,7 @@ function RegisterTukang() {
                         </label>
                         <div className="relative">
                           <LeafletMapPicker 
-                            onLocationSelect={(data) => {
+                            onLocationChange={(data) => {
                               setLocationData({
                                 address: data.address,
                                 latitude: data.latitude,
@@ -870,6 +901,7 @@ function RegisterTukang() {
                     <input
                       ref={ktpInputRef}
                       type="file"
+                      accept="application/pdf"
                       onChange={handleKtpFileChange}
                       className="hidden"
                     />
@@ -904,7 +936,7 @@ function RegisterTukang() {
                         </div>
                       ) : (
                         <p className="text-xs text-on-surface-variant">
-                          Scan atau foto KTP berkualitas tinggi
+                          Unggah file KTP dalam format PDF (Max 5MB)
                         </p>
                       )}
                     </div>
@@ -921,6 +953,7 @@ function RegisterTukang() {
                     <input
                       ref={portfolioInputRef}
                       type="file"
+                      accept="application/pdf"
                       onChange={handlePortfolioFileChange}
                       className="hidden"
                     />
@@ -955,8 +988,7 @@ function RegisterTukang() {
                         </div>
                       ) : (
                         <p className="text-xs text-on-surface-variant">
-                          Unggah CV atau contoh pekerjaan yang pernah Anda
-                          kerjakan
+                          Unggah CV/Portofolio format PDF (Max 5MB)
                         </p>
                       )}
                     </div>
