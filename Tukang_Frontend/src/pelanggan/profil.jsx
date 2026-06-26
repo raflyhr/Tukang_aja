@@ -1,35 +1,72 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import LeafletMapPicker from "../components/LeafletMapPicker";
+import LogoutModal from "../components/LogoutModal";
 
 function Profil() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  
+  // Sidebar open/close
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // Logout Modal State
+  // Logout modal state
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Profile data state
-  const [profileData, setProfileData] = useState({
+  // Toast Notification State
+  const [toasts, setToasts] = useState([]);
+  
+  const showToast = (message, type = "success") => {
+    const id = Date.now().toString() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  };
+
+  // Initial user data for change detection
+  const initialData = {
     fullName: "Reze",
     email: "chaostknight483@gmail.com",
     phone: "0812 3456 7890",
     primaryAddress: "Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan, 12190",
-  });
+  };
 
-  // Saved Addresses State
+  // Profile data states
+  const [profileData, setProfileData] = useState({ ...initialData });
+  const [profilePic, setProfilePic] = useState("https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg");
+
+  // Saved Addresses State (with Coordinates)
   const [addresses, setAddresses] = useState([
-    { id: 1, label: "Rumah Utama", details: "Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan, 12190", isPrimary: true },
-    { id: 2, label: "Kantor", details: "Pacific Century Place Lt. 15, SCBD Lot 10, Jl. Jend. Sudirman, Jakarta Pusat, 12190", isPrimary: false },
+    { id: 1, label: "Rumah Utama", details: "Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan, 12190", lat: -6.2244, lng: 106.8086, isPrimary: true },
+    { id: 2, label: "Kantor", details: "Pacific Century Place Lt. 15, SCBD Lot 10, Jl. Jend. Sudirman, Jakarta Pusat, 12190", lat: -6.2231, lng: 106.8094, isPrimary: false },
   ]);
 
-  // Form states for adding/editing address
-  const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
-  const [editingAddressId, setEditingAddressId] = useState(null);
+  // Modal toggle states
+  const [isFullscreenPicOpen, setIsFullscreenPicOpen] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropZoom, setCropZoom] = useState(1);
+  
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordFields, setPasswordFields] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+
+  const [otpVerificationState, setOtpVerificationState] = useState(null); // null | { type: "email" | "phone", value: string, code: string }
+  const [pendingProfileUpdates, setPendingProfileUpdates] = useState(null);
+
+  // Address edit modal state
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [selectedAddressForDelete, setSelectedAddressForDelete] = useState(null); // addr object or null
   const [addressLabel, setAddressLabel] = useState("");
   const [addressDetails, setAddressDetails] = useState("");
+  const [addressCoords, setAddressCoords] = useState({ lat: -6.2088, lng: 106.8456 });
+  const [editingAddressId, setEditingAddressId] = useState(null);
+
+  // Delete Account multi-step flow
+  const [deleteAccountStep, setDeleteAccountStep] = useState(0); // 0 = closed, 1 = confirm password, 2 = confirm OTP, 3 = final double-confirm
+  const [deletePasswordInput, setDeletePasswordInput] = useState("");
+  const [deleteOtpInput, setDeleteOtpInput] = useState("");
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -39,67 +76,282 @@ function Profil() {
     { id: "profil", label: "Profil", icon: "person", path: "/pelanggan/profil", active: true },
   ];
 
-  const handleLogout = () => {
-    // Redirect to Landing Page
-    navigate("/");
+  // 1. Profile Picture upload trigger & simple crop simulator
+  const handleEditPicClick = (e) => {
+    e.stopPropagation();
+    fileInputRef.current.click();
   };
 
-  const handleSaveProfile = () => {
-    // Show success message (alert or state)
-    alert("Perubahan profil berhasil disimpan!");
-  };
-
-  const handleAddOrUpdateAddress = (e) => {
-    e.preventDefault();
-    if (!addressLabel || !addressDetails) return;
-
-    if (editingAddressId) {
-      setAddresses(addresses.map(addr => 
-        addr.id === editingAddressId 
-          ? { ...addr, label: addressLabel, details: addressDetails } 
-          : addr
-      ));
-      setEditingAddressId(null);
-    } else {
-      const newAddress = {
-        id: Date.now(),
-        label: addressLabel,
-        details: addressDetails,
-        isPrimary: addresses.length === 0,
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropImageSrc(reader.result);
+        setIsCropModalOpen(true);
       };
-      setAddresses([...addresses, newAddress]);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleConfirmCrop = () => {
+    // Crop simulation updates the photo state with the source image
+    setProfilePic(cropImageSrc);
+    setIsCropModalOpen(false);
+    showToast("Foto profil berhasil diperbarui!", "success");
+  };
+
+  // 4. Web Share / Clipboard API
+  const handleShareProfile = async () => {
+    const shareUrl = "https://tukangaja.com/u/reze-customer";
+    const shareData = {
+      title: "Profil Pelanggan TukangAja",
+      text: "Hubungi jasa tukang terpercaya melalui profil saya di TukangAja.",
+      url: shareUrl,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        showToast("Profil berhasil dibagikan!", "success");
+      } catch (err) {
+        // Fallback to copy if share fails or cancelled
+        copyToClipboard(shareUrl);
+      }
+    } else {
+      copyToClipboard(shareUrl);
+    }
+    setIsShareModalOpen(false);
+  };
+
+  const copyToClipboard = (url) => {
+    navigator.clipboard.writeText(url);
+    showToast("Tautan profil berhasil disalin ke clipboard!", "success");
+  };
+
+  // 3. Simpan Perubahan & sequence OTP for email/phone changes
+  const handleSaveProfile = () => {
+    if (!profileData.fullName.trim()) {
+      showToast("Nama lengkap tidak boleh kosong!", "error");
+      return;
     }
 
-    setAddressLabel("");
-    setAddressDetails("");
-    setIsAddressFormOpen(false);
+    const emailChanged = profileData.email.trim() !== initialData.email;
+    const phoneChanged = profileData.phone.trim() !== initialData.phone;
+
+    if (emailChanged) {
+      // Trigger Email OTP flow
+      setPendingProfileUpdates({ ...profileData });
+      setOtpVerificationState({
+        type: "email",
+        value: profileData.email.trim(),
+        code: "",
+      });
+      return;
+    }
+
+    if (phoneChanged) {
+      // Trigger Phone OTP flow
+      setPendingProfileUpdates({ ...profileData });
+      setOtpVerificationState({
+        type: "phone",
+        value: profileData.phone.trim(),
+        code: "",
+      });
+      return;
+    }
+
+    // Standard save if no security values changed
+    showToast("Perubahan profil berhasil disimpan!", "success");
   };
 
-  const handleEditAddress = (addr) => {
+  const handleVerifyOTP = (e) => {
+    e.preventDefault();
+    if (!otpVerificationState || otpVerificationState.code.length < 6) return;
+
+    // Simulate OTP validation (using "123456" as dummy valid code)
+    if (otpVerificationState.code === "123456") {
+      showToast(`Verifikasi OTP untuk ${otpVerificationState.type} berhasil!`, "success");
+      
+      const updatedData = { ...pendingProfileUpdates };
+      
+      // If we verified email first and phone was also changed, trigger phone OTP next
+      if (otpVerificationState.type === "email" && updatedData.phone !== initialData.phone) {
+        setOtpVerificationState({
+          type: "phone",
+          value: updatedData.phone,
+          code: "",
+        });
+      } else {
+        setOtpVerificationState(null);
+        setPendingProfileUpdates(null);
+        showToast("Seluruh profil Anda berhasil diperbarui & disimpan!", "success");
+      }
+    } else {
+      showToast("Kode OTP salah! Gunakan kode dummy: 123456", "error");
+    }
+  };
+
+  // 7. Change Password modal action
+  const handleChangePasswordSubmit = (e) => {
+    e.preventDefault();
+    const { oldPassword, newPassword, confirmPassword } = passwordFields;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      showToast("Seluruh kolom password harus diisi!", "error");
+      return;
+    }
+    if (newPassword.length < 6) {
+      showToast("Kata sandi baru minimal harus 6 karakter!", "error");
+      return;
+    }
+    if (newPassword === oldPassword) {
+      showToast("Kata sandi baru tidak boleh sama dengan kata sandi lama!", "error");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast("Konfirmasi kata sandi baru tidak cocok!", "error");
+      return;
+    }
+
+    showToast("Kata sandi Anda berhasil diperbarui!", "success");
+    setIsPasswordModalOpen(false);
+    setPasswordFields({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  };
+
+  // 8 & 9. Add or Edit Address with Leaflet Map Callback
+  const handleMapLocationChange = (loc) => {
+    if (loc.address) {
+      setAddressDetails(loc.address);
+    }
+    setAddressCoords({ lat: loc.latitude, lng: loc.longitude });
+  };
+
+  const handleOpenAddAddress = () => {
+    setEditingAddressId(null);
+    setAddressLabel("");
+    setAddressDetails("");
+    setAddressCoords({ lat: -6.2088, lng: 106.8456 }); // Default center Jakarta
+    setIsAddressModalOpen(true);
+  };
+
+  const handleOpenEditAddress = (addr) => {
     setEditingAddressId(addr.id);
     setAddressLabel(addr.label);
     setAddressDetails(addr.details);
-    setIsAddressFormOpen(true);
+    setAddressCoords({ lat: addr.lat || -6.2088, lng: addr.lng || 106.8456 });
+    setIsAddressModalOpen(true);
   };
 
-  const handleDeleteAddress = (id) => {
-    setAddresses(addresses.filter(addr => addr.id !== id));
-  };
-
-  const handleSetPrimaryAddress = (id) => {
-    setAddresses(addresses.map(addr => ({
-      ...addr,
-      isPrimary: addr.id === id
-    })));
-    const primary = addresses.find(addr => addr.id === id);
-    if (primary) {
-      setProfileData({ ...profileData, primaryAddress: primary.details });
+  const handleSaveAddress = (e) => {
+    e.preventDefault();
+    if (!addressLabel.trim() || !addressDetails.trim()) {
+      showToast("Label dan detail alamat tidak boleh kosong!", "error");
+      return;
     }
+
+    if (editingAddressId) {
+      // Edit mode
+      setAddresses(
+        addresses.map((addr) =>
+          addr.id === editingAddressId
+            ? { ...addr, label: addressLabel, details: addressDetails, lat: addressCoords.lat, lng: addressCoords.lng }
+            : addr
+        )
+      );
+      showToast("Alamat berhasil diperbarui!", "success");
+    } else {
+      // Add mode
+      const newAddr = {
+        id: Date.now(),
+        label: addressLabel,
+        details: addressDetails,
+        lat: addressCoords.lat,
+        lng: addressCoords.lng,
+        isPrimary: addresses.length === 0,
+      };
+      setAddresses([...addresses, newAddr]);
+      showToast("Alamat baru berhasil ditambahkan!", "success");
+    }
+
+    setIsAddressModalOpen(false);
+    setAddressLabel("");
+    setAddressDetails("");
+  };
+
+  // 10. Delete address confirm
+  const handleConfirmDeleteAddress = () => {
+    if (selectedAddressForDelete) {
+      setAddresses(addresses.filter((addr) => addr.id !== selectedAddressForDelete.id));
+      showToast(`Alamat "${selectedAddressForDelete.label}" berhasil dihapus.`, "success");
+      setSelectedAddressForDelete(null);
+    }
+  };
+
+  // 11. Set primary address sync
+  const handleSetPrimaryAddress = (id) => {
+    setAddresses(
+      addresses.map((addr) => ({
+        ...addr,
+        isPrimary: addr.id === id,
+      }))
+    );
+    const targetAddr = addresses.find((addr) => addr.id === id);
+    if (targetAddr) {
+      setProfileData((prev) => ({
+        ...prev,
+        primaryAddress: targetAddr.details,
+      }));
+      showToast(`"${targetAddr.label}" dijadikan alamat utama.`, "success");
+    }
+  };
+
+  // 13. Delete Account multi-step trigger
+  const handleDeleteAccountSubmit = (e) => {
+    e.preventDefault();
+
+    if (deleteAccountStep === 1) {
+      // Validate Password
+      if (!deletePasswordInput) {
+        showToast("Masukkan kata sandi untuk verifikasi!", "error");
+        return;
+      }
+      // Simulating correct password match
+      if (deletePasswordInput === "password") {
+        setDeleteAccountStep(2);
+        showToast("Verifikasi OTP telah dikirim ke ponsel Anda.", "success");
+      } else {
+        showToast("Kata sandi salah! Gunakan: password", "error");
+      }
+    } else if (deleteAccountStep === 2) {
+      // Validate OTP
+      if (deleteOtpInput === "123456") {
+        setDeleteAccountStep(3);
+      } else {
+        showToast("Kode OTP salah! Gunakan kode dummy: 123456", "error");
+      }
+    }
+  };
+
+  const handleFinalDeleteAccount = () => {
+    showToast("Akun Anda telah berhasil dihapus permanent.", "success");
+    setDeleteAccountStep(0);
+    setDeletePasswordInput("");
+    setDeleteOtpInput("");
+    navigate("/");
   };
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
-      
+      {/* File input (Hidden) */}
+      <input 
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+      />
+
       {/* Backdrop for Mobile Sidebar */}
       {isSidebarOpen && (
         <div
@@ -107,6 +359,27 @@ function Profil() {
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
+
+      {/* Toast notifications rendering */}
+      <div className="fixed top-24 right-6 z-[100] space-y-3 pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto p-4 rounded-xl shadow-2xl border flex items-center gap-3 animate-slide-in text-xs font-semibold ${
+              t.type === "success"
+                ? "bg-green-500/10 border-green-500/30 text-green-400"
+                : t.type === "error"
+                  ? "bg-red-500/10 border-red-500/30 text-red-400"
+                  : "bg-surface-container border-outline-variant/30 text-on-surface"
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {t.type === "success" ? "check_circle" : t.type === "error" ? "error" : "info"}
+            </span>
+            <span>{t.message}</span>
+          </div>
+        ))}
+      </div>
 
       {/* SideNavBar */}
       <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
@@ -145,7 +418,7 @@ function Profil() {
                 <img
                   className="w-full h-full object-cover"
                   alt="Reze Profile"
-                  src="https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg"
+                  src={profilePic}
                 />
               </div>
               <div className="min-w-0">
@@ -188,7 +461,7 @@ function Profil() {
               <img
                 className="w-full h-full object-cover"
                 alt="Reze Profile"
-                src="https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg"
+                src={profilePic}
               />
             </div>
           </div>
@@ -201,15 +474,19 @@ function Profil() {
           <section className="bg-surface-container rounded-3xl p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 border border-surface-variant/15 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-[100px] pointer-events-none"></div>
             
-            <div className="relative group">
+            <div className="relative group cursor-pointer" onClick={() => setIsFullscreenPicOpen(true)} title="Klik untuk perbesar">
               <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-surface-container-high overflow-hidden shadow-xl">
                 <img
                   className="w-full h-full object-cover"
                   alt="Reze Profile"
-                  src="https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg"
+                  src={profilePic}
                 />
               </div>
-              <button className="absolute bottom-0 right-0 bg-secondary text-on-secondary p-1.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer border-none flex items-center justify-center">
+              <button 
+                onClick={handleEditPicClick}
+                className="absolute bottom-0 right-0 bg-secondary text-on-secondary p-1.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer border-none flex items-center justify-center"
+                title="Ganti Foto Profil"
+              >
                 <span className="material-symbols-outlined text-[16px]">edit</span>
               </button>
             </div>
@@ -230,7 +507,10 @@ function Profil() {
                 <span className="material-symbols-outlined text-sm">share</span>
                 Bagikan Profil
               </button>
-              <button className="border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface-variant px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-transparent">
+              <button 
+                onClick={handleEditPicClick}
+                className="border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface-variant px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-transparent"
+              >
                 Ganti Foto Profil
               </button>
             </div>
@@ -310,9 +590,31 @@ function Profil() {
                         <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Terakhir diubah 3 bulan lalu</p>
                       </div>
                     </div>
-                    <button className="text-secondary text-xs font-bold hover:underline bg-transparent border-none cursor-pointer">
+                    <button 
+                      onClick={() => setIsPasswordModalOpen(true)}
+                      className="text-secondary text-xs font-bold hover:underline bg-transparent border-none cursor-pointer"
+                    >
                       Ubah Sandi
                     </button>
+                  </div>
+
+                  {/* Riwayat Login Navigation */}
+                  <div className="flex items-center justify-between p-3.5 border border-outline-variant/20 rounded-2xl bg-surface-container-low/50 hover:border-secondary/15 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-surface-container-high p-2 rounded-xl text-secondary">
+                        <span className="material-symbols-outlined text-base">devices</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs text-on-surface">Riwayat Login</p>
+                        <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Pantau sesi perangkat aktif Anda</p>
+                      </div>
+                    </div>
+                    <Link 
+                      to="/pelanggan/riwayat-login"
+                      className="text-secondary text-xs font-bold hover:underline cursor-pointer"
+                    >
+                      Lihat Sesi
+                    </Link>
                   </div>
 
                   {/* Verifikasi Email */}
@@ -347,6 +649,25 @@ function Profil() {
                     </span>
                   </div>
 
+                  {/* Hapus Akun Action Row */}
+                  <div className="flex items-center justify-between p-3.5 border border-red-500/20 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-red-500/10 p-2 rounded-xl text-red-400">
+                        <span className="material-symbols-outlined text-base">delete_forever</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs text-on-surface">Hapus Akun Permanen</p>
+                        <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Menghapus seluruh riwayat dan data profil Anda</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setDeleteAccountStep(1)}
+                      className="text-red-400 text-xs font-bold hover:underline cursor-pointer border-none bg-transparent"
+                    >
+                      Hapus Akun
+                    </button>
+                  </div>
+
                 </div>
               </div>
 
@@ -360,12 +681,7 @@ function Profil() {
                   <div className="px-6 py-4 bg-surface-container-high/60 border-b border-surface-variant/10 flex justify-between items-center">
                     <h4 className="font-bold text-sm text-on-surface">Alamat Tersimpan</h4>
                     <button
-                      onClick={() => {
-                        setEditingAddressId(null);
-                        setAddressLabel("");
-                        setAddressDetails("");
-                        setIsAddressFormOpen(true);
-                      }}
+                      onClick={handleOpenAddAddress}
                       className="text-secondary hover:underline text-xs font-bold bg-transparent border-none cursor-pointer"
                     >
                       Tambah
@@ -402,14 +718,14 @@ function Profil() {
                         {/* Address Actions */}
                         <div className="mt-3 flex gap-3">
                           <button
-                            onClick={() => handleEditAddress(addr)}
+                            onClick={() => handleOpenEditAddress(addr)}
                             className="text-on-surface-variant hover:text-secondary text-[10px] font-bold bg-transparent border-none cursor-pointer flex items-center gap-1"
                           >
                             <span className="material-symbols-outlined text-[12px]">edit</span> Edit
                           </button>
                           {!addr.isPrimary && (
                             <button
-                              onClick={() => handleDeleteAddress(addr.id)}
+                              onClick={() => setSelectedAddressForDelete(addr)}
                               className="text-on-surface-variant hover:text-red-400 text-[10px] font-bold bg-transparent border-none cursor-pointer flex items-center gap-1"
                             >
                               <span className="material-symbols-outlined text-[12px]">delete</span> Hapus
@@ -418,52 +734,6 @@ function Profil() {
                         </div>
                       </div>
                     ))}
-
-                    {/* Address Form Container (Modal or Box) */}
-                    {isAddressFormOpen && (
-                      <form onSubmit={handleAddOrUpdateAddress} className="mt-4 p-4 border border-outline-variant/30 rounded-2xl bg-surface-container-high/40 space-y-3">
-                        <h5 className="font-bold text-xs text-on-surface">
-                          {editingAddressId ? "Edit Alamat" : "Tambah Alamat Baru"}
-                        </h5>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Label Alamat</label>
-                          <input
-                            type="text"
-                            placeholder="Contoh: Rumah, Kantor, Kos"
-                            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface"
-                            value={addressLabel}
-                            onChange={(e) => setAddressLabel(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Detail Alamat Lengkap</label>
-                          <textarea
-                            rows="2"
-                            placeholder="Jl. Raya No. X, Kota, Kode Pos"
-                            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface"
-                            value={addressDetails}
-                            onChange={(e) => setAddressDetails(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setIsAddressFormOpen(false)}
-                            className="px-3 py-1.5 border border-outline-variant/30 rounded-xl text-[10px] font-bold text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
-                          >
-                            Batal
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-3 py-1.5 bg-secondary text-on-secondary rounded-xl text-[10px] font-bold hover:opacity-90 cursor-pointer"
-                          >
-                            {editingAddressId ? "Simpan" : "Tambah"}
-                          </button>
-                        </div>
-                      </form>
-                    )}
                   </div>
                 </div>
 
@@ -507,55 +777,92 @@ function Profil() {
         </div>
       </main>
 
-      {/* Logout Confirmation Modal */}
-      {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          
-          {/* Blur & Dark Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/75 backdrop-blur-md transition-opacity duration-300"
-            onClick={() => setIsLogoutModalOpen(false)}
-          />
+      {/* MODAL: PHOTO FULLSCREEN VIEW */}
+      {isFullscreenPicOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="absolute inset-0" onClick={() => setIsFullscreenPicOpen(false)}></div>
+          <div className="relative max-w-lg w-full overflow-hidden rounded-3xl shadow-2xl flex flex-col items-center">
+            <button 
+              onClick={() => setIsFullscreenPicOpen(false)}
+              className="absolute top-4 right-4 bg-black/60 p-2 rounded-full text-white hover:bg-black/80 transition-colors z-10 cursor-pointer border-none flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+            <img 
+              src={profilePic} 
+              alt="Profile Fullscreen" 
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl" 
+            />
+          </div>
+        </div>
+      )}
 
-          {/* Modal Container */}
-          <div className="relative bg-surface-container border border-surface-variant/20 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-4 animate-[scaleUp_0.25s_cubic-bezier(0.34,1.56,0.64,1)_forwards]">
+      {/* MODAL: PHOTO CROP SIMULATION */}
+      {isCropModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
+            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
+              <h3 className="text-sm font-extrabold text-on-surface">Potong Foto Profil</h3>
+              <button 
+                onClick={() => setIsCropModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
             
-            {/* Logout Icon */}
-            <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
-              <span className="material-symbols-outlined text-2xl font-bold">logout</span>
+            <div className="p-6 flex flex-col items-center space-y-4">
+              <div className="relative w-48 h-48 border-2 border-dashed border-secondary/40 rounded-full overflow-hidden flex items-center justify-center bg-surface-container-low shadow-inner">
+                {/* Crop simulator container */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center transition-transform duration-100"
+                  style={{ transform: `scale(${cropZoom})` }}
+                >
+                  <img src={cropImageSrc} alt="Crop Preview" className="w-full h-full object-cover" />
+                </div>
+                {/* Visual crop border */}
+                <div className="absolute inset-2 border-2 border-secondary rounded-full pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
+              </div>
+
+              <div className="w-full space-y-1">
+                <label className="text-[10px] text-on-surface-variant font-bold flex justify-between">
+                  <span>Perbesar Zoom</span>
+                  <span>{Math.round(cropZoom * 100)}%</span>
+                </label>
+                <input 
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  className="w-full accent-secondary"
+                  value={cropZoom}
+                  onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <h4 className="font-extrabold text-base text-on-surface">Keluar dari Akun?</h4>
-              <p className="text-xs text-on-surface-variant/80 leading-relaxed px-2">
-                Apakah Anda yakin ingin keluar dari akun TukangAja?
-              </p>
-            </div>
-
-            <div className="flex gap-3 w-full pt-2">
-              <button
-                onClick={() => setIsLogoutModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+            <div className="p-5 border-t border-surface-variant/10 flex justify-end gap-2.5 bg-surface-container-high">
+              <button 
+                onClick={() => setIsCropModalOpen(false)}
+                className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
               >
                 Batal
               </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 py-2.5 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer shadow-lg shadow-secondary/15"
+              <button 
+                onClick={handleConfirmCrop}
+                className="px-4 py-2 bg-secondary text-on-secondary hover:bg-secondary/90 transition-all rounded-xl font-bold cursor-pointer border-none"
               >
-                Ya, Keluar
+                Simpan
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Share Modal */}
+      {/* MODAL: SHARE OPTIONS */}
       {isShareModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsShareModalOpen(false)}></div>
-          
-          <div className="relative bg-surface-container border border-surface-variant/20 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-4 animate-[scaleUp_0.25s_cubic-bezier(0.34,1.56,0.64,1)_forwards]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/20 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-4 animate-scale-up text-xs font-semibold">
             <div className="w-12 h-12 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center border border-secondary/25">
               <span className="material-symbols-outlined text-lg">share</span>
             </div>
@@ -570,14 +877,10 @@ function Profil() {
             <div className="w-full bg-surface-container-low border border-outline-variant/20 p-2.5 rounded-xl flex items-center justify-between text-xs">
               <span className="truncate text-on-surface-variant font-medium select-all">https://tukangaja.com/u/reze-customer</span>
               <button 
-                onClick={() => {
-                  navigator.clipboard.writeText("https://tukangaja.com/u/reze-customer");
-                  alert("Link disalin ke clipboard!");
-                  setIsShareModalOpen(false);
-                }}
+                onClick={handleShareProfile}
                 className="text-secondary font-bold hover:underline ml-2 bg-transparent border-none cursor-pointer"
               >
-                Salin
+                Bagikan
               </button>
             </div>
 
@@ -587,6 +890,377 @@ function Profil() {
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: UBAH PASSWORD */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
+            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
+              <h3 className="text-sm font-extrabold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">lock_reset</span>
+                Ubah Kata Sandi
+              </h3>
+              <button 
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePasswordSubmit} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-on-surface-variant text-[11px]">Kata Sandi Lama</label>
+                <input 
+                  type="password"
+                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
+                  value={passwordFields.oldPassword}
+                  onChange={(e) => setPasswordFields({ ...passwordFields, oldPassword: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-on-surface-variant text-[11px]">Kata Sandi Baru</label>
+                <input 
+                  type="password"
+                  placeholder="Min 6 Karakter"
+                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
+                  value={passwordFields.newPassword}
+                  onChange={(e) => setPasswordFields({ ...passwordFields, newPassword: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-on-surface-variant text-[11px]">Konfirmasi Kata Sandi Baru</label>
+                <input 
+                  type="password"
+                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
+                  value={passwordFields.confirmPassword}
+                  onChange={(e) => setPasswordFields({ ...passwordFields, confirmPassword: e.target.value })}
+                  required
+                />
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full mt-2 bg-secondary text-on-secondary font-bold py-3.5 rounded-xl hover:scale-[1.01] transition-transform border-none cursor-pointer"
+              >
+                Perbarui Kata Sandi
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: OTP VERIFICATION FOR EMAIL/PHONE */}
+      {otpVerificationState && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
+            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
+              <h3 className="text-sm font-extrabold text-on-surface">Verifikasi Keamanan</h3>
+              <button 
+                onClick={() => {
+                  setOtpVerificationState(null);
+                  setPendingProfileUpdates(null);
+                }}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleVerifyOTP} className="p-6 space-y-4 text-center">
+              <span className="material-symbols-outlined text-secondary text-4xl animate-pulse">lock_person</span>
+              <div className="space-y-1">
+                <h4 className="font-bold text-on-surface">Masukkan Kode OTP</h4>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed px-4">
+                  Masukkan 6 digit kode keamanan OTP yang dikirim ke {otpVerificationState.type === "email" ? "Email" : "No Telepon"} baru Anda: <br />
+                  <strong className="text-on-surface">{otpVerificationState.value}</strong>
+                </p>
+              </div>
+
+              <input 
+                type="text"
+                placeholder="Dummy code: 123456"
+                maxLength="6"
+                className="w-48 mx-auto tracking-[10px] text-center bg-surface-container-high border border-outline-variant rounded-xl p-3 text-sm text-on-surface outline-none focus:border-secondary font-bold"
+                value={otpVerificationState.code}
+                onChange={(e) => setOtpVerificationState({ ...otpVerificationState, code: e.target.value })}
+                required
+              />
+
+              <button 
+                type="submit"
+                className="w-full bg-secondary text-on-secondary font-bold py-3 rounded-xl hover:scale-[1.01] transition-transform border-none cursor-pointer mt-4"
+              >
+                Verifikasi & Simpan
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD/EDIT ADDRESS WITH MAP PICKER */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold my-8">
+            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
+              <h3 className="text-sm font-extrabold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">location_on</span>
+                {editingAddressId ? "Ubah Alamat Tersimpan" : "Tambah Alamat Baru"}
+              </h3>
+              <button 
+                onClick={() => setIsAddressModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAddress} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-on-surface-variant text-[11px]">Label Alamat</label>
+                  <input 
+                    type="text"
+                    placeholder="Contoh: Rumah Utama, Kantor, Kos"
+                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none font-bold"
+                    value={addressLabel}
+                    onChange={(e) => setAddressLabel(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-on-surface-variant text-[11px]">Alamat Lengkap (Nominatim Geocoded)</label>
+                  <textarea 
+                    rows="4"
+                    placeholder="Pilih lokasi pada peta atau ketik alamat..."
+                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none font-bold resize-none"
+                    value={addressDetails}
+                    onChange={(e) => setAddressDetails(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="p-3 bg-surface-container-high rounded-xl border border-outline-variant/10 space-y-1 text-[10px] text-on-surface-variant font-medium">
+                  <p>Koordinat Geospasial:</p>
+                  <p className="font-mono text-on-surface">Lat: {addressCoords.lat.toFixed(6)}</p>
+                  <p className="font-mono text-on-surface">Lng: {addressCoords.lng.toFixed(6)}</p>
+                </div>
+              </div>
+
+              {/* Map Column */}
+              <div className="space-y-3">
+                <label className="text-on-surface-variant text-[11px] block">Peta Pemilih Lokasi (OSM)</label>
+                <div className="w-full">
+                  <LeafletMapPicker onLocationChange={handleMapLocationChange} />
+                </div>
+                <p className="text-[9px] text-on-surface-variant/60 leading-normal">
+                  Geser pin penunjuk atau gunakan bar pencarian di atas peta untuk menaruh lokasi spesifik Anda.
+                </p>
+              </div>
+
+              <div className="md:col-span-2 pt-4 border-t border-surface-variant/10 flex justify-end gap-2.5">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="px-4 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2.5 bg-secondary text-on-secondary hover:bg-secondary/90 transition-all rounded-xl font-bold cursor-pointer border-none"
+                >
+                  Simpan Alamat
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE ADDRESS CONFIRMATION */}
+      {selectedAddressForDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/20 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-4 animate-scale-up text-xs font-semibold">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
+              <span className="material-symbols-outlined text-2xl font-bold">delete</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <h4 className="font-extrabold text-base text-on-surface">Hapus Alamat?</h4>
+              <p className="text-xs text-on-surface-variant/80 leading-relaxed px-4">
+                Apakah Anda yakin ingin menghapus alamat <strong>{selectedAddressForDelete.label}</strong>? Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => setSelectedAddressForDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer bg-transparent"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmDeleteAddress}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors cursor-pointer border-none"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE ACCOUNT MULTI-STEP FLOW */}
+      {deleteAccountStep > 0 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
+            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
+              <h3 className="text-sm font-extrabold text-red-400 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-lg">dangerous</span>
+                Hapus Akun (Langkah {deleteAccountStep}/3)
+              </h3>
+              <button 
+                onClick={() => {
+                  setDeleteAccountStep(0);
+                  setDeletePasswordInput("");
+                  setDeleteOtpInput("");
+                }}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            {deleteAccountStep === 1 && (
+              <form onSubmit={handleDeleteAccountSubmit} className="p-6 space-y-4 text-center">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-on-surface text-sm">Konfirmasi Sandi Anda</h4>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Demi keamanan akun, silakan masukkan kata sandi akun Anda saat ini untuk memulai proses penghapusan.
+                  </p>
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[10px] text-on-surface-variant uppercase font-bold">Kata Sandi</label>
+                  <input 
+                    type="password"
+                    placeholder="Masukkan sandi (dummy: password)"
+                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
+                    value={deletePasswordInput}
+                    onChange={(e) => setDeletePasswordInput(e.target.value)}
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-2"
+                >
+                  Lanjut Ke Langkah 2
+                </button>
+              </form>
+            )}
+
+            {deleteAccountStep === 2 && (
+              <form onSubmit={handleDeleteAccountSubmit} className="p-6 space-y-4 text-center">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-on-surface text-sm">Masukkan Kode OTP Hapus Akun</h4>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Masukkan 6 digit OTP konfirmasi pembatalan akun yang telah dikirim ke ponsel Anda.
+                  </p>
+                </div>
+                
+                <input 
+                  type="text"
+                  placeholder="Dummy OTP: 123456"
+                  maxLength="6"
+                  className="w-48 mx-auto tracking-[10px] text-center bg-surface-container-high border border-outline-variant rounded-xl p-3 text-sm text-on-surface outline-none focus:border-secondary font-bold"
+                  value={deleteOtpInput}
+                  onChange={(e) => setDeleteOtpInput(e.target.value)}
+                  required
+                />
+
+                <button 
+                  type="submit"
+                  className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-4"
+                >
+                  Lanjut Ke Langkah 3
+                </button>
+              </form>
+            )}
+
+            {deleteAccountStep === 3 && (
+              <div className="p-6 space-y-4 text-center">
+                <span className="material-symbols-outlined text-red-500 text-5xl animate-bounce">warning</span>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-red-400 text-sm">Tindakan Ini Bersifat Permanen!</h4>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed px-2">
+                    Menghapus akun Anda akan membatalkan seluruh pesanan aktif, menghapus saldo dompet, riwayat transaksi, dan profil secara permanen. Data tidak dapat dipulihkan kembali.
+                  </p>
+                </div>
+                
+                <div className="flex gap-3 w-full pt-2">
+                  <button
+                    onClick={() => {
+                      setDeleteAccountStep(0);
+                      setDeletePasswordInput("");
+                      setDeleteOtpInput("");
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer bg-transparent"
+                  >
+                    Batalkan Hapus
+                  </button>
+                  <button
+                    onClick={handleFinalDeleteAccount}
+                    className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer border-none"
+                  >
+                    Ya, Hapus Permanen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/75 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setIsLogoutModalOpen(false)}
+          />
+          <div className="relative bg-surface-container border border-surface-variant/20 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-4 animate-[scaleUp_0.25s_cubic-bezier(0.34,1.56,0.64,1)_forwards]">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
+              <span className="material-symbols-outlined text-2xl font-bold">logout</span>
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="font-extrabold text-base text-on-surface">Keluar dari Akun?</h4>
+              <p className="text-xs text-on-surface-variant/80 leading-relaxed px-2">
+                Apakah Anda yakin ingin keluar dari akun TukangAja?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer bg-transparent"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="flex-1 py-2.5 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer shadow-lg shadow-secondary/15"
+              >
+                Ya, Keluar
+              </button>
+            </div>
           </div>
         </div>
       )}

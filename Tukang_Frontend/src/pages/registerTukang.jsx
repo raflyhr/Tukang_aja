@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import GoogleMapPicker from "../components/GoogleMapPicker";
+import { Link, useNavigate } from "react-router-dom";
+import LeafletMapPicker from "../components/LeafletMapPicker";
 
 const AVAILABLE_SKILLS = [
   "Anti Bocor",
@@ -599,7 +599,7 @@ function RegisterTukang() {
                           Alamat Domisili
                         </label>
                         <div className="relative">
-                          <GoogleMapPicker
+                          <LeafletMapPicker
                             onLocationChange={(location) => {
                               setLocationData(location);
                               console.log(location);
@@ -997,6 +997,19 @@ function RegisterTukang() {
                   )}
                 </button>
               </section>
+
+              {/* Sudah punya akun? Masuk */}
+              <div className="text-center mt-8 pb-4">
+                <p className="text-sm text-on-surface-variant font-medium flex items-center justify-center gap-1.5">
+                  Sudah punya akun?
+                  <Link
+                    className="text-secondary font-bold hover:underline transition-all text-sm"
+                    to="/login"
+                  >
+                    Masuk
+                  </Link>
+                </p>
+              </div>
             </form>
           </main>
         </div>

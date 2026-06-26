@@ -324,7 +324,7 @@ function Login() {
                   Belum punya akun?
                   <Link
                     className="text-secondary font-bold hover:underline transition-all text-sm"
-                    to="/"
+                    to="/register"
                   >
                     Daftar sekarang
                   </Link>
