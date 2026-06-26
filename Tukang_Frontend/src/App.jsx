@@ -1,122 +1,69 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import Home from "./pages/home";
+import RegisterPelanggan from "./pages/registerPelanggan";
+import RegisterTukang from "./pages/registerTukang";
+import Login from "./pages/login";
+import Dashboard from "./pelanggan/dashboard";
+import Pesanan from "./pelanggan/pesanan";
+import Chat from "./pelanggan/chat";
+import Pembayaran from "./pelanggan/pembayaran";
+import Profil from "./pelanggan/profil";
+import TukangDashboard from "./tukang/dashboard";
+import TukangPesanan from "./tukang/pesanan";
+import TukangChat from "./tukang/chat";
+import TukangProfil from "./tukang/profil";
+import Notifications from "./pages/notifications";
+import HelpCenter from "./pages/bantuan";
+import AdminDashboard from "./admin/dashboard";
+import VerifikasiTukang from "./admin/verifikasi";
+import DataTukang from "./admin/data";
+import MonitoringRating from "./admin/monitoring";
+import ProfilAdmin from "./admin/profil";
+
+import "./index.css";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <BrowserRouter>
+      <Routes>
+        {/* Main page (home.jsx) */}
+        <Route path="/" element={<Home />} />
 
-      <div className="ticks"></div>
+        {/* Authentication & Onboarding */}
+        <Route path="/register-pelanggan" element={<RegisterPelanggan />} />
+        <Route path="/register-tukang" element={<RegisterTukang />} />
+        <Route path="/login" element={<Login />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {/* Pelanggan (Customer) Routes */}
+        <Route path="/pelanggan/dashboard" element={<Dashboard />} />
+        <Route path="/pelanggan/pesanan" element={<Pesanan />} />
+        <Route path="/pelanggan/chat" element={<Chat />} />
+        <Route path="/pelanggan/pembayaran" element={<Pembayaran />} />
+        <Route path="/pelanggan/profil" element={<Profil />} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Tukang (Technician) Routes */}
+        <Route path="/tukang/dashboard" element={<TukangDashboard />} />
+        <Route path="/tukang/pesanan" element={<TukangPesanan />} />
+        <Route path="/tukang/chat" element={<TukangChat />} />
+        <Route path="/tukang/profil" element={<TukangProfil />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/verifikasi" element={<VerifikasiTukang />} />
+        <Route path="/admin/data" element={<DataTukang />} />
+        <Route path="/admin/rating" element={<MonitoringRating />} />
+        <Route path="/admin/profil" element={<ProfilAdmin />} />
+
+        {/* General Pages */}
+        <Route path="/notifikasi" element={<Notifications />} />
+        <Route path="/bantuan" element={<HelpCenter />} />
+        
+        {/* Fallback redirect to /admin/dashboard */}
+        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

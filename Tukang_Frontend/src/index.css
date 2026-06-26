@@ -1,111 +1,155 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  --color-on-surface-variant: #c0c7d3;
+  --color-error-container: #93000a;
+  --color-surface-container-low: #1c1b1b;
+  --color-on-primary-fixed-variant: #00497e;
+  --color-surface-variant: #353534;
+  --color-on-secondary-fixed-variant: #703700;
+  --color-tertiary: #c8c6c5;
+  --color-secondary-container: #b15b00;
+  --color-on-secondary-container: #fff7f3;
+  --color-background: #131313;
+  --color-primary-fixed: #d2e4ff;
+  --color-surface-container: #201f1f;
+  --color-inverse-primary: #0061a5;
+  --color-inverse-on-surface: #313030;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed-dim: #9fcaff;
+  --color-surface-dim: #131313;
+  --color-on-primary: #003259;
+  --color-surface-container-highest: #353534;
+  --color-secondary-fixed-dim: #ffb783;
+  --color-outline-variant: #414751;
+  --color-on-primary-container: #002b4e;
+  --color-tertiary-container: #929090;
+  --color-outline: #8b919c;
+  --color-on-background: #e5e2e1;
+  --color-error: #ffb4ab;
+  --color-tertiary-fixed: #e5e2e1;
+  --color-on-tertiary-container: #2a2a2a;
+  --color-surface-bright: #393939;
+  --color-on-tertiary-fixed: #1b1b1c;
+  --color-on-surface: #e5e2e1;
+  --color-on-secondary-fixed: #301400;
+  --color-on-primary-fixed: #001d37;
+  --color-tertiary-fixed-dim: #c8c6c5;
+  --color-surface: #131313;
+  --color-primary-container: #4894e2;
+  --color-on-error: #690005;
+  --color-inverse-surface: #e5e2e1;
+  --color-on-tertiary: #303030;
+  --color-on-tertiary-fixed-variant: #474746;
+  --color-surface-container-high: #2a2a2a;
+  --color-primary: #9fcaff;
+  --color-surface-tint: #9fcaff;
+  --color-secondary-fixed: #ffdcc5;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-secondary: #ffb783;
+  --color-on-secondary: #4f2500;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --spacing-lg: 48px;
+  --spacing-md: 24px;
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-xl: 80px;
+  --spacing-margin-desktop: 64px;
+  --spacing-xs: 4px;
+  --spacing-sm: 12px;
+  --spacing-base: 8px;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
+  --max-width-xs: 20rem;
+  --max-width-sm: 24rem;
+  --max-width-md: 28rem;
+  --max-width-lg: 32rem;
+  --max-width-xl: 36rem;
+  --max-width-2xl: 42rem;
+  --max-width-3xl: 48rem;
+  --max-width-4xl: 56rem;
+  --max-width-5xl: 64rem;
+  --max-width-6xl: 72rem;
+  --max-width-7xl: 80rem;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --font-size-label-sm: 12px;
+  --font-size-headline-xl: 40px;
+  --font-size-headline-md: 24px;
+  --font-size-body-md: 16px;
+  --font-size-body-lg: 18px;
+  --font-size-label-md: 14px;
+  --font-size-headline-xl-mobile: 30px;
+  --font-size-headline-lg: 32px;
 }
 
 body {
   margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  padding: 0;
   box-sizing: border-box;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background-color: #131313;
+  color: #e5e2e1;
+  overflow-x: hidden;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+.glass-panel {
+  background: rgba(32, 31, 31, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #131313;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #353534;
+  border-radius: 10px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #3182CE !important;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+}
+
+/* Custom Number Input Spin Buttons */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  filter: invert(0.9) contrast(1.5);
+  cursor: pointer;
+  padding: 4px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+
+.page-transition {
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Fix browser autofill background and text color in dark theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #2a2a2a inset !important;
+  -webkit-text-fill-color: #e5e2e1 !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #e5e2e1;
 }
