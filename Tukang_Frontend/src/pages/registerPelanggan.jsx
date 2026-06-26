@@ -11,9 +11,22 @@ function RegisterPelanggan() {
   });
   const [noteText, setNoteText] = useState("");
   const [activeStep, setActiveStep] = useState("profile");
+  
+  // Form states
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Toast states
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState(""); // "success" | "error"
+  const [showToast, setShowToast] = useState(false);
+
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
 
@@ -86,13 +99,82 @@ function RegisterPelanggan() {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = "Nama lengkap wajib diisi";
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      newErrors.email = "Alamat email wajib diisi";
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = "Format email tidak valid";
+    }
+
+    const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,11}$/;
+    if (!phone) {
+      newErrors.phone = "Nomor WhatsApp wajib diisi";
+    } else if (!phoneRegex.test(phone)) {
+      newErrors.phone = "Format nomor WhatsApp tidak valid (misal: 0812...)";
+    }
+
+    if (!password) {
+      newErrors.password = "Kata sandi wajib diisi";
+    } else if (password.length < 8) {
+      newErrors.password = "Kata sandi minimal 8 karakter";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Konfirmasi kata sandi wajib diisi";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Konfirmasi kata sandi tidak cocok";
+    }
+
+    if (!locationData.address || !locationData.latitude || !locationData.longitude) {
+      newErrors.address = "Alamat dan titik lokasi di peta wajib diisi";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    navigate("/pelanggan/dashboard");
+    if (!validateForm()) {
+      setToastType("error");
+      setToastMessage("Tolong lengkapi persyaratan terlebih dahulu.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+      scrollToSection("profile");
+      return;
+    }
+
+    setToastType("success");
+    setToastMessage("Registrasi Pelanggan Berhasil! Silakan masuk.");
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+      navigate("/pelanggan/dashboard");
+    }, 2000);
   };
 
   return (
-    <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans select-none custom-scrollbar">
+    <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans select-none custom-scrollbar relative">
+      {/* Toast Notification Bar */}
+      {showToast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+          toastType === "success" 
+            ? "bg-secondary text-on-secondary" 
+            : "bg-red-500/10 border border-red-500/30 text-red-400 backdrop-blur-md"
+        }`}>
+          <span className="material-symbols-outlined">
+            {toastType === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="text-sm font-bold">{toastMessage}</span>
+        </div>
+      )}
       {/* Top Navigation Bar (Shared Component Logic) */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 shadow-sm h-20 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
         <div className="flex items-center gap-4">
@@ -281,8 +363,15 @@ function RegisterPelanggan() {
                         className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
                         placeholder="Masukkan nama sesuai KTP"
                         type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                       />
                     </div>
+                    {errors.fullName && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                        {errors.fullName}
+                      </span>
+                    )}
                   </div>
 
                   {/* WhatsApp Number */}
@@ -298,8 +387,15 @@ function RegisterPelanggan() {
                         className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
                         placeholder="0812-xxxx-xxxx"
                         type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                       />
                     </div>
+                    {errors.phone && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                        {errors.phone}
+                      </span>
+                    )}
                   </div>
 
                   {/* Email */}
@@ -320,6 +416,11 @@ function RegisterPelanggan() {
                         required
                       />
                     </div>
+                    {errors.email && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                        {errors.email}
+                      </span>
+                    )}
                   </div>
 
                   {/* Password */}
@@ -349,6 +450,45 @@ function RegisterPelanggan() {
                         </span>
                       </button>
                     </div>
+                    {errors.password && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                        {errors.password}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-base focus-within:scale-[1.01] transition-transform duration-200">
+                    <label className="font-label-md text-label-md text-on-surface-variant ml-1">
+                      Konfirmasi Kata Sandi
+                    </label>
+                    <div className="relative group">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors">
+                        lock
+                      </span>
+                      <input
+                        className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-12 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
+                        placeholder="••••••••"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none"
+                      >
+                        <span className="material-symbols-outlined text-lg">
+                          {showConfirmPassword ? "visibility_off" : "visibility"}
+                        </span>
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                        {errors.confirmPassword}
+                      </span>
+                    )}
                   </div>
                 </div>
               </section>
@@ -394,6 +534,11 @@ function RegisterPelanggan() {
                       {locationData.longitude || "-"}
                     </p>
                   </div>
+                  {errors.address && (
+                    <span className="text-xs text-red-500 px-1 mt-1 block font-semibold">
+                      {errors.address}
+                    </span>
+                  )}
                 </div>
               </section>
 
