@@ -101,6 +101,80 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Hide scrollbars for element with no-scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbar globally for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #131313;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 9999px;
+  border: 2px solid #131313;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #353534;
+}
+
+/* Custom scrollbar buttons (arrows) */
+::-webkit-scrollbar-button {
+  display: block;
+  background-color: #131313;
+  width: 14px;
+  height: 14px;
+}
+::-webkit-scrollbar-button:horizontal:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb783' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='15 18 9 12 15 6'></polyline></svg>");
+  background-size: 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+::-webkit-scrollbar-button:horizontal:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb783' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 18 15 12 9 6'></polyline></svg>");
+  background-size: 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb783' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='18 15 12 9 6 15'></polyline></svg>");
+  background-size: 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+::-webkit-scrollbar-button:vertical:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb783' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-size: 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Tabs Scrollbar style */
+.tabs-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+.tabs-scrollbar::-webkit-scrollbar-track {
+  background: #131313;
+  border-radius: 9999px;
+}
+.tabs-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 9999px;
+}
+.tabs-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ffb783;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

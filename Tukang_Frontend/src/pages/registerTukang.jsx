@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import GoogleMapPicker from "../components/GoogleMapPicker";
+import LeafletMapPicker from "../components/LeafletMapPicker";
 
 const AVAILABLE_SKILLS = [
   "Anti Bocor",
@@ -599,7 +599,7 @@ function RegisterTukang() {
                           Alamat Domisili
                         </label>
                         <div className="relative">
-                          <GoogleMapPicker
+                          <LeafletMapPicker
                             onLocationChange={(location) => {
                               setLocationData(location);
                               console.log(location);

@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import LeafletMapPicker from "../components/LeafletMapPicker";
 
 function RegisterPelanggan() {
   const navigate = useNavigate();
+  const [locationData, setLocationData] = useState({
+    address: "",
+    latitude: "",
+    longitude: "",
+  });
   const [noteText, setNoteText] = useState("");
   const [activeStep, setActiveStep] = useState("profile");
   const [email, setEmail] = useState("");
@@ -361,75 +367,33 @@ function RegisterPelanggan() {
                   </h3>
                 </div>
 
-                {/* Full Address with Search Icon */}
                 <div className="space-y-base focus-within:scale-[1.01] transition-transform duration-200">
                   <label className="font-label-md text-label-md text-on-surface-variant ml-1">
-                    Alamat Lengkap
+                    Alamat Domisili
                   </label>
-                  <div className="relative group">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors">
-                      location_on
-                    </span>
-                    <input
-                      className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-4 pl-12 pr-12 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:ring-0 focus:border-secondary outline-none"
-                      placeholder="Cari alamat atau seret pin di peta"
-                      type="text"
-                    />
-                    <button
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:scale-110 transition-transform cursor-pointer"
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined">map</span>
-                    </button>
-                  </div>
-                </div>
+                  <LeafletMapPicker
+                    onLocationChange={(location) => {
+                      setLocationData(location);
+                      console.log("Customer Location Change:", location);
+                    }}
+                  />
+                  <div className="mt-3 rounded-lg bg-surface-container-high p-3 border border-outline-variant font-sans">
+                    <p className="text-sm">
+                      <strong>Alamat:</strong>
+                      <br />
+                      {locationData.address || "-"}
+                    </p>
 
-                {/* Interactive Map UI Placeholder */}
-                <div className="space-y-base">
-                  <div className="relative w-full h-64 bg-surface-container-highest rounded-xl overflow-hidden border border-outline-variant group">
-                    {/* Mock Map Background */}
-                    <div
-                      className="absolute inset-0 opacity-40 bg-cover bg-center"
-                      style={{
-                        backgroundImage:
-                          "url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/106.8272,-6.1751,12,0/800x400?access_token=pk.eyJ1IjoiZGVzaWduZXIiLCJhIjoiY2t4eHh4eHh4eHh4eHh4eHh4eHh4In0')",
-                      }}
-                    ></div>
-                    {/* Center Pin */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-10">
-                      <span className="material-symbols-outlined text-secondary text-4xl drop-shadow-lg animate-bounce">
-                        location_on
-                      </span>
-                    </div>
-                    {/* Map Controls Overlay */}
-                    <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                      <button
-                        className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center shadow-lg border border-outline-variant hover:bg-surface-variant cursor-pointer text-on-surface"
-                        type="button"
-                      >
-                        <span className="material-symbols-outlined">add</span>
-                      </button>
-                      <button
-                        className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center shadow-lg border border-outline-variant hover:bg-surface-variant cursor-pointer text-on-surface"
-                        type="button"
-                      >
-                        <span className="material-symbols-outlined">
-                          remove
-                        </span>
-                      </button>
-                    </div>
-                    <div className="absolute top-4 left-4">
-                      <div className="bg-surface-container/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-outline-variant flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
-                        <span className="text-label-sm text-on-surface">
-                          Lokasi Presisi Aktif
-                        </span>
-                      </div>
-                    </div>
+                    <p className="text-sm mt-2">
+                      <strong>Latitude:</strong>{" "}
+                      {locationData.latitude || "-"}
+                    </p>
+
+                    <p className="text-sm">
+                      <strong>Longitude:</strong>{" "}
+                      {locationData.longitude || "-"}
+                    </p>
                   </div>
-                  <p className="text-label-sm text-on-surface-variant/60 ml-1">
-                    Geser peta untuk menyesuaikan titik koordinat hunian Anda.
-                  </p>
                 </div>
               </section>
 
