@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import api from "../lib/axios";
 
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility";
@@ -10,12 +11,11 @@ import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility
 function TukangDashboard() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [technicianName, setTechnicianName] = useState("Tukang");
+  const [avatar, setAvatar] = useState("https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg");
   const [isActiveWorking, setIsActiveWorking] = useState(true);
   const [progressWidth, setProgressWidth] = useState(0);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
-  // 17. Greeting and name from state
-  const [technicianName, setTechnicianName] = useState("Denji");
   
   // 15. Notification badge state
   const [notificationCount, setNotificationCount] = useState(3);
@@ -50,107 +50,21 @@ function TukangDashboard() {
 
   // Active summary stats counters
   const [statsCounters, setStatsCounters] = useState({
-    activeOrders: 3,
-    completedJobs: 128,
-    avgRating: 4.9,
-    monthlyIncome: "8.4M",
+    activeOrders: 0,
+    completedJobs: 0,
+    avgRating: 0.0,
+    monthlyIncome: "0",
   });
 
   // 13. Dynamic Recent Activities State
-  const [recentActivities, setRecentActivities] = useState([
-    {
-      id: 1,
-      type: "completed",
-      title: "Selesaikan Pekerjaan #4412",
-      subtitle: "Perbaikan Listrik - Bpk. Irwan",
-      time: "15 menit yang lalu",
-      icon: "check",
-    },
-    {
-      id: 2,
-      type: "message",
-      title: "Pesan Baru dari Ibu Siti",
-      subtitle: '"Bisa datang jam 2 siang besok?"',
-      time: "1 jam yang lalu",
-      icon: "chat",
-    },
-    {
-      id: 3,
-      type: "rating",
-      title: "Rating 5 Bintang Diterima",
-      subtitle: "Pekerjaan Cat Tembok - Apartemen Park",
-      time: "3 jam yang lalu",
-      icon: "star",
-    },
-  ]);
+  const [recentActivities, setRecentActivities] = useState([]);
 
   // Order List State
-  const [ordersList, setOrdersList] = useState([
-    {
-      id: 101,
-      category: "Plumbing",
-      title: "Perbaikan Keran Bocor & Instalasi Pipa Wastafel",
-      locationName: "Kemang, Jakarta Selatan",
-      lat: -6.2738,
-      lng: 106.8122,
-      distance: 2.4,
-      fee: 250000,
-      feeText: "Rp 250rb",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDymauO8hECOyauQr6APO_jnNU9MKKTqBHTkSw52lJDN-lQDP_AUEbTizrRdQLZY2rOCzIhl2L8juduEkx4cUwNfl_XDpwDnECGqrNVGxNu6SNZfxvK-fsjBPcQ9uzGZ5NRCeoQQPMbNv4QZJrh8LVPbG7Jsa4G0mAbZbxmrEM2bU4CHYNsnJQ3AAKTqyYozf617f7y9Agt18uD1vW8v5BtEzdBn0MJynAsbSqoPdk9ArpVMczz6rnyiimxpUm_mmb7Zg-eS8VaBANb",
-      description: "Keran di kamar mandi utama bocor terus menerus dan pembuangan air wastafel tersumbat. Butuh penggantian pipa PVC fitting dan seal keran baru.",
-      clientName: "Ibu Amanda",
-      clientPhone: "0812-9876-5432",
-      createdTime: 5, // minutes ago
-    },
-    {
-      id: 102,
-      category: "Elektronik",
-      title: "Instalasi TV Wall Mount 65 inch",
-      locationName: "Senopati, Jakarta Selatan",
-      lat: -6.2244,
-      lng: 106.8086,
-      distance: 4.1,
-      fee: 450000,
-      feeText: "Rp 450rb",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAoudWbFHMdlNaites7UIdGX0WIb8i9ixTaD3IQoQ9Zq7wsCnFOnOr1OgRIw9QBVAYovkQ9FsimLjMPDqhb8wLShaM7on1t00GKS76KjPlcUOy6uq1afccIJVG9_b_ZZ2Lk_ZsvHPYcNqOFjGF_PSxhG3fNexRgbPVbQy4YlS7NixsSG_RalvQ3ia89Oj4mK0TSPi4e1iyBTh7nU_d3arSSBHYOVhlL0_iA2K50Zi2HI4dLkdD7l4Qpq3NkekKkWCnMuJWWhCXs9VIu",
-      description: "Pemasangan bracket dinding untuk Smart TV Samsung 65 inch. Bracket sudah dibeli, dinding berbahan bata merah plester. Butuh bor beton dan keahlian leveling.",
-      clientName: "Bpk. Wibowo",
-      clientPhone: "0813-1122-3344",
-      createdTime: 12, // minutes ago
-    },
-    {
-      id: 103,
-      category: "AC",
-      title: "Cuci AC & Tambah Freon 2 Unit Daikin 1 PK",
-      locationName: "Kebayoran Baru, Jakarta Selatan",
-      lat: -6.2384,
-      lng: 106.7992,
-      distance: 1.8,
-      fee: 350000,
-      feeText: "Rp 350rb",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDk6Z2YI_rJ403iQ2Nq0y1078nC_g7w99QzPZtTfX7N8V2X9Q12bF_z6uH8hG0Y82tQ5mZ24hF0k5mZ24hF0k5mZ24hF0",
-      description: "Dua unit AC split Daikin kurang dingin. Butuh cuci outdoor & indoor unit, serta penambahan freon R32.",
-      clientName: "Bpk. Reynald",
-      clientPhone: "0878-8877-6655",
-      createdTime: 20, // minutes ago
-    },
-    {
-      id: 104,
-      category: "Cat",
-      title: "Pengecatan Tembok Kamar Tidur 4x3 meter",
-      locationName: "Cilandak, Jakarta Selatan",
-      lat: -6.2904,
-      lng: 106.7968,
-      distance: 6.5,
-      fee: 600000,
-      feeText: "Rp 600rb",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAoudWbFHMdlNaites7UIdGX0WIb8i9ixTaD3IQoQ9Zq7wsCnFOnOr1OgRIw9QBVAYovkQ9FsimLjMPDqhb8wLShaM7on1t00GKS76KjPlcUOy6uq1afccIJVG9_b_ZZ2Lk_ZsvHPYcNqOFjGF_PSxhG3fNexRgbPVbQy4YlS7NixsSG_RalvQ3ia89Oj4mK0TSPi4e1iyBTh7nU_d3arSSBHYOVhlL0_iA2K50Zi2HI4dLkdD7l4Qpq3NkekKkWCnMuJWWhCXs9VIu",
-      description: "Mengecat ulang dinding kamar tidur anak. Cat sudah disediakan oleh pemilik rumah (Jotun). Butuh jasa pengerjaan rapi beserta plamir penutup retak rambut.",
-      clientName: "Ibu Ratna",
-      clientPhone: "0811-2233-4455",
-      createdTime: 30, // minutes ago
-    },
-  ]);
+  const [ordersList, setOrdersList] = useState([]);
+
+  // User Location & Auth State
+  const [userLocation, setUserLocation] = useState({ lat: null, lng: null });
+  const [tukangId, setTukangId] = useState(null);
 
   useEffect(() => {
     // Simple target progress animation
@@ -160,40 +74,112 @@ function TukangDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 19. Auto Refresh Polling Logic every 30 seconds
   useEffect(() => {
-    if (!isActiveWorking) return; // Stop polling if offline
+    // Ambil tukang_id dari localStorage (asumsi login menyimpan { data: { tukang: { id: ... } } })    // Get tukang_id from localStorage
+    const userDataStr = localStorage.getItem("user");
+    let id = null;
+    if (userDataStr) {
+      try {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed && parsed.tukang && parsed.tukang.id) {
+          id = parsed.tukang.id;
+          if (parsed.tukang.nama) setTechnicianName(parsed.tukang.nama);
+          if (parsed.tukang.foto_profil) setAvatar(parsed.tukang.foto_profil.startsWith('http') ? parsed.tukang.foto_profil : `http://localhost:8000/storage/${parsed.tukang.foto_profil}`);
+        }
+      } catch (e) {}
+    }
+    
+    if (!id) {
+      // Jika tidak ada ID tukang (mungkin belum login, atau login sebagai pelanggan), redirect ke login
+      navigate("/");
+      return;
+    }
+    setTukangId(id);
 
-    const polling = setInterval(() => {
-      // Simulate adding a random order in background
-      const categories = ["Plumbing", "Elektronik", "AC", "Cat", "Listrik"];
-      const randomCat = categories[Math.floor(Math.random() * categories.length)];
-      const randomDist = parseFloat((Math.random() * 8 + 0.5).toFixed(1));
-      const randomFee = Math.round((Math.random() * 500000 + 150000) / 10000) * 10000;
+    // Get Geolocation
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          showToast("Lokasi berhasil didapatkan", "success");
+        },
+        (error) => {
+          showToast("Gagal mendapatkan lokasi, pastikan izin browser diaktifkan", "error");
+        }
+      );
+    }
+  }, []);
+
+  const fetchDashboardData = async () => {
+    if (!tukangId) return;
+    try {
+      const statsRes = await api.get(`/tukang/${tukangId}/dashboard-stats`);
+      if (statsRes.data.status === "Sukses") {
+        setStatsCounters({
+          activeOrders: statsRes.data.data.pesanan_aktif,
+          completedJobs: statsRes.data.data.pekerjaan_selesai,
+          avgRating: parseFloat(statsRes.data.data.rating_rata_rata || 0),
+          monthlyIncome: (statsRes.data.data.pendapatan_bulan_ini / 1000000).toFixed(1) + "M",
+        });
+      }
       
-      const newSimulatedOrder = {
-        id: Date.now(),
-        category: randomCat,
-        title: `Jasa Perbaikan ${randomCat} Mandiri`,
-        locationName: "Sudirman, Jakarta Pusat",
-        lat: -6.2189,
-        lng: 106.8198,
-        distance: randomDist,
-        fee: randomFee,
-        feeText: `Rp ${randomFee / 1000}rb`,
-        image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDymauO8hECOyauQr6APO_jnNU9MKKTqBHTkSw52lJDN-lQDP_AUEbTizrRdQLZY2rOCzIhl2L8juduEkx4cUwNfl_XDpwDnECGqrNVGxNu6SNZfxvK-fsjBPcQ9uzGZ5NRCeoQQPMbNv4QZJrh8LVPbG7Jsa4G0mAbZbxmrEM2bU4CHYNsnJQ3AAKTqyYozf617f7y9Agt18uD1vW8v5BtEzdBn0MJynAsbSqoPdk9ArpVMczz6rnyiimxpUm_mmb7Zg-eS8VaBANb",
-        description: "Simulasi deskripsi pekerjaan baru yang otomatis terdeteksi masuk ke radar radius pencarian Anda.",
-        clientName: "Pelanggan Baru",
-        clientPhone: "0899-8877-6655",
-        createdTime: 0,
-      };
+      const actRes = await api.get(`/tukang/${tukangId}/activities`);
+      if (actRes.data.status === "Sukses") {
+        setRecentActivities(actRes.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    }
+  };
 
-      setOrdersList((prev) => [newSimulatedOrder, ...prev]);
-      showToast(`Pesanan ${randomCat} baru terdeteksi dalam jangkauan!`, "info");
-    }, 30000);
+  const fetchAvailableOrders = async () => {
+    if (!userLocation.lat || !userLocation.lng) return;
+    try {
+      const res = await api.get(`/pesanan/available`, {
+        params: {
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          radius: workingRadius,
+          kategori: selectedCategory,
+        }
+      });
+      if (res.data.status === "Sukses") {
+        const formatted = res.data.data.map(order => ({
+          id: order.id,
+          category: order.kategori_layanan,
+          title: order.judul,
+          locationName: order.alamat_lengkap,
+          lat: order.latitude,
+          lng: order.longitude,
+          distance: parseFloat(order.jarak).toFixed(1),
+          fee: order.harga_penawaran,
+          feeText: `Rp ${(order.harga_penawaran / 1000)}rb`,
+          image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDymauO8hECOyauQr6APO_jnNU9MKKTqBHTkSw52lJDN-lQDP_AUEbTizrRdQLZY2rOCzIhl2L8juduEkx4cUwNfl_XDpwDnECGqrNVGxNu6SNZfxvK-fsjBPcQ9uzGZ5NRCeoQQPMbNv4QZJrh8LVPbG7Jsa4G0mAbZbxmrEM2bU4CHYNsnJQ3AAKTqyYozf617f7y9Agt18uD1vW8v5BtEzdBn0MJynAsbSqoPdk9ArpVMczz6rnyiimxpUm_mmb7Zg-eS8VaBANb",
+          description: order.deskripsi_masalah,
+          clientName: "Pelanggan",
+          createdTime: new Date(order.created_at).getTime(),
+        }));
+        setOrdersList(formatted);
+      }
+    } catch (error) {
+      console.error("Error fetching available orders:", error);
+    }
+  };
 
-    return () => clearInterval(polling);
-  }, [isActiveWorking]);
+  useEffect(() => {
+    fetchDashboardData();
+  }, [tukangId]);
+
+  useEffect(() => {
+    if (isActiveWorking) {
+      fetchAvailableOrders();
+      const polling = setInterval(fetchAvailableOrders, 30000);
+      return () => clearInterval(polling);
+    }
+  }, [userLocation, workingRadius, selectedCategory, isActiveWorking]);
 
   // 18. Manual Refresh Orders click handler
   const handleManualRefresh = () => {
@@ -210,32 +196,28 @@ function TukangDashboard() {
     setActiveModal("confirmAccept");
   };
 
-  const confirmAcceptJob = () => {
-    if (!selectedOrder) return;
+  const confirmAcceptJob = async () => {
+    if (!selectedOrder || !tukangId) return;
 
-    // Remove from available orders
-    setOrdersList((prev) => prev.filter((o) => o.id !== selectedOrder.id));
-    
-    // Increment active orders count
-    setStatsCounters((prev) => ({
-      ...prev,
-      activeOrders: prev.activeOrders + 1,
-    }));
-
-    // Add activity log
-    const newActivity = {
-      id: Date.now(),
-      type: "completed",
-      title: `Terima Pekerjaan #${selectedOrder.id}`,
-      subtitle: `${selectedOrder.category} - ${selectedOrder.clientName}`,
-      time: "Baru saja",
-      icon: "check",
-    };
-    setRecentActivities((prev) => [newActivity, ...prev]);
-
-    showToast(`Pekerjaan "${selectedOrder.title}" berhasil diterima!`, "success");
-    setActiveModal(null);
-    setSelectedOrder(null);
+    try {
+      const res = await api.post(`/pesanan/${selectedOrder.id}/terima`, {
+        tukang_id: tukangId
+      });
+      
+      if (res.data.message) {
+        showToast(`Pekerjaan "${selectedOrder.title}" berhasil diterima!`, "success");
+        // Remove from list
+        setOrdersList((prev) => prev.filter((o) => o.id !== selectedOrder.id));
+        
+        // Refresh dashboard stats and activities
+        fetchDashboardData();
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || "Gagal menerima pekerjaan", "error");
+    } finally {
+      setActiveModal(null);
+      setSelectedOrder(null);
+    }
   };
 
   // Filter & Sort Logic
@@ -342,8 +324,8 @@ function TukangDashboard() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img
                   className="w-full h-full object-cover"
-                  alt="Denji"
-                  src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+                  alt={technicianName}
+                  src={avatar}
                 />
               </div>
               <div className="min-w-0">
@@ -403,10 +385,10 @@ function TukangDashboard() {
               onClick={() => navigate("/tukang/profil")}
               className="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30 ml-2 cursor-pointer hover:opacity-90"
             >
-              <img
-                className="w-full h-full object-cover"
-                alt="Denji Profile"
-                src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+              <img 
+                className="w-10 h-10 rounded-full border-2 border-surface-variant/30 object-cover"
+                src={avatar}
+                alt={technicianName}
               />
             </div>
           </div>

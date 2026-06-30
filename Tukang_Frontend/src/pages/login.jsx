@@ -29,6 +29,7 @@ function Login() {
       if (response.data.access_token) {
         // Simpen token sama data user di localStorage
         localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
         
         // Data response dari backend (kadang dibungkus di "user", kadang langsung)
         const userData = response.data.data.user || response.data.data;

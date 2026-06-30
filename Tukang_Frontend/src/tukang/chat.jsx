@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import api from "../lib/axios";
 
 function TukangChat() {
   const navigate = useNavigate();
@@ -19,111 +20,115 @@ function TukangChat() {
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil" },
   ];
 
-  // Mock Conversations
-  const [chats, setChats] = useState([
-    {
-      id: 1,
-      name: "Siska Pratama",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDgDnbyp9rLOAb2jO9oe7bGmKYJuagcArNETRx627Q4zAm3lGT5ALP5IwniAJz3ZIJ8wx59z7gLbaEk1P6TrsKEWNIN2M9Ld-IKiHVVPhGYrwJMC0TepBIOIw_Ic5YREwRxHMT-rW5Vhmb8k9Dn9zSkPSjiXr-54QLPIlqJ5_liD9xmSiZg4gB_TTjoD8JVyMJnRtyWMOdd9nFj6HqxxES9P06QWNZtumNkEggXQiZJPzpEQNQOvuVGUUDPzztYZORsOb2rq0PfltCx",
-      online: true,
-      time: "14:20",
-      unread: 0,
-      lastMsg: "Oke, saya setuju dengan harga tersebut...",
-      negotiation: {
-        active: true,
-        price: "Rp 150.000",
-        originalPrice: "Rp 200.000",
-        buyerOffer: "Rp 120.000",
-        desc: "Ibu Siska mengajukan penawaran harga untuk jasa pengecekan & perbaikan.",
-        agreedNotes: "Termasuk penggantian kabel kecil yang aus",
-        history: [
-          { status: "Selesai", price: "Rp 150.000", time: "14:25", notes: "Termasuk penggantian kabel kecil yang aus" },
-          { status: "Ditawar", price: "Rp 120.000", time: "14:15" },
-          { status: "Awal", price: "Rp 200.000", time: "14:10" }
-        ],
-        jobStatus: "Pre-Job Coordination",
-        schedule: "Hari ini, 16:30 WIB"
-      },
-      messages: [
-        {
-          id: 1,
-          sender: "client",
-          text: "Halo Pak Budi, saya ada masalah dengan instalasi listrik di ruang tamu. Lampunya sering kedap-kedip.",
-          time: "14:02"
-        },
-        {
-          id: 2,
-          sender: "tukang",
-          text: "Halo Ibu Siska. Baik, biasanya itu karena sambungan yang longgar atau ballast yang bermasalah. Saya bisa cek sore ini.",
-          time: "14:05"
-        },
-        {
-          id: 3,
-          sender: "system",
-          type: "negotiation_offer",
-          text: "Penawaran Harga Baru Diajukan"
-        },
-        {
-          id: 4,
-          sender: "client",
-          text: "Oke, saya setuju dengan harga tersebut jika termasuk penggantian kabel kecil yang aus.",
-          time: "14:20"
+  const [chats, setChats] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [tukangId, setTukangId] = useState(null);
+  const [technicianName, setTechnicianName] = useState("Tukang");
+  const [avatar, setAvatar] = useState("https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg");
+
+  useEffect(() => {
+    // Ambil tukang_id dari localStorage
+    const userDataStr = localStorage.getItem("user");
+    let id = null;
+    if (userDataStr) {
+      try {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed && parsed.tukang && parsed.tukang.id) {
+          id = parsed.tukang.id;
+          if (parsed.tukang.nama) setTechnicianName(parsed.tukang.nama);
+          if (parsed.tukang.foto_profil) setAvatar(parsed.tukang.foto_profil.startsWith('http') ? parsed.tukang.foto_profil : `http://localhost:8000/storage/${parsed.tukang.foto_profil}`);
         }
-      ]
-    },
-    {
-      id: 2,
-      name: "Andi Wijaya",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAKJwaM0S4w1b-RnR09uopTe5VAIuxeJk96Y91JMuzx7rF53seXuU1fOUPbijIDsThs3r9sKaJ7gw1G4RuJyRG3dGMvJNKC1Z_551UrrzQkxJ6WMvexiQe_QS6XuojvhyWzV8CcAz6j5kEl7o8bp2T8Px0hH-rwNOhPaLTXaV3rkjAjx0cspGrk5DJCbGRGAjWsFEFca3qbJw_cwtGj2dxj3HVeQyVKvk9HNZFmVbK6EP5YK5yhxdvOQeR01mUI681ii9eKln76xDgm",
-      online: false,
-      time: "Kemarin",
-      unread: 0,
-      lastMsg: "Kapan bisa datang ke lokasi?",
-      messages: [
-        { id: 1, sender: "client", text: "Halo, untuk servis mesin cuci bisa?", time: "Kemarin 10:15" },
-        { id: 2, sender: "tukang", text: "Bisa pak Andi, kendalanya apa ya?", time: "Kemarin 10:20" },
-        { id: 3, sender: "client", text: "Kapan bisa datang ke lokasi?", time: "Kemarin 10:30" }
-      ]
-    },
-    {
-      id: 3,
-      name: "Rizky Ramadhan",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDS9x33sM6rk0F-P8DMjXo9m_KeQCwvycuUlbIcrUUj1ETRtZMd_cs7Kxru1S6d7ow748aplzNiwQoilh5kCSKPF_eLPcYAnDjkKkTQrQLRTb03RYbs0AEIYfLR_WbXK5zAph0lM9yDrCMn6AhrOxp5ePyKcxwMwfo9hvwE1M9NosJG3SY-mHtL6wDU6GObe_I3_qgpwa02dOGPUTxgOTO9ynmfG8ymVTgoua3sjzNQaC5QlL0XW6S9dHZ_WYqlwXx72eQVy5l10hhs",
-      online: false,
-      time: "2 Hari lalu",
-      unread: 0,
-      lastMsg: "Terima kasih banyak pak, sangat rapi.",
-      messages: [
-        { id: 1, sender: "tukang", text: "Halo pak Rizky, perbaikan atap bocor sudah selesai seluruhnya ya.", time: "2 Hari lalu" },
-        { id: 2, sender: "client", text: "Terima kasih banyak pak, sangat rapi.", time: "2 Hari lalu" }
-      ]
+      } catch (e) {}
     }
-  ]);
+    if (!id) {
+      navigate("/");
+      return;
+    }
+    setTukangId(id);
+  }, []);
 
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
-
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    const newMsg = {
-      id: Date.now(),
-      sender: "tukang",
-      text: inputText,
-      time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    };
-    
-    setChats(prev => prev.map(c => {
-      if (c.id === activeChatId) {
-        return {
-          ...c,
-          lastMsg: inputText,
-          messages: [...c.messages, newMsg]
-        };
+  const fetchChats = async () => {
+    if (!tukangId) return;
+    try {
+      const res = await api.get(`/tukang/${tukangId}/chats`);
+      if (res.data.status === 'Sukses') {
+        const mapped = res.data.data.map(c => ({
+          id: c.id,
+          name: c.user?.name || "Pelanggan",
+          avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDgDnbyp9rLOAb2jO9oe7bGmKYJuagcArNETRx627Q4zAm3lGT5ALP5IwniAJz3ZIJ8wx59z7gLbaEk1P6TrsKEWNIN2M9Ld-IKiHVVPhGYrwJMC0TepBIOIw_Ic5YREwRxHMT-rW5Vhmb8k9Dn9zSkPSjiXr-54QLPIlqJ5_liD9xmSiZg4gB_TTjoD8JVyMJnRtyWMOdd9nFj6HqxxES9P06QWNZtumNkEggXQiZJPzpEQNQOvuVGUUDPzztYZORsOb2rq0PfltCx", // fallback
+          online: true,
+          time: c.messages && c.messages.length > 0 ? new Date(c.messages[0].created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
+          lastMsg: c.messages && c.messages.length > 0 ? c.messages[0].text : "Belum ada pesan",
+          negotiation: null, // Kita nonaktifkan dulu detail negosiasi kompleks untuk MVP
+        }));
+        setChats(mapped);
+        
+        // Auto set active chat jika belum ada
+        if (mapped.length > 0 && !activeChatId) {
+          setActiveChatId(mapped[0].id);
+        }
       }
-      return c;
-    }));
-    setInputText("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchMessages = async () => {
+    if (!activeChatId) return;
+    try {
+      const res = await api.get(`/chat/${activeChatId}/messages`);
+      if (res.data.status === 'Sukses') {
+        const mappedMsg = res.data.data.map(m => ({
+          id: m.id,
+          sender: m.sender_type,
+          type: m.message_type,
+          text: m.text,
+          time: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }));
+        setMessages(mappedMsg);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Polling Interval
+  useEffect(() => {
+    fetchChats();
+    const interval = setInterval(() => {
+      fetchChats();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [tukangId]);
+
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeChatId]);
+
+  const activeChat = chats.find(c => c.id === activeChatId) || { name: "Loading...", avatar: "", messages: [] };
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !activeChatId) return;
+    
+    try {
+      await api.post(`/chat/send`, {
+        chat_id: activeChatId,
+        sender_type: 'tukang',
+        sender_id: tukangId,
+        text: inputText
+      });
+      setInputText("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      
+      // Langsung fetch pesan terbaru
+      fetchMessages();
+      fetchChats();
+    } catch (err) {
+      alert("Gagal mengirim pesan");
     }
   };
 
@@ -186,11 +191,11 @@ function TukangChat() {
                 <img
                   className="w-full h-full object-cover"
                   alt="Denji"
-                  src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+                  src={avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Denji</h4>
+                <h4 className="font-bold text-sm text-on-surface truncate">{technicianName}</h4>
                 <p className="text-xs text-secondary truncate">Elite Technician</p>
               </div>
             </div>
@@ -237,8 +242,8 @@ function TukangChat() {
             <div className="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30 ml-2">
               <img
                 className="w-full h-full object-cover"
-                alt="Denji Profile"
-                src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+                alt={technicianName}
+                src={avatar}
               />
             </div>
           </div>
@@ -341,20 +346,15 @@ function TukangChat() {
                 <span className="text-[9px] bg-surface-container px-3.5 py-1 rounded-full text-on-surface-variant/80 uppercase tracking-widest font-extrabold">Hari Ini</span>
               </div>
 
-              {activeChat.messages.map((msg) => {
+              {messages.map((msg) => {
                 if (msg.sender === "system" && msg.type === "negotiation_offer") {
                   return (
                     <div key={msg.id} className="flex justify-center my-6">
                       <div className="bg-surface-container border border-secondary/25 p-5 rounded-3xl max-w-xs w-full text-center shadow-lg">
                         <span className="material-symbols-outlined text-secondary text-3xl mb-1">payments</span>
                         <h4 className="font-bold text-xs text-on-surface mb-0.5">Tawaran Harga</h4>
-                        <p className="text-[10px] text-on-surface-variant/75 mb-3">{activeChat.negotiation.desc}</p>
                         <div className="bg-surface-container-lowest py-2 px-4 rounded-xl mb-4">
-                          <span className="text-lg font-black text-secondary">{activeChat.negotiation.price}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="flex-grow border border-outline-variant/30 py-1.5 rounded-lg text-[10px] font-bold hover:bg-surface-container-high transition-all cursor-pointer">Tolak</button>
-                          <button className="flex-grow bg-secondary text-on-secondary py-1.5 rounded-lg text-[10px] font-bold hover:brightness-105 transition-all cursor-pointer">Terima</button>
+                          <span className="text-lg font-black text-secondary">{msg.text}</span>
                         </div>
                       </div>
                     </div>

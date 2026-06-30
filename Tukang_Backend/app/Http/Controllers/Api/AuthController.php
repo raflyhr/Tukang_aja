@@ -43,7 +43,8 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role
-                ]
+                ],
+                'tukang' => $user->role === 'tukang' ? $user->tukang : null
             ]
         ], 200);
     }

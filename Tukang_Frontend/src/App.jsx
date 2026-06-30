@@ -62,7 +62,7 @@ function App() {
 
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/verifikasi" element={<VerifikasiTukang />} />
+        <Route path="/admin/verifikasi/:id?" element={<VerifikasiTukang />} />
         <Route path="/admin/data" element={<DataTukang />} />
         <Route path="/admin/rating" element={<MonitoringRating />} />
         <Route path="/admin/profil" element={<ProfilAdmin />} />

@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../components/LogoutModal";
+import axios from "axios";
 
 function VerifikasiTukang() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isInverted, setIsInverted] = useState(false);
   const [showRejectionBox, setShowRejectionBox] = useState(false);
@@ -48,21 +50,71 @@ function VerifikasiTukang() {
     setNewNote("");
   };
 
-  const handleApprove = () => {
-    if (confirm("Apakah Anda yakin ingin menyetujui verifikasi untuk Budi Santoso?")) {
-      alert("Verifikasi Berhasil Disetujui! Notifikasi akan dikirim ke tukang.");
-      navigate("/admin/dashboard");
+  const [tukangData, setTukangData] = useState(null);
+  const [totalPending, setTotalPending] = useState(0);
+
+  useEffect(() => {
+    fetchData();
+  }, [id]);
+
+  const fetchData = async () => {
+    try {
+      // Get all pending to count them and get the first one if no id is provided
+      const resList = await axios.get("http://localhost:8000/api/admin/verifikasi");
+      if (resList.data.status === 'Sukses') {
+        const pendingList = resList.data.data;
+        setTotalPending(pendingList.length);
+        
+        let targetId = id;
+        if (!targetId && pendingList.length > 0) {
+          targetId = pendingList[0].id;
+        }
+
+        if (targetId) {
+          const resDetail = await axios.get(`http://localhost:8000/api/tukang/${targetId}`);
+          if (resDetail.data.status === 'Sukses') {
+            setTukangData(resDetail.data.data);
+          }
+        } else {
+          setTukangData(null);
+        }
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleConfirmRejection = () => {
+  const handleApprove = async () => {
+    if (!tukangData) return;
+    if (confirm(`Apakah Anda yakin ingin menyetujui verifikasi untuk ${tukangData.nama}?`)) {
+      try {
+        const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${tukangData.id}`, { action: 'approve' });
+        if (response.data.status === 'Sukses') {
+          alert("Verifikasi Berhasil Disetujui!");
+          navigate("/admin/dashboard");
+        }
+      } catch (e) {
+        alert("Gagal memproses verifikasi.");
+      }
+    }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!tukangData) return;
     if (!rejectionReason.trim()) {
       alert("Silakan masukkan alasan penolakan terlebih dahulu.");
       return;
     }
     if (confirm("Tolak verifikasi ini?")) {
-      alert("Verifikasi ditolak. Alasan: " + rejectionReason);
-      navigate("/admin/dashboard");
+      try {
+        const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${tukangData.id}`, { action: 'reject', reason: rejectionReason });
+        if (response.data.status === 'Sukses') {
+          alert("Verifikasi ditolak. Alasan: " + rejectionReason);
+          navigate("/admin/dashboard");
+        }
+      } catch (e) {
+        alert("Gagal memproses penolakan.");
+      }
     }
   };
 
@@ -193,12 +245,13 @@ function VerifikasiTukang() {
         <div className="pt-28 pb-12 px-6 md:px-12 max-w-7xl w-full mx-auto space-y-8 flex-grow page-transition">
           
           {/* Header Identity Card */}
+          {tukangData ? (
           <section className="bg-surface-container-high/60 backdrop-blur-md p-6 rounded-2xl border border-surface-variant/20 shadow-lg flex flex-col md:flex-row gap-6 items-start">
             <div className="relative shrink-0">
               <img 
                 className="w-28 h-28 md:w-36 md:h-36 rounded-2xl object-cover border border-surface-variant/20 shadow-md" 
-                alt="Budi Santoso" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmNFPIo6_W_zJaNEwWMIbJvVn0LwdIwWiB72YLgObBo5wWzeZrleP46FxIVDSJonKcA0J5imjN3bNmwtmFIqnRjtIQS9jD8j0AE51lM-4tvxksxOAG4hXEOwQEfS8rQlazz7BJWtyq-XLDp9GXDbe5vtnAZ2uaHx9iZN-58bdZEQvqBMmiFPfYjpXRqDsl3695PhzlAWyF6zwp_5L1cPZGbUMw-oHqDG-1BgLxVyHg4nR5dOp5ggeaCNiFcnYsRQR1SYWQ4MkqY-rJ"
+                alt={tukangData.nama} 
+                src={tukangData.foto_profil ? (tukangData.foto_profil.startsWith('http') ? tukangData.foto_profil : `http://localhost:8000/storage/${tukangData.foto_profil}`) : `https://ui-avatars.com/api/?name=${tukangData.nama}&background=random`}
               />
               <div className="absolute -bottom-2 -right-2 bg-secondary text-on-secondary p-1.5 rounded-lg shadow-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
@@ -208,18 +261,18 @@ function VerifikasiTukang() {
             <div className="flex-grow space-y-4 w-full">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
-                  <h3 className="text-xl md:text-2xl font-black text-on-surface">Budi Santoso</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-on-surface">{tukangData.nama}</h3>
                   <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
-                    <span className="bg-secondary/15 text-secondary px-2.5 py-0.5 rounded-full font-bold border border-secondary/20">Spesialis Kelistrikan</span>
+                    <span className="bg-secondary/15 text-secondary px-2.5 py-0.5 rounded-full font-bold border border-secondary/20">{tukangData.keahlian}</span>
                     <span className="text-on-surface-variant flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">location_on</span>
-                      Kec. Serpong, Tangerang Selatan
+                      {tukangData.alamat}
                     </span>
                   </div>
                 </div>
                 <div className="sm:text-right">
                   <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">ID Pendaftaran</p>
-                  <p className="font-mono text-secondary font-bold text-base md:text-lg">TK-20231109-082</p>
+                  <p className="font-mono text-secondary font-bold text-base md:text-lg">TKG-{tukangData.id}</p>
                 </div>
               </div>
 
@@ -228,22 +281,28 @@ function VerifikasiTukang() {
                   <p className="text-on-surface-variant text-[10px] font-bold mb-1.5 uppercase tracking-wider">Informasi Kontak</p>
                   <p className="text-on-surface flex items-center gap-2 text-xs font-semibold">
                     <span className="material-symbols-outlined text-xs text-secondary">phone_iphone</span>
-                    +62 812-3456-7890
+                    {tukangData.no_hp || "-"}
                   </p>
                   <p className="text-on-surface flex items-center gap-2 text-xs font-semibold mt-1">
                     <span className="material-symbols-outlined text-xs text-secondary">mail</span>
-                    budi.santoso@email.com
+                    {tukangData.user?.email || "-"}
                   </p>
                 </div>
                 <div className="bg-surface-container-high/40 p-4 rounded-xl border border-surface-variant/10">
                   <p className="text-on-surface-variant text-[10px] font-bold mb-1.5 uppercase tracking-wider">Alamat Lengkap</p>
                   <p className="text-on-surface text-xs leading-relaxed">
-                    Jl. Melati No. 45, RT 003/RW 001, Kelurahan Jelupang, Kecamatan Serpong, Tangerang Selatan, Banten 15323.
+                    {tukangData.alamat}
                   </p>
                 </div>
               </div>
             </div>
           </section>
+          ) : (
+            <div className="bg-surface-container p-8 rounded-2xl text-center text-on-surface-variant/65">
+              <span className="material-symbols-outlined text-4xl mb-2 text-secondary/45">inbox</span>
+              <p className="text-xs font-medium">Tidak ada data pendaftar untuk ditampilkan.</p>
+            </div>
+          )}
 
           {/* Bento Grid Content */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -279,7 +338,7 @@ function VerifikasiTukang() {
                       className={`w-full h-full object-cover transition-transform duration-500 ${isInverted ? "invert" : ""}`} 
                       alt="Indonesian ID Card (KTP)" 
                       id="ktp-image" 
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjg21U0-EWBigVuE_ZqTYM6nX3SYmUl1Spy6SHwpP6Flf0gXTK3kBnx_aI_ntwjcxBq_QA4g3jgKqme4XQ8YD4jDUTyKRIQTlQrpb-OLQHTB6I_HaSkgC8EfSGurJumYZZLOS47d3eCf7ip0SM2SjXYMOjtH97MHtmK6aTfwc4DYWnC9c3WKBbjWDGKbu17-8c-1B1MiKot6EqLN1F86JlcoVgrAAt8YQSeg-Zo2A3wvRmIebxqwtMZnbBu6BC4zGO3cSxvp0DsoB8"
+                      src={tukangData?.foto_ktp ? (tukangData.foto_ktp.startsWith('http') ? tukangData.foto_ktp : `http://localhost:8000/storage/${tukangData.foto_ktp}`) : "https://via.placeholder.com/600x400?text=No+KTP"}
                     />
                   </div>
 
@@ -440,7 +499,7 @@ function VerifikasiTukang() {
                 </div>
                 <div>
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Total Pendaftaran</p>
-                  <p className="text-on-surface font-bold text-lg">124 <span className="text-[10px] font-normal text-on-surface-variant/70 ml-1">dalam antrian</span></p>
+                  <p className="text-on-surface font-bold text-lg">{totalPending} <span className="text-[10px] font-normal text-on-surface-variant/70 ml-1">dalam antrian</span></p>
                 </div>
               </div>
 

@@ -12,6 +12,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            TukangAjaSeeder::class
+        ]);
 
         // Bikin akun Admin
         User::create([
@@ -21,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        $this->call(TukangSeeder::class);
-        $this->call(PesananSeeder::class);
+        // $this->call(TukangSeeder::class);
+        // $this->call(PesananSeeder::class);
     }
 }

@@ -1,22 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import api from "../lib/axios";
 
 function TukangProfil() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  // Ambil data awal secara sinkron (langsung) dari localStorage untuk mencegah efek kedip/delay
+  const getInitialProfile = () => {
+    try {
+      const userDataStr = localStorage.getItem("user");
+      if (userDataStr) {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed?.tukang) {
+          const t = parsed.tukang;
+          return {
+            id: t.id || null,
+            fullName: t.nama || "",
+            email: parsed.user?.email || "",
+            phone: t.nomor_telepon || "",
+            category: t.keahlian || "",
+            rating: t.rating || "0.0",
+            reviewsCount: 0,
+            avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `http://localhost:8000/storage/${t.foto_profil}`) : "https://ui-avatars.com/api/?name=" + (t.nama || "Tukang") + "&background=random"
+          };
+        }
+      }
+    } catch (e) {}
+    
+    return {
+      id: null,
+      fullName: "",
+      email: "",
+      phone: "",
+      category: "",
+      rating: "0.0",
+      reviewsCount: 0,
+      avatar: "https://ui-avatars.com/api/?name=User&background=random"
+    };
+  };
 
-  // Profile data (technician state)
-  const [profileData, setProfileData] = useState({
-    fullName: "Denji",
-    email: "denji@tukangaja.com",
-    phone: "0812 3456 7890",
-    category: "Teknisi Elektrik & AC",
-    rating: "4.9",
-    reviewsCount: "124",
-    avatar: "https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
-  });
+  // Profile data (technician state) diisi langsung dari data localStorage
+  const [profileData, setProfileData] = useState(getInitialProfile());
 
   // Coverage radius and area
   const [radius, setRadius] = useState(15);
@@ -43,12 +69,76 @@ function TukangProfil() {
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil", active: true },
   ];
 
+  // Fetch profil saat komponen dimuat
+  useEffect(() => {
+    const userDataStr = localStorage.getItem("user");
+    let id = null;
+    if (userDataStr) {
+      try {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed && parsed.tukang && parsed.tukang.id) {
+          id = parsed.tukang.id;
+        }
+      } catch (e) {}
+    }
+    
+    if (id) {
+      fetchProfil(id);
+    } else {
+      navigate("/");
+    }
+  }, []);
+
+  const fetchProfil = async (id) => {
+    try {
+      const res = await api.get(`/tukang/${id}`);
+      if (res.data.status === 'Sukses') {
+        const data = res.data.data;
+        setProfileData({
+          id: data.id,
+          fullName: data.nama || "",
+          email: data.user?.email || "",
+          phone: data.no_hp || "",
+          category: data.keahlian || "",
+          rating: data.rating || "0.0",
+          reviewsCount: data.ulasans?.length || 0,
+          avatar: data.foto_profil ? (data.foto_profil.startsWith('http') ? data.foto_profil : `http://localhost:8000/storage/${data.foto_profil}`) : "https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+        });
+        setRadius(data.radius_layanan || 15);
+        setCoverageArea(data.area_cakupan || "");
+        if (data.keahlian_tambahan && Array.isArray(data.keahlian_tambahan)) {
+          setSkills(data.keahlian_tambahan);
+        } else {
+          setSkills([]);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal load profil", err);
+    }
+  };
+
   const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
-  const handleSaveProfile = () => {
-    alert("Perubahan profil teknisi berhasil disimpan!");
+  const handleSaveProfile = async () => {
+    if (!profileData.id) return;
+    try {
+      await api.put(`/tukang/${profileData.id}/profil`, {
+        nama: profileData.fullName,
+        no_hp: profileData.phone,
+        keahlian: profileData.category,
+        radius_layanan: radius,
+        area_cakupan: coverageArea,
+        keahlian_tambahan: skills
+      });
+      alert("Perubahan profil teknisi berhasil disimpan!");
+    } catch (err) {
+      alert("Gagal menyimpan profil.");
+      console.error(err);
+    }
   };
 
   const handleAddSkill = (e) => {
@@ -66,7 +156,7 @@ function TukangProfil() {
   };
 
   return (
-    <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
+    <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-hidden flex">
       {/* Backdrop for Mobile Sidebar */}
       {isSidebarOpen && (
         <div
@@ -752,19 +842,20 @@ function TukangProfil() {
               </p>
             </div>
 
-            <div className="w-full bg-surface-container-low border border-outline-variant/20 p-2.5 rounded-xl flex items-center justify-between text-xs">
-              <span className="truncate text-on-surface-variant font-medium select-all">
-                https://tukangaja.com/p/denji-elite
-              </span>
-              <button
+            <div className="flex bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/30 focus-within:ring-2 focus-within:ring-secondary/50 focus-within:border-secondary transition-all w-full">
+              <input 
+                type="text" 
+                readOnly 
+                value={`https://tukangaja.com/p/${profileData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-elite`} 
+                className="w-full bg-transparent px-4 py-3 text-sm text-on-surface outline-none"
+              />
+              <button 
+                className="px-4 py-3 bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-sm transition-colors border-l border-outline-variant/30 cursor-pointer"
                 onClick={() => {
-                  navigator.clipboard.writeText(
-                    "https://tukangaja.com/p/denji-elite",
-                  );
-                  alert("Link disalin ke clipboard!");
+                  navigator.clipboard.writeText(`https://tukangaja.com/p/${profileData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-elite`);
+                  alert("Link disalin!");
                   setIsShareModalOpen(false);
                 }}
-                className="text-secondary font-bold hover:underline ml-2 bg-transparent border-none cursor-pointer"
               >
                 Salin
               </button>

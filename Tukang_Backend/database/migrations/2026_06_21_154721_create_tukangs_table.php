@@ -26,7 +26,11 @@ return new class extends Migration
 
             // Keahlian
             $table->string('keahlian');
-            $table->string('keahlian_tambahan')->nullable();
+            $table->json('keahlian_tambahan')->nullable();
+
+            // Area Cakupan
+            $table->integer('radius_layanan')->default(15);
+            $table->string('area_cakupan')->nullable();
 
             // Pengalaman Kerja
             $table->integer('tahun_pengalaman')->default(0);

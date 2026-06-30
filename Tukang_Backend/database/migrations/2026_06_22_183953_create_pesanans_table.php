@@ -14,10 +14,25 @@ return new class extends Migration
         Schema::create('pesanans', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('tukang_id')->constrained('tukangs')->onDelete('cascade');
+            $table->foreignId('tukang_id')->nullable()->constrained('tukangs')->onDelete('cascade');
             $table->text('deskripsi_masalah');
+            $table->string('judul')->nullable();
+            $table->string('kategori_layanan')->nullable();
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
+            $table->string('alamat_lengkap')->nullable();
             $table->integer('harga_penawaran')->nullable();
-            $table->enum('status', ['menunggu', 'dinego', 'ditolak', 'diterima', 'selesai'])->default('menunggu');
+            $table->string('foto_lampiran')->nullable(); // Foto array JSON
+            $table->string('budget_perkiraan')->nullable();
+            $table->enum('status', [
+                'menunggu', // Belum ada tukang
+                'menunggu_penawaran', // Diambil tukang, belum kirim harga
+                'menunggu_persetujuan', // Tukang kirim harga, nunggu ACC client
+                'menunggu_pembayaran', // Client ACC, nunggu bayar (optional flow)
+                'sedang_dikerjakan', // Sedang dikerjakan
+                'selesai', // Selesai
+                'ditolak' // Ditolak
+            ])->default('menunggu');
             $table->text('alasan_penolakan')->nullable();
 
             $table->timestamps();

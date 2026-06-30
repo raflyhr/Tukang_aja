@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../components/LogoutModal";
+import axios from "axios";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -9,65 +10,82 @@ function AdminDashboard() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // Verification queue state for interactivity
-  const [verifications, setVerifications] = useState([
-    {
-      id: 1,
-      name: "Budi Santoso",
-      type: "Tukang Listrik & Elektronik",
-      location: "Kec. Lowokwaru, Malang",
-      date: "22 Mei 2024",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHbv4u2L_IGov9GQcUgwEvUphPz5E-YY5V0_Owl2pzSNiWDy0OPynrhBPHuRC7P7aorHJdpaEuctn60Mb7qg5W_2qeY1x7abSmDskRpRySJrkMa8lmcxg2FELR3cMeC7V9KVlPYS81XtKr_gJQXHJyM6rN7HiH5sGKlGP7NKEKrFULu0NyTIJf8ng2FoTMc9TThfzODwnO_lDamxc0xhuMh9ISfQ2WiV2z2nAK7v_hZX_3vb4qbu0vCswd94yNu-pGHiaJ2lmWBW8P",
-      status: "pending"
-    },
-    {
-      id: 2,
-      name: "Siti Aminah",
-      type: "Tukang Ledeng & Pipa",
-      location: "Kec. Sukun, Malang",
-      date: "23 Mei 2024",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUOGUlOHo5W6x4MbUKaAvHWBpbZqNNrS4YhRF1j69VQfHjUIhJSm00d490GK0m8HRCPDdxhY5L3asuOPXEuOBdFTnIwl0JplhncExSwE7drBsBKcGyxRq49XI8AjklEt9ErQ-TsYPbEqTUBDYGvDrAwcm3IA0a_xIlXYLa63PjXPKorqCq3TDM6SJw7Dt25XuGey-5P6x1Y8qAhC5j07kSo5ZL5sWDenFTlBkV2PJ4eg7rjnJaoUqFMZw64j9d5cFni6t1Yc04S3Ds",
-      status: "pending"
-    },
-    {
-      id: 3,
-      name: "Hendra Wijaya",
-      type: "Tukang Kayu & Mebel",
-      location: "Kec. Blimbing, Malang",
-      date: "24 Mei 2024",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCIC7DStFxVfqZ3Ik5DA2xJ5Theg2yJDHYsem9dm4rquDfX5ygrbjDU1d3FZZa5Pd_aptqvxet3LAwzZ4HL9R4S55dxiZLd5ST9rNRoef_w-NYm3CsgdmOyGDXsSZ6CZwv8ozXgHx0xYCXLUHFP-lYJvqb6iIme2M2WbqmARrzrLIytKt_nBJ0qP-RWAGECpVnMV3p3rEtYRFuL72xsmGJPnSkUiktlLzxKRwlnxcGBVwF_E74MH_M7nFfvNugjAXJyqawrgwtJLH57",
-      status: "pending"
-    }
-  ]);
+  const [verifications, setVerifications] = useState([]);
 
-  const [notificationCount, setNotificationCount] = useState(3);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // Statistics
-  const pendingCount = 42 + verifications.filter(v => v.status === "pending").length - 3;
-  const activeCount = 1208 + verifications.filter(v => v.status === "verified").length;
+  const [stats, setStats] = useState({
+    pendingCount: 0,
+    activeCount: 0,
+    inactiveCount: 0,
+    problemCount: 0
+  });
 
-  const handleVerify = (id) => {
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/admin/dashboard-stats");
+      if (response.data.status === 'Sukses') {
+        setStats(response.data.data);
+        const fetchedVerifications = response.data.data.recentVerifications.map(v => ({
+          id: v.id,
+          name: v.nama,
+          type: v.keahlian,
+          location: v.alamat,
+          date: new Date(v.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }),
+          avatar: v.foto_profil ? (v.foto_profil.startsWith('http') ? v.foto_profil : `http://localhost:8000/storage/${v.foto_profil}`) : `https://ui-avatars.com/api/?name=${v.nama}&background=random`,
+          status: "pending"
+        }));
+        setVerifications(fetchedVerifications);
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin stats:", error);
+    }
+  };
+
+  const handleVerify = async (id) => {
     setVerifications(prev =>
       prev.map(v => (v.id === id ? { ...v, status: "verifying" } : v))
     );
 
-    setTimeout(() => {
-      setVerifications(prev =>
-        prev.map(v => (v.id === id ? { ...v, status: "verified" } : v))
-      );
-      setTimeout(() => {
-        setVerifications(prev => prev.filter(v => v.id !== id));
-      }, 500);
-    }, 800);
+    try {
+      const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${id}`, { action: 'approve' });
+      if (response.data.status === 'Sukses') {
+        setVerifications(prev =>
+          prev.map(v => (v.id === id ? { ...v, status: "verified" } : v))
+        );
+        setTimeout(() => {
+          setVerifications(prev => prev.filter(v => v.id !== id));
+          fetchDashboardData(); // Refresh stats
+        }, 500);
+      }
+    } catch (e) {
+      console.error(e);
+      setVerifications(prev => prev.map(v => (v.id === id ? { ...v, status: "pending" } : v)));
+    }
   };
 
-  const handleReject = (id) => {
+  const handleReject = async (id) => {
     setVerifications(prev =>
       prev.map(v => (v.id === id ? { ...v, status: "rejecting" } : v))
     );
 
-    setTimeout(() => {
-      setVerifications(prev => prev.filter(v => v.id !== id));
-    }, 500);
+    try {
+      const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${id}`, { action: 'reject' });
+      if (response.data.status === 'Sukses') {
+        setTimeout(() => {
+          setVerifications(prev => prev.filter(v => v.id !== id));
+          fetchDashboardData(); // Refresh stats
+        }, 500);
+      }
+    } catch (e) {
+      console.error(e);
+      setVerifications(prev => prev.map(v => (v.id === id ? { ...v, status: "pending" } : v)));
+    }
   };
 
   const navigationItems = [
@@ -211,7 +229,7 @@ function AdminDashboard() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">Menunggu Verifikasi</p>
-                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{pendingCount}</h3>
+                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{stats.pendingCount}</h3>
               </div>
             </div>
 
@@ -227,7 +245,7 @@ function AdminDashboard() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">Tukang Aktif</p>
-                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{activeCount.toLocaleString("id-ID")}</h3>
+                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{stats.activeCount.toLocaleString("id-ID")}</h3>
               </div>
             </div>
 
@@ -243,7 +261,7 @@ function AdminDashboard() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">Tukang Tidak Aktif</p>
-                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{154}</h3>
+                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{stats.inactiveCount}</h3>
               </div>
             </div>
 
@@ -259,7 +277,7 @@ function AdminDashboard() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">Rating Bermasalah</p>
-                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{8}</h3>
+                <h3 className="text-3xl font-extrabold mt-1 text-on-surface">{stats.problemCount}</h3>
               </div>
             </div>
           </section>
@@ -321,7 +339,7 @@ function AdminDashboard() {
                       </div>
 
                       <div className="flex items-center justify-end gap-2.5">
-                        <Link to="/admin/verifikasi" className="px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant text-xs font-bold shrink-0 cursor-pointer bg-transparent">
+                        <Link to={`/admin/verifikasi/${item.id}`} className="px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant text-xs font-bold shrink-0 cursor-pointer bg-transparent">
                           Lihat Detail
                         </Link>
                         

@@ -21,8 +21,15 @@ class Tukang extends Model
         'foto_ktp',
         'cv_portofolio',
         'is_aktif',
+        'radius_layanan',
+        'area_cakupan',
         'saldo',
-        'rating'
+        'rating',
+        'status_verifikasi'
+    ];
+
+    protected $casts = [
+        'keahlian_tambahan' => 'array'
     ];
 
     public function user()

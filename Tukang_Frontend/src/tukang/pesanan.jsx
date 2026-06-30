@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
+import api from "../lib/axios";
 
 function TukangPesanan() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("semua");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  
+  const [technicianName, setTechnicianName] = useState("Tukang");
+  const [avatar, setAvatar] = useState("https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg");
   
   // Rejection reason select options
   const rejectReasons = [
@@ -17,57 +21,64 @@ function TukangPesanan() {
     "Lainnya"
   ];
 
-  // Stateful orders list to support interaction (e.g. sending a bid, changing rejection reasons, saving reasons)
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      clientName: "Siti Aminah",
-      clientLoc: "BSD City, Tangerang Selatan",
-      clientAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBKTfl-bPc3TYOy5r-jjyWK-ywD97kiKmUzf_fckpbG-fUGriGzIBeAYvujKLJIrVAaFR_vAJ-IPv7FSCgP8PVrxcSvLSiS3wILfbXS_YBz2fAaK6QbKEibAKOEdSbdNxSzP_1_P6gigW-WXYWGSUkNpqGCi9S8d0Mbhv7sTh-o5PXLb1XzNaj-x3BKXoYylvhC_l_RPbMK9V1uVH_HsOJeC-UFwuZ5dFhLWeri2WlVrGC41Qbkjt2paaIKIH8i6E9HxuTNhfn7nl4V",
-      status: "menunggu_penawaran",
-      title: "Perbaikan Pipa Bocor di Dapur",
-      desc: "Pipa wastafel bocor parah sejak tadi malam, butuh penanganan segera agar tidak banjir ke area ruang makan.",
-      images: [
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDuvvzLYFv8KuAQ3PaWGnK1219yGfK6XEy-FJUG6TEs5ogKLTkh6vorFWSHr5dwXVqX4kf8W-H6i8ZWf_IU9TmgGUk4C5n__rDr_utm4MS-dwMn83tc36ULlOXjuyPQg_SHqdfg0l1c21NKC5UG6m2e0esnPE9Lq4htj3k0zsZQjlsOhcXVzZtLCXEDYE_x5NwpeqT5U4XrYtP3dfYPOpAHHWPLqtlTz5WFlZuA2dhpXGy_c5HjaC0j04qayJ8Q9VA6baoFk2-OlXr2",
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuB2B4cYD5S557LOaI2yjg7fHk0dKt5onzJd48uHby8URHI3GnHuMZt1myvC5nutee9uyvJNMAYVh0bGBdUevhc4fRqqdOHh0qVShmThEUd1F4i7WDNqA3vRuSVQNqTdHPLtz0HEkso80fqhNkPpHP8b6NFoIJ1QwBCoQOUMj1tVi1BMz4Piv5PDdMQxnmO16Y2EO2CE2hRbVwKzpdllSXnFi9qMq01EOEwLjwQiciWQ1aBrDuGyv4mZ3PYH3iH9_iEsWpBA7Adx4nox"
-      ],
-      budgetRange: "Rp 150.000 - 300.000",
-      hasBidSent: false,
-    },
-    {
-      id: 2,
-      clientName: "Rian Hidayat",
-      clientLoc: "Kebayoran Baru, Jakarta Selatan",
-      clientAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBbdo8dOVMNjo7LLWag1LurBy_-yYkPck5d6B_gR7idpkdkHC7XyX8dPd9Q2kuv0-j5c6pVvz6FgYNcs7JcjQhe5xcqWjLdrE8VDpQZwDC5apUVor7rB8AtpDV9fKvAjozbnuaPyEb4LfTGqqc7B8PeJ4nJ1AuRdAl-nPPHFnDM9hIbpu7N3Y5oJsIJmzZaxKBrWhaBU2hCWOuHp3Cz2dQj_x615I561dc1EyCQFbC-GO4_QEzJ6bSgzAeqid-ybxdItksm6JEBNqc5",
-      status: "menunggu_persetujuan",
-      title: "Pasang Bracket TV 55 Inch",
-      bidValue: "Rp 250.000",
-      clientNotes: "Menunggu konfirmasi dari klien atas rincian biaya material tambahan.",
-    },
-    {
-      id: 3,
-      clientName: "Diana Putri",
-      clientLoc: "Canggu, Bali",
-      clientAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBanKwNeoZOu9pYge-LR7B8wnMRqj60WBtEqUzr4I-BIm8lWF3X22GN8zU1Zbh5CuLqwVv1m2MGfbHZFYjykcYw_sNPVKmM8DKeNE5FqywuplpHeEL2czJiwW5Jxq4po7wZUJ4KpXMkhNy7Qi-8rcKSHfiRu7ztwcR--YUbSoyJKV1ezC-EdIJO739bwcg8R4zBtnVWVLq34JeAHnrFjEVyxQim53HhE6DCNwjlCY3UCBv2noUm32zR-HXub8AiZQ5c0638rLe9r-GD",
-      status: "menunggu_pembayaran",
-      title: "Service AC Split & Cuci Besar (4 Unit)",
-      totalValue: "Rp 1.250.000",
-      stepText: "Langkah 4/5",
-      stepProgress: 80,
-    },
-    {
-      id: 4,
-      clientName: "Bambang S.",
-      clientLoc: "Senen, Jakarta Pusat",
-      clientAvatar: "",
-      status: "ditolak",
-      title: "Instalasi Listrik Gudang",
-      rejectReason: "Keahlian Tidak Sesuai",
-      rejectNotes: "",
-      timeText: "2 jam yang lalu",
-      isReasonSaved: false,
+  const [orders, setOrders] = useState([]);
+  const [tukangId, setTukangId] = useState(null);
+
+  useEffect(() => {
+    // Ambil tukang_id dari localStorage
+    const userDataStr = localStorage.getItem("user");
+    let id = null;
+    if (userDataStr) {
+      try {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed && parsed.tukang && parsed.tukang.id) {
+          id = parsed.tukang.id;
+          if (parsed.tukang.nama) setTechnicianName(parsed.tukang.nama);
+          if (parsed.tukang.foto_profil) setAvatar(parsed.tukang.foto_profil.startsWith('http') ? parsed.tukang.foto_profil : `http://localhost:8000/storage/${parsed.tukang.foto_profil}`);
+        }
+      } catch (e) {}
     }
-  ]);
+    if (!id) {
+      navigate("/");
+      return;
+    }
+    setTukangId(id);
+  }, []);
+
+  const fetchOrders = async () => {
+    if (!tukangId) return;
+    try {
+      const res = await api.get(`/tukang/${tukangId}/pesanan`);
+      if (res.data.status === 'Sukses') {
+        const mappedOrders = res.data.data.map(order => ({
+          id: order.id,
+          clientName: order.user?.name || "Pelanggan",
+          clientLoc: order.alamat_lengkap,
+          clientAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBKTfl-bPc3TYOy5r-jjyWK-ywD97kiKmUzf_fckpbG-fUGriGzIBeAYvujKLJIrVAaFR_vAJ-IPv7FSCgP8PVrxcSvLSiS3wILfbXS_YBz2fAaK6QbKEibAKOEdSbdNxSzP_1_P6gigW-WXYWGSUkNpqGCi9S8d0Mbhv7sTh-o5PXLb1XzNaj-x3BKXoYylvhC_l_RPbMK9V1uVH_HsOJeC-UFwuZ5dFhLWeri2WlVrGC41Qbkjt2paaIKIH8i6E9HxuTNhfn7nl4V",
+          status: order.status,
+          title: order.judul,
+          desc: order.deskripsi_masalah,
+          images: order.foto_lampiran ? JSON.parse(order.foto_lampiran) : [],
+          budgetRange: order.budget_perkiraan || "Belum ditentukan",
+          bidValue: order.harga_penawaran ? `Rp ${order.harga_penawaran.toLocaleString('id-ID')}` : "",
+          totalValue: order.harga_penawaran ? `Rp ${order.harga_penawaran.toLocaleString('id-ID')}` : "",
+          rejectReason: order.alasan_penolakan || "",
+          hasBidSent: false,
+          clientNotes: "Menunggu konfirmasi...",
+          stepText: "Sedang diproses",
+          stepProgress: 50,
+          timeText: new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }));
+        setOrders(mappedOrders);
+      }
+    } catch (err) {
+      console.error("Gagal memuat pesanan:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [tukangId]);
 
   const filterTabs = [
     { id: "semua", label: "Semua Pesanan" },
@@ -87,14 +98,27 @@ function TukangPesanan() {
   ];
 
   // Handle Action - Send Bid
-  const handleSendBid = (id) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, hasBidSent: true } : o));
+  const handleSendBid = async (id) => {
+    // Sebagai contoh UI, kita prompt harga. Di dunia nyata bisa lewat form modal
+    const harga = prompt("Masukkan nominal harga penawaran Anda (misal: 150000):");
+    if (!harga) return;
+    try {
+      await api.put(`/pesanan/${id}/tawar`, { harga_penawaran: parseInt(harga) });
+      fetchOrders();
+    } catch (err) {
+      alert("Gagal mengirim penawaran.");
+    }
   };
 
   // Handle Action - Save Reason
-  const handleSaveReason = (id, reason, notes) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, rejectReason: reason, rejectNotes: notes, isReasonSaved: true } : o));
-    alert("Alasan penolakan berhasil disimpan!");
+  const handleSaveReason = async (id, reason, notes) => {
+    try {
+      await api.put(`/pesanan/${id}/tolak`, { alasan_penolakan: `${reason} - ${notes}` });
+      fetchOrders();
+      alert("Alasan penolakan berhasil disimpan!");
+    } catch (err) {
+      alert("Gagal menolak pesanan.");
+    }
   };
 
   // Filter logic
@@ -151,12 +175,12 @@ function TukangPesanan() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img
                   className="w-full h-full object-cover"
-                  alt="Denji"
-                  src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+                  alt={technicianName}
+                  src={avatar}
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Denji</h4>
+                <h4 className="font-bold text-sm text-on-surface truncate">{technicianName}</h4>
                 <p className="text-xs text-secondary truncate">Elite Technician</p>
               </div>
             </div>
@@ -200,12 +224,11 @@ function TukangPesanan() {
               <span className="material-symbols-outlined">help</span>
             </Link>
             <div className="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30 ml-2">
-              <img
-                className="w-full h-full object-cover"
-                alt="Denji Profile"
-                src="https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
-              />
-            </div>
+              <img 
+            className="w-10 h-10 rounded-full border-2 border-surface-variant/30 object-cover"
+            src={avatar}
+            alt={technicianName}
+          />  </div>
           </div>
         </header>
 

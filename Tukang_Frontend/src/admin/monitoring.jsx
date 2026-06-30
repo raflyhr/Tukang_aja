@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../components/LogoutModal";
+import axios from "axios";
 
 function MonitoringRating() {
   const navigate = useNavigate();
@@ -9,56 +10,53 @@ function MonitoringRating() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
-  // Interactive Tukang Performance state
-  const [performances, setPerformances] = useState([
-    {
-      id: "TKG-881",
-      name: "Budi Santoso",
-      specialty: "Spesialis Listrik",
-      rating: 4.9,
-      reviews: 428,
-      complaints: 0,
-      status: "Aktif",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDtO1WCGBhYc33ytgCjZlxz5wT7JIdNekX3caJ08z4w47DcbLZAEoH0TspyzEc88IuZhHaGmKYgJKa9w206Mjp8SObWm1Io_xRzhUnEMiF68sKSHrQSmlmJ6W6xQPVZWf_sLMvogL4ZsweKBiVbdpnK9-l684TMWNEvs5YZpK5E2TuZAbqzfqQnXTo8lTXZWstYd_exqXOqSicWfBbNmY1W5xMqm4S0dAl2pv7loTnUjlbmvSWttVP2F8az7ztOEFz4N4Wmuu4c9Brl"
-    },
-    {
-      id: "TKG-419",
-      name: "Ahmad Hidayat",
-      specialty: "Tukang Ledeng",
-      rating: 2.8,
-      reviews: 52,
-      complaints: 4,
-      status: "Ditinjau",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuD1gleQJXSMGx-9fPj5v8q2HLb8LTeTjhFZE8WsJI-HGin1m0kfPkQI4dtDQywqRUFstRUf6sBLsBQ9xmW42bEzNbE3SDXNJ92cek-yvczNv2mY3gAz6bQMhYQ5Q87pQ9WSveUCFlm7nBc-vpnhTedh3b7RHaWAt4o0i2E0LREK1SV3MSSFvCt7IuZ7akzNaRWdcR9ekA-3hXW3IYyb7NcHy8O4hDWdIv-GdSOlsTHw8CYi2qlqfjvv8tv1D3qQQyXN5BppHTkjdEhU"
-    },
-    {
-      id: "TKG-302",
-      name: "Suryo Pratama",
-      specialty: "Tukang Cat",
-      rating: 4.2,
-      reviews: 112,
-      complaints: 1,
-      status: "Aktif",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuD2KrU0lP7CBXNvqeUmLYT6VEXEOmTWeqnlLtnvtDkbymz9-GtUbkGIIF67IogguFYIZq5V47ScP6J8f8ojDoZlvZbhsPU6uEW5oarrStCas60zdyOVBlj0AjAGmcbNAakJKc4rLLVLg8OQmVEfN97blo9iZFKx-nHo8PMjKNkLy_fwjKUXQO3cmvDDHS2UPgGJD-FgQKcbqfvt8fkTA1qTRtpp0ynoCxJzuZeTD95ZMH5UNP715vyqnMR5-rMZHkZ5cMMq9qx3AJEK"
-    },
-    {
-      id: "TKG-105",
-      name: "Rian Setiawan",
-      specialty: "AC & Pendingin",
-      rating: 3.5,
-      reviews: 15,
-      complaints: 7,
-      status: "Peringatan",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6mcbo3dovOyIWsCvkUyOnAV8b3NZpa1tL19vZwlfxaK26iHS5qu_OHWhCGsh0YMWIjjiJp6axHqdoFqwluV6M-fNAC2Vi1kRJHOSglgBAazleBGMBOdnkF4cYJ8xqUlUEhCC3CQnz8Ekp8pP6udNHBjRqYRd_8zb32XpgEUgNIVbKKANBHi8eQDoe9wlBZ4G6eKLiAQQuHJYe71wIETvjJKBiAhGVBzsugTKeGbzmTxFAI5rRXrAqImmUhdChJhgKTzFbXLIzG5kj"
-    }
-  ]);
+  const [stats, setStats] = useState({
+    averageRating: 0.0,
+    totalReviews: 0,
+    problematicCount: 0
+  });
 
-  const handleDeactivate = (id) => {
+  const [performances, setPerformances] = useState([]);
+
+  useEffect(() => {
+    fetchMonitoringData();
+  }, []);
+
+  const fetchMonitoringData = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/admin/monitoring");
+      if (response.data.status === 'Sukses') {
+        const { averageRating, totalReviews, problematicCount, performances } = response.data.data;
+        setStats({ averageRating, totalReviews, problematicCount });
+        
+        const mappedPerf = performances.map(p => ({
+          id: p.id,
+          name: p.nama,
+          specialty: p.keahlian,
+          rating: p.rating || 0.0,
+          reviews: p.ulasans_count || 0,
+          complaints: 0, // Mock for now, maybe add logic in backend later
+          status: p.status_verifikasi === 'Menunggu' ? 'Ditinjau' : (p.status_verifikasi || (p.is_aktif ? 'Aktif' : 'Nonaktif')),
+          avatar: p.foto_profil ? (p.foto_profil.startsWith('http') ? p.foto_profil : `http://localhost:8000/storage/${p.foto_profil}`) : `https://ui-avatars.com/api/?name=${p.nama}&background=random`
+        }));
+        setPerformances(mappedPerf);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeactivate = async (id) => {
     if (confirm(`Apakah Anda yakin ingin menonaktifkan akun dengan ID ${id}?`)) {
-      setPerformances(prev => 
-        prev.map(p => p.id === id ? { ...p, status: "Nonaktif" } : p)
-      );
-      alert(`Akun ${id} telah dinonaktifkan.`);
+      try {
+        const response = await axios.put(`http://localhost:8000/api/admin/tukang/${id}/status`);
+        if (response.data.status === 'Sukses') {
+          fetchMonitoringData();
+          alert(`Akun ${id} telah dinonaktifkan.`);
+        }
+      } catch (e) {
+        alert("Gagal mengubah status tukang.");
+      }
     }
   };
 
@@ -198,7 +196,7 @@ function MonitoringRating() {
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 </div>
                 <span className="block text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">Rating Rata-rata</span>
-                <h3 className="text-3xl font-black mt-1">4.8</h3>
+                <h3 className="text-3xl font-black mt-1">{stats.averageRating}</h3>
               </div>
               <div className="mt-4 flex items-center gap-2 text-green-400 text-[10px] font-bold">
                 <span className="material-symbols-outlined text-sm">trending_up</span>
@@ -213,7 +211,7 @@ function MonitoringRating() {
                   <span className="material-symbols-outlined">forum</span>
                 </div>
                 <span className="block text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">Total Ulasan</span>
-                <h3 className="text-3xl font-black mt-1">1.284</h3>
+                <h3 className="text-3xl font-black mt-1">{stats.totalReviews.toLocaleString("id-ID")}</h3>
               </div>
               <div className="mt-4 text-on-surface-variant/75 text-[10px] font-bold">
                 98% ulasan terverifikasi
@@ -227,8 +225,8 @@ function MonitoringRating() {
                   <div className="w-11 h-11 rounded-xl bg-red-500/15 flex items-center justify-center mb-3 text-red-400 border border-red-500/10 shrink-0">
                     <span className="material-symbols-outlined">report</span>
                   </div>
-                  <span className="block text-[9px] text-red-400 font-bold uppercase tracking-wider">Jumlah Komplain Aktif</span>
-                  <h3 className="text-3xl font-black text-red-400 mt-1">12</h3>
+                  <span className="block text-[9px] text-red-400 font-bold uppercase tracking-wider">Akun Rating Rendah</span>
+                  <h3 className="text-3xl font-black text-red-400 mt-1">{stats.problematicCount}</h3>
                 </div>
                 <div className="text-right">
                   <span className="inline-flex items-center px-3 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-bold uppercase mb-1.5">Peringatan Tinggi</span>
@@ -379,18 +377,7 @@ function MonitoringRating() {
 
             {/* Pagination Footer */}
             <div className="p-5 border-t border-surface-variant/15 flex justify-between items-center bg-surface-container-high/20">
-              <span className="text-xs text-on-surface-variant font-medium">Menampilkan 1-4 dari 156 tukang</span>
-              <div className="flex gap-1.5">
-                <button className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer" disabled>
-                  <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                </button>
-                <button className="w-8 h-8 rounded-lg bg-secondary text-on-secondary text-xs font-bold shadow-md shadow-secondary/10 border-none cursor-pointer">1</button>
-                <button className="w-8 h-8 rounded-lg border border-surface-variant/20 text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer">2</button>
-                <button className="w-8 h-8 rounded-lg border border-surface-variant/20 text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer">3</button>
-                <button className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer">
-                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                </button>
-              </div>
+              <span className="text-xs text-on-surface-variant font-medium">Menampilkan {filteredPerformances.length} tukang</span>
             </div>
 
           </div>

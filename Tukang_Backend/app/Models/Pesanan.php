@@ -10,6 +10,11 @@ class Pesanan extends Model
         'user_id',
         'tukang_id',
         'deskripsi_masalah',
+        'judul',
+        'kategori_layanan',
+        'latitude',
+        'longitude',
+        'alamat_lengkap',
         'harga_penawaran',
         'status',
         'alasan_penolakan'

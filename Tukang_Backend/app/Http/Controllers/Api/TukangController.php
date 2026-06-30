@@ -101,11 +101,123 @@ class TukangController extends Controller
         ], 200);
     }
 
+    public function updateProfil(Request $request, $id)
+    {
+        $tukang = \App\Models\Tukang::find($id);
+        if (!$tukang) {
+            return response()->json(['message' => 'Tukang tidak ditemukan'], 404);
+        }
+
+        $request->validate([
+            'nama' => 'required|string',
+            'no_hp' => 'required|string',
+            'keahlian' => 'required|string',
+            'radius_layanan' => 'required|integer',
+            'area_cakupan' => 'nullable|string',
+            'keahlian_tambahan' => 'nullable|array'
+        ]);
+
+        $tukang->nama = $request->nama;
+        $tukang->no_hp = $request->no_hp;
+        $tukang->keahlian = $request->keahlian;
+        $tukang->radius_layanan = $request->radius_layanan;
+        $tukang->area_cakupan = $request->area_cakupan;
+        $tukang->keahlian_tambahan = $request->keahlian_tambahan;
+        $tukang->save();
+
+        return response()->json([
+            'status' => 'Sukses',
+            'message' => 'Profil berhasil diperbarui',
+            'data' => $tukang
+        ]);
+    }
+
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Mendapatkan Statistik Dashboard untuk Tukang
+     */
+    public function getDashboardStats($id)
+    {
+        $tukang = \App\Models\Tukang::find($id);
+        
+        if (!$tukang) {
+            return response()->json(['message' => 'Tukang tidak ditemukan'], 404);
+        }
+
+        $pesananAktif = \App\Models\Pesanan::where('tukang_id', $id)
+            ->whereIn('status', ['menunggu', 'diterima', 'dinego'])
+            ->count();
+            
+        $pekerjaanSelesai = \App\Models\Pesanan::where('tukang_id', $id)
+            ->where('status', 'selesai')
+            ->count();
+            
+        $pendapatanBulanIni = \App\Models\Pesanan::where('tukang_id', $id)
+            ->where('status', 'selesai')
+            ->whereMonth('created_at', date('m'))
+            ->whereYear('created_at', date('Y'))
+            ->sum('harga_penawaran');
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => [
+                'pesanan_aktif' => str_pad($pesananAktif, 2, '0', STR_PAD_LEFT),
+                'pekerjaan_selesai' => $pekerjaanSelesai,
+                'rating_rata_rata' => $tukang->rating,
+                'pendapatan_bulan_ini' => $pendapatanBulanIni
+            ]
+        ]);
+    }
+
+    /**
+     * Mendapatkan Aktivitas Terbaru untuk Tukang
+     */
+    public function getRecentActivities($id)
+    {
+        // Sebagai contoh simulasi data log, ambil pesanan terbaru dan ulasan terbaru.
+        // Di aplikasi riil bisa berupa tabel 'notifications' khusus.
+        
+        $pesananSelesai = \App\Models\Pesanan::with('user')
+            ->where('tukang_id', $id)
+            ->where('status', 'selesai')
+            ->latest()
+            ->take(2)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'tipe' => 'pekerjaan_selesai',
+                    'judul' => 'Selesaikan Pekerjaan #' . $item->id,
+                    'deskripsi' => $item->kategori_layanan . ' - ' . ($item->user->name ?? 'Pelanggan'),
+                    'waktu' => $item->updated_at->diffForHumans()
+                ];
+            });
+
+        $ulasanBaru = \App\Models\Ulasan::with('user')
+            ->where('tukang_id', $id)
+            ->latest()
+            ->take(1)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'tipe' => 'ulasan',
+                    'judul' => 'Rating ' . $item->rating . ' Bintang Diterima',
+                    'deskripsi' => $item->komentar . ' - ' . ($item->user->name ?? 'Pelanggan'),
+                    'waktu' => $item->created_at->diffForHumans()
+                ];
+            });
+
+        $activities = $pesananSelesai->concat($ulasanBaru)->sortByDesc('waktu')->values();
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => $activities
+        ]);
     }
 }
