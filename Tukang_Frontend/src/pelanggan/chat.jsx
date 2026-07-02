@@ -50,10 +50,10 @@ const kirimRating = async () => {
             "http://127.0.0.1:8000/api/ulasan",
             {
                 user_id: 1,
-    pesanan_id: 1,
-    rating: rating,
-    komentar: ulasan,
-    tukang_id: 1,
+                pesanan_id: 1,
+                rating: rating,
+                komentar: ulasan,
+                tukang_id: 1,
             }
         );
 
