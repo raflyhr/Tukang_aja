@@ -28,11 +28,14 @@ function Login() {
       // Kalo sukses dapet token dari Laravel
       if (response.data.access_token) {
         // Simpen token sama data user di localStorage
+        const userData = response.data.data.user;
+        
         localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("user_role", userData.role);
         localStorage.setItem("user", JSON.stringify(response.data.data));
         
         // Data response dari backend (kadang dibungkus di "user", kadang langsung)
-        const userData = response.data.data.user || response.data.data;
         localStorage.setItem("user_role", userData.role);
 
         setToastType("success");

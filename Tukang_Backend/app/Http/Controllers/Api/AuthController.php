@@ -174,29 +174,40 @@ class AuthController extends Controller
      * API untuk Register (Daftar) Pelanggan / User Biasa.
      */
     public function registerUser(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'no_hp' => 'required|string|max:20',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:8|confirmed',
+        'alamat' => 'required|string',
+        'latitude' => 'required|numeric',
+        'longitude' => 'required|numeric',
+        'catatan' => 'nullable|string',
+    ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'user',
-        ]);
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => 'user',
+        'no_hp' => $request->no_hp,
+        'alamat' => $request->alamat,
+        'latitude' => $request->latitude,
+        'longitude' => $request->longitude,
+        'catatan' => $request->catatan,
+    ]);
 
-        $token = $user->createToken('auth_token_user')->plainTextToken;
+    $token = $user->createToken('auth_token_user')->plainTextToken;
 
-        return response()->json([
-            'message' => 'Registrasi Pelanggan Berhasil!',
-            'data' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer'
-        ], 201);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Registrasi Pelanggan Berhasil!',
+        'data' => $user,
+        'access_token' => $token,
+        'token_type' => 'Bearer'
+    ], 201);
+}
 
     /**
      * API untuk Login Pelanggan / User Biasa.
