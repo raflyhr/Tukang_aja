@@ -107,6 +107,7 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Perbaikan Listrik',
             'deskripsi_masalah' => 'Lampu ruang tamu sering kedap-kedip.',
             'alamat_lengkap' => 'Jl. Sudirman No.1',
+            'latitude' => -6.2000,
             'longitude' => 106.84,
             'status' => 'menunggu_pembayaran',
             'harga_penawaran' => 150000
@@ -118,6 +119,8 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Servis AC',
             'deskripsi_masalah' => 'AC tidak dingin sama sekali.',
             'alamat_lengkap' => 'Jl. Thamrin No.2',
+            'latitude' => -6.2100,
+            'longitude' => 106.8100,
             'status' => 'selesai',
             'harga_penawaran' => 250000
         ]);
@@ -128,6 +131,8 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Instalasi Listrik',
             'deskripsi_masalah' => 'Pasang stop kontak baru.',
             'alamat_lengkap' => 'Jl. Gatot Subroto No.3',
+            'latitude' => -6.2200,
+            'longitude' => 106.8200,
             'status' => 'selesai',
             'harga_penawaran' => 100000
         ]);

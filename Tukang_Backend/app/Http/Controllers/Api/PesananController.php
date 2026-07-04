@@ -98,7 +98,7 @@ class PesananController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|exists:roles,id',
             'deskripsi_masalah' => 'required|string',
             'judul' => 'required|string',
             'kategori_layanan' => 'required|string',
