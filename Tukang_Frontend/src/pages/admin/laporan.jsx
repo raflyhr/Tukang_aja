@@ -1,32 +1,31 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
-import LogoutModal from "../components/LogoutModal";
+import LogoutModal from "../../components/LogoutModal";
 
-const MOCK_PEMBAYARAN = [
-  { id: "PAY-1002", transaksiId: "TRX-9982", pelanggan: "Rian Hidayat", metode: "Transfer Bank (BCA)", status: "Berhasil", jumlah: 150000, tanggal: "03 Jul 2026" },
-  { id: "PAY-1001", transaksiId: "TRX-9980", pelanggan: "Budi Pratama", metode: "E-Wallet (Gopay)", status: "Menunggu Pembayaran", jumlah: 200000, tanggal: "02 Jul 2026" },
-  { id: "PAY-1000", transaksiId: "TRX-9979", pelanggan: "Siti Aminah", metode: "Transfer Bank (Mandiri)", status: "Berhasil", jumlah: 120000, tanggal: "01 Jul 2026" },
-  { id: "PAY-0999", transaksiId: "TRX-9977", pelanggan: "Dewi Lestari", metode: "Kartu Kredit", status: "Gagal", jumlah: 450000, tanggal: "29 Jun 2026" }
+const MOCK_LAPORAN = [
+  { id: "REP-001", pelapor: "Dewi Lestari", terlapor: "Agus Prasetyo", tipe: "Tukang", alasan: "Pekerjaan AC bocor lagi setelah 2 hari dan tidak mau dihubungi", status: "Baru", tanggal: "03 Jul 2026" },
+  { id: "REP-002", pelapor: "Rian Hidayat", terlapor: "Budi Santoso", tipe: "Tukang", alasan: "Terlambat datang lebih dari 2 jam tanpa kabar", status: "Diproses", tanggal: "02 Jul 2026" },
+  { id: "REP-003", pelapor: "Hendra Wijaya", terlapor: "Andi Wijaya", tipe: "Pelanggan", alasan: "Pelanggan tidak membayar sisa biaya material tambahan", status: "Selesai", tanggal: "30 Jun 2026" }
 ];
 
-function AdminPembayaran() {
+function AdminLaporan() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [pembayaranList, setPembayaranList] = useState(MOCK_PEMBAYARAN);
+  const [laporanList, setLaporanList] = useState(MOCK_LAPORAN);
 
-  const filteredPembayaran = pembayaranList.filter(p => {
+  const filteredLaporan = laporanList.filter(l => {
     const matchesSearch = 
-      p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.transaksiId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.pelanggan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.metode.toLowerCase().includes(searchQuery.toLowerCase());
+      l.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.pelapor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.terlapor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.alasan.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (statusFilter === "Semua") return matchesSearch;
-    return matchesSearch && p.status === statusFilter;
+    return matchesSearch && l.status === statusFilter;
   });
 
   const navigationItems = [
@@ -40,11 +39,11 @@ function AdminPembayaran() {
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
-      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:transition-none lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-4 mb-8 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-secondary/15 rounded-lg flex items-center justify-center text-secondary border border-secondary/10 shrink-0">
-              <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
+              <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>gavel</span>
             </div>
             <div>
               <h1 className="font-headline-md text-headline-md font-bold text-secondary text-sm">TukangAja</h1>
@@ -79,7 +78,7 @@ function AdminPembayaran() {
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
               <input 
                 className="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-secondary/50 text-sm outline-none" 
-                placeholder="Cari pembayaran, ID transaksi..." 
+                placeholder="Cari pelapor, terlapor, alasan..." 
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -90,12 +89,12 @@ function AdminPembayaran() {
 
         <div className="pt-28 pb-12 px-6 md:px-12 max-w-7xl w-full mx-auto space-y-8 flex-grow">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-on-surface">Manajemen Monitoring Pembayaran</h1>
-            <p className="text-sm text-on-surface-variant/80 font-normal mt-1">Pantau dan verifikasi aliran dana transaksi platform TukangAja.</p>
+            <h1 className="text-2xl md:text-3xl font-black text-on-surface">Manajemen Laporan Pengaduan</h1>
+            <p className="text-sm text-on-surface-variant/80 font-normal mt-1">Selesaikan sengketa dan aduan antara pelanggan dan mitra tukang.</p>
           </div>
 
           <div className="flex gap-2">
-            {["Semua", "Berhasil", "Menunggu Pembayaran", "Gagal"].map(status => (
+            {["Semua", "Baru", "Diproses", "Selesai"].map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -115,35 +114,35 @@ function AdminPembayaran() {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-surface-container-high/35 text-on-surface-variant uppercase text-[9px] font-bold tracking-widest border-b border-surface-variant/15">
-                    <th className="px-6 py-4">ID Pembayaran</th>
-                    <th className="px-6 py-4">ID Pesanan</th>
-                    <th className="px-6 py-4">Pelanggan</th>
-                    <th className="px-6 py-4">Metode</th>
+                    <th className="px-6 py-4">ID Laporan</th>
+                    <th className="px-6 py-4">Pelapor</th>
+                    <th className="px-6 py-4">Terlapor</th>
+                    <th className="px-6 py-4">Tipe Aduan</th>
+                    <th className="px-6 py-4">Alasan</th>
                     <th className="px-6 py-4">Tanggal</th>
                     <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Jumlah</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-variant/10 font-medium">
-                  {filteredPembayaran.map((item) => (
+                  {filteredLaporan.map((item) => (
                     <tr key={item.id} className="border-b border-surface-variant/10">
                       <td className="px-6 py-4 font-mono font-bold text-secondary">{item.id}</td>
-                      <td className="px-6 py-4 font-mono text-on-surface">{item.transaksiId}</td>
-                      <td className="px-6 py-4 text-on-surface">{item.pelanggan}</td>
-                      <td className="px-6 py-4 text-on-surface-variant">{item.metode}</td>
+                      <td className="px-6 py-4 text-on-surface">{item.pelapor}</td>
+                      <td className="px-6 py-4 text-on-surface">{item.terlapor}</td>
+                      <td className="px-6 py-4 text-on-surface-variant">{item.tipe}</td>
+                      <td className="px-6 py-4 text-on-surface-variant max-w-[300px] truncate">{item.alasan}</td>
                       <td className="px-6 py-4 text-on-surface-variant">{item.tanggal}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide ${
-                          item.status === "Berhasil" 
+                          item.status === "Selesai" 
                             ? "bg-green-500/10 border-green-500/20 text-green-400"
-                            : item.status === "Menunggu Pembayaran"
-                            ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
+                            : item.status === "Diproses"
+                            ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
                             : "bg-red-500/10 border-red-500/20 text-red-400"
                         }`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-on-surface font-semibold">Rp {item.jumlah.toLocaleString('id-ID')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -163,4 +162,4 @@ function AdminPembayaran() {
   );
 }
 
-export default AdminPembayaran;
+export default AdminLaporan;

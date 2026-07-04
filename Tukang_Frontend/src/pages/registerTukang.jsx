@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import LeafletMapPicker from "../components/LeafletMapPicker";
+import ImageCropModal from "../components/ImageCropModal";
 
 const AVAILABLE_SKILLS = [
   "Anti Bocor",
@@ -15,7 +16,8 @@ const AVAILABLE_SKILLS = [
   "Pasang Keramik Dinding",
   "Perawatan Taman",
   "Perbaikan Pompa Air",
-  "Pemasangan Baja Ringan"
+  "Pemasangan Baja Ringan",
+  "Lainnya"
 ];
 
 function RegisterTukang() {
@@ -40,6 +42,9 @@ function RegisterTukang() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
   const [profilePhotoDetails, setProfilePhotoDetails] = useState({ name: "", size: "" });
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [tempProfileFile, setTempProfileFile] = useState(null);
 
   // Address
   const [locationData, setLocationData] = useState({
@@ -51,6 +56,7 @@ function RegisterTukang() {
   // Keahlian State
   const [mainCategory, setMainCategory] = useState("Pilih kategori");
   const [additionalSkills, setAdditionalSkills] = useState([]);
+  const [customSkill, setCustomSkill] = useState("");
   const [yearsExp, setYearsExp] = useState("");
   const [jobDesc, setJobDesc] = useState("");
 
@@ -93,17 +99,24 @@ function RegisterTukang() {
     }
 
     setErrors(prev => ({ ...prev, profilePhoto: null }));
-    setProfilePhoto(file);
-    setProfilePhotoDetails({
-      name: file.name,
-      size: (file.size / 1024 / 1024).toFixed(2) + " MB"
-    });
+    setTempProfileFile(file);
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProfilePhotoPreview(reader.result);
+      setCropImageSrc(reader.result);
+      setIsCropModalOpen(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleConfirmProfileCrop = ({ file, dataUrl }) => {
+    setProfilePhoto(file);
+    setProfilePhotoPreview(dataUrl);
+    setProfilePhotoDetails({
+      name: tempProfileFile ? tempProfileFile.name : "profile.jpg",
+      size: (file.size / 1024 / 1024).toFixed(2) + " MB"
+    });
+    setIsCropModalOpen(false);
   };
 
   const handleKtpFileChange = (e) => {
@@ -191,6 +204,10 @@ function RegisterTukang() {
       newErrors.additionalSkills = "Pilih minimal 1 keahlian tambahan";
     }
 
+    if (additionalSkills.includes("Lainnya") && !customSkill.trim()) {
+      newErrors.customSkill = "Harap sebutkan keahlian lainnya yang Anda miliki";
+    }
+
     if (yearsExp === "") {
       newErrors.yearsExp = "Tahun pengalaman wajib diisi";
     } else if (Number(yearsExp) < 0) {
@@ -258,7 +275,10 @@ function RegisterTukang() {
       formData.append("latitude", locationData.latitude || "");
       formData.append("longitude", locationData.longitude || "");
       formData.append("keahlian", mainCategory);
-      formData.append("keahlian_tambahan", additionalSkills.join(", "));
+      const finalSkills = additionalSkills.map(skill => 
+        skill === "Lainnya" ? (customSkill.trim() || "Lainnya") : skill
+      );
+      formData.append("keahlian_tambahan", finalSkills.join(", "));
       formData.append("tahun_pengalaman", yearsExp);
       formData.append("deskripsi_pengalaman", jobDesc);
       
@@ -819,6 +839,26 @@ function RegisterTukang() {
                         );
                       })}
                     </div>
+
+                    {additionalSkills.includes("Lainnya") && (
+                      <div className="mt-4 flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200 w-full">
+                        <label className="font-label-md text-label-md text-on-surface-variant px-1">
+                          Sebutkan Keahlian Lainnya
+                        </label>
+                        <input
+                          type="text"
+                          className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
+                          placeholder="Masukkan keahlian lainnya..."
+                          value={customSkill}
+                          onChange={(e) => setCustomSkill(e.target.value)}
+                        />
+                        {errors.customSkill && (
+                          <span className="text-xs text-red-500 px-1 mt-0.5 block">
+                            {errors.customSkill}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
@@ -1140,6 +1180,13 @@ function RegisterTukang() {
         <div className="absolute top-[10%] right-[5%] w-96 h-96 bg-secondary/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[20%] left-[5%] w-64 h-64 bg-primary/5 blur-[100px] rounded-full"></div>
       </div>
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={cropImageSrc}
+        onClose={() => setIsCropModalOpen(false)}
+        onConfirm={handleConfirmProfileCrop}
+      />
     </div>
   );
 }
