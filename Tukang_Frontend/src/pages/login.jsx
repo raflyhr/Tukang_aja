@@ -20,7 +20,7 @@ function Login() {
     
     try {
       // Panggil API Login Universal
-      const response = await axios.post("http://localhost:8000/api/auth/login", {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, {
         email: email,
         password: password
       });
@@ -28,12 +28,13 @@ function Login() {
       // Kalo sukses dapet token dari Laravel
       if (response.data.access_token) {
         // Simpen token sama data user di localStorage
-        localStorage.setItem("access_token", response.data.access_token);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
+        const userData = response.data.data.user;
         
-        // Data response dari backend (kadang dibungkus di "user", kadang langsung)
-        const userData = response.data.data.user || response.data.data;
+        localStorage.setItem("user_id", userData.id);
         localStorage.setItem("user_role", userData.role);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+        localStorage.setItem("access_token", response.data.access_token);
+        
 
         setToastType("success");
         setToastMessage(response.data.message || `Login berhasil sebagai ${userData.role}`);

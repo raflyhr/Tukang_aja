@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../components/LeafletMapPicker";
+import axios from "axios";
 
 function RegisterPelanggan() {
   const navigate = useNavigate();
@@ -140,25 +141,60 @@ function RegisterPelanggan() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      setToastType("error");
-      setToastMessage("Tolong lengkapi persyaratan terlebih dahulu.");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-      scrollToSection("profile");
-      return;
-    }
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!validateForm()) {
+    setToastType("error");
+    setToastMessage("Tolong lengkapi persyaratan terlebih dahulu.");
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
+    scrollToSection("profile");
+    return;
+  }
+
+  try {
+    const response = await axios.post(
+      "http://127.0.0.1:8000/api/auth/user/register",
+      {
+        name: fullName,
+        no_hp: phone,
+        email: email,
+        password: password,
+        password_confirmation: confirmPassword,
+        alamat: locationData.address,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        catatan: noteText,
+      }
+    );
+
+    localStorage.setItem(
+      "access_token",
+      response.data.access_token
+    );
 
     setToastType("success");
-    setToastMessage("Registrasi Pelanggan Berhasil! Silakan masuk.");
+    setToastMessage(response.data.message);
     setShowToast(true);
+
     setTimeout(() => {
-      setShowToast(false);
-      navigate("/pelanggan/dashboard");
+      navigate("/login");
     }, 2000);
-  };
+
+  } catch (error) {
+    setToastType("error");
+
+    if (error.response) {
+      setToastMessage(error.response.data.message);
+    } else {
+      setToastMessage("Tidak dapat terhubung ke server.");
+    }
+
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
+  }
+};
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans select-none custom-scrollbar relative">

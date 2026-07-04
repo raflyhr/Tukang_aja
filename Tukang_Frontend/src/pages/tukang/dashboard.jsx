@@ -84,7 +84,7 @@ function TukangDashboard() {
         if (parsed && parsed.tukang && parsed.tukang.id) {
           id = parsed.tukang.id;
           if (parsed.tukang.nama) setTechnicianName(parsed.tukang.nama);
-          if (parsed.tukang.foto_profil) setAvatar(parsed.tukang.foto_profil.startsWith('http') ? parsed.tukang.foto_profil : `http://localhost:8000/storage/${parsed.tukang.foto_profil}`);
+          if (parsed.tukang.foto_profil) setAvatar(parsed.tukang.foto_profil.startsWith('http') ? parsed.tukang.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${parsed.tukang.foto_profil}`);
         }
       } catch (e) {}
     }

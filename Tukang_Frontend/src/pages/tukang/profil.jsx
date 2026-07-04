@@ -23,7 +23,7 @@ function TukangProfil() {
             category: t.keahlian || "",
             rating: t.rating || "0.0",
             reviewsCount: 0,
-            avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `http://localhost:8000/storage/${t.foto_profil}`) : "https://ui-avatars.com/api/?name=" + (t.nama || "Tukang") + "&background=random"
+            avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`) : "https://ui-avatars.com/api/?name=" + (t.nama || "Tukang") + "&background=random"
           };
         }
       }
@@ -102,7 +102,7 @@ function TukangProfil() {
           category: data.keahlian || "",
           rating: data.rating || "0.0",
           reviewsCount: data.ulasans?.length || 0,
-          avatar: data.foto_profil ? (data.foto_profil.startsWith('http') ? data.foto_profil : `http://localhost:8000/storage/${data.foto_profil}`) : "https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
+          avatar: data.foto_profil ? (data.foto_profil.startsWith('http') ? data.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${data.foto_profil}`) : "https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg"
         });
         setRadius(data.radius_layanan || 15);
         setCoverageArea(data.area_cakupan || "");
