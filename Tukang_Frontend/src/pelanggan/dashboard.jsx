@@ -5,8 +5,9 @@ import axios from "axios";
 import { useEffect} from "react";
 
 function Dashboard() {
+  const [user, setUser] = useState(null);
   const [tukangs, setTukangs] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -43,8 +44,21 @@ const [loading, setLoading] = useState(true);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && parsed.user) {
+          setUser(parsed.user);
+        } else {
+          setUser(parsed);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
     getTukangs();
-}, []);
+  }, []);
 
   const getTukangs = async () => {
     try {
@@ -586,8 +600,8 @@ const [loading, setLoading] = useState(true);
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Reze</h4>
-                <p className="text-xs text-on-surface-variant/60 truncate">chaostknight483@gmail.com</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{user ? user.name : "Pelanggan"}</h4>
+                <p className="text-xs text-on-surface-variant/60 truncate">{user ? user.email : ""}</p>
               </div>
             </div>
             <button 
@@ -640,7 +654,7 @@ const [loading, setLoading] = useState(true);
                 <div className="relative z-10 max-w-xl space-y-4 w-full">
                   <div>
                     <h2 className="font-headline-xl text-headline-xl text-on-background mb-2 text-4xl font-bold mt-3">
-                      Halo, <span className="text-secondary">Reze!</span>
+                      Halo, <span className="text-secondary">{user ? user.name : "Pelanggan"}!</span>
                     </h2>
                     <p className="font-body-lg text-sm text-on-surface-variant/80 font-normal leading-relaxed">
                       Butuh perbaikan rumah? Temukan penyedia jasa terpercaya untuk melayani kebutuhan listrik, pipa, kebersihan, dan atap rumah Anda.
