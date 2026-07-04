@@ -30,13 +30,11 @@ function Login() {
         // Simpen token sama data user di localStorage
         const userData = response.data.data.user;
         
-        localStorage.setItem("access_token", response.data.access_token);
-        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("user_id", userData.id);
         localStorage.setItem("user_role", userData.role);
         localStorage.setItem("user", JSON.stringify(response.data.data));
+        localStorage.setItem("access_token", response.data.access_token);
         
-        // Data response dari backend (kadang dibungkus di "user", kadang langsung)
-        localStorage.setItem("user_role", userData.role);
 
         setToastType("success");
         setToastMessage(response.data.message || `Login berhasil sebagai ${userData.role}`);
