@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { adminData } from "./adminData";
-import LogoutModal from "../components/LogoutModal";
+import LogoutModal from "../../components/LogoutModal";
 import axios from "axios";
 
 function VerifikasiTukang() {

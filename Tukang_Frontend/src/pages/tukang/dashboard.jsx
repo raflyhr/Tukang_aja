@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import LogoutModal from "../components/LogoutModal";
+import LogoutModal from "../../components/LogoutModal";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import api from "../lib/axios";
+import api from "../../lib/axios";
 
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility";

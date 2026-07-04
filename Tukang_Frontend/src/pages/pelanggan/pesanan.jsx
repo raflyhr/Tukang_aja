@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import LogoutModal from "../components/LogoutModal";
+import LogoutModal from "../../components/LogoutModal";
 import { useState, useEffect } from "react";
 import axios from "axios";
 

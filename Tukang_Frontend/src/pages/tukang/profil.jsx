@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../lib/axios";
+import api from "../../lib/axios";
 
 function TukangProfil() {
   const navigate = useNavigate();

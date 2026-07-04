@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
-import LogoutModal from "../components/LogoutModal";
+import LogoutModal from "../../components/LogoutModal";
 
 const MOCK_LAPORAN = [
   { id: "REP-001", pelapor: "Dewi Lestari", terlapor: "Agus Prasetyo", tipe: "Tukang", alasan: "Pekerjaan AC bocor lagi setelah 2 hari dan tidak mau dihubungi", status: "Baru", tanggal: "03 Jul 2026" },

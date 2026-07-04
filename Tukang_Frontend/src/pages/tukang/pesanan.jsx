@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import LogoutModal from "../components/LogoutModal";
-import api from "../lib/axios";
+import LogoutModal from "../../components/LogoutModal";
+import api from "../../lib/axios";
 
 function TukangPesanan() {
   const navigate = useNavigate();

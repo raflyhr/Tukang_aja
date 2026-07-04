@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import LeafletMapPicker from "../components/LeafletMapPicker";
-import LogoutModal from "../components/LogoutModal";
-import ImageCropModal from "../components/ImageCropModal";
+import LeafletMapPicker from "../../components/LeafletMapPicker";
+import LogoutModal from "../../components/LogoutModal";
+import ImageCropModal from "../../components/ImageCropModal";
 
 function Profil() {
   const navigate = useNavigate();
