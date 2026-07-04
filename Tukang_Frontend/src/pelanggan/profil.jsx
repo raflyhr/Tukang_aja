@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../components/LeafletMapPicker";
 import LogoutModal from "../components/LogoutModal";
+import ImageCropModal from "../components/ImageCropModal";
 
 function Profil() {
   const navigate = useNavigate();
@@ -94,9 +95,8 @@ function Profil() {
     }
   };
 
-  const handleConfirmCrop = () => {
-    // Crop simulation updates the photo state with the source image
-    setProfilePic(cropImageSrc);
+  const handleConfirmCrop = ({ file, dataUrl }) => {
+    setProfilePic(dataUrl);
     setIsCropModalOpen(false);
     showToast("Foto profil berhasil diperbarui!", "success");
   };
@@ -382,7 +382,7 @@ function Profil() {
       </div>
 
       {/* SideNavBar */}
-      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:transition-none lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-4 mb-8 flex justify-between items-center">
           <div>
             <h1 className="font-headline-md text-headline-md font-bold text-secondary">TukangAja</h1>
@@ -797,67 +797,13 @@ function Profil() {
         </div>
       )}
 
-      {/* MODAL: PHOTO CROP SIMULATION */}
-      {isCropModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
-            <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
-              <h3 className="text-sm font-extrabold text-on-surface">Potong Foto Profil</h3>
-              <button 
-                onClick={() => setIsCropModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-            
-            <div className="p-6 flex flex-col items-center space-y-4">
-              <div className="relative w-48 h-48 border-2 border-dashed border-secondary/40 rounded-full overflow-hidden flex items-center justify-center bg-surface-container-low shadow-inner">
-                {/* Crop simulator container */}
-                <div 
-                  className="absolute inset-0 flex items-center justify-center transition-transform duration-100"
-                  style={{ transform: `scale(${cropZoom})` }}
-                >
-                  <img src={cropImageSrc} alt="Crop Preview" className="w-full h-full object-cover" />
-                </div>
-                {/* Visual crop border */}
-                <div className="absolute inset-2 border-2 border-secondary rounded-full pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
-              </div>
-
-              <div className="w-full space-y-1">
-                <label className="text-[10px] text-on-surface-variant font-bold flex justify-between">
-                  <span>Perbesar Zoom</span>
-                  <span>{Math.round(cropZoom * 100)}%</span>
-                </label>
-                <input 
-                  type="range"
-                  min="1"
-                  max="3"
-                  step="0.1"
-                  className="w-full accent-secondary"
-                  value={cropZoom}
-                  onChange={(e) => setCropZoom(parseFloat(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <div className="p-5 border-t border-surface-variant/10 flex justify-end gap-2.5 bg-surface-container-high">
-              <button 
-                onClick={() => setIsCropModalOpen(false)}
-                className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
-              >
-                Batal
-              </button>
-              <button 
-                onClick={handleConfirmCrop}
-                className="px-4 py-2 bg-secondary text-on-secondary hover:bg-secondary/90 transition-all rounded-xl font-bold cursor-pointer border-none"
-              >
-                Simpan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL: PHOTO CROP */}
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={cropImageSrc}
+        onClose={() => setIsCropModalOpen(false)}
+        onConfirm={handleConfirmCrop}
+      />
 
       {/* MODAL: SHARE OPTIONS */}
       {isShareModalOpen && (

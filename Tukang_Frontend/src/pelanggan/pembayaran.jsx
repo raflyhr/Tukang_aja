@@ -305,7 +305,7 @@ function Pembayaran() {
       </div>
 
       {/* SideNavBar */}
-      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`h-screen w-64 fixed left-0 top-0 bg-surface-container flex flex-col py-6 px-4 z-50 border-r border-surface-variant/20 transition-transform duration-300 lg:transition-none lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-4 mb-8 flex justify-between items-center">
           <div>
             <h1 className="font-headline-md text-headline-md font-bold text-secondary">TukangAja</h1>
