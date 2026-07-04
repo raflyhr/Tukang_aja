@@ -22,6 +22,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@tukangaja.com',
             'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
             'role' => 'admin',
+            'no_hp' => '080000000000',
+            'alamat' => 'Kantor Pusat TukangAja',
+            'latitude' => -6.2088,
+            'longitude' => 106.8456,
         ]);
 
         // $this->call(TukangSeeder::class);

@@ -286,7 +286,7 @@ function RegisterTukang() {
       if (ktpFile) formData.append("foto_ktp", ktpFile);
       if (portfolioFile) formData.append("cv_portofolio", portfolioFile);
 
-      const response = await axios.post("http://localhost:8000/api/auth/tukang/register", formData, {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/tukang/register`, formData, {
         headers: {
           "Accept": "application/json",
           "Content-Type": "multipart/form-data"

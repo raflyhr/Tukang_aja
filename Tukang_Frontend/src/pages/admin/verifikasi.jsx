@@ -60,7 +60,7 @@ function VerifikasiTukang() {
   const fetchData = async () => {
     try {
       // Get all pending to count them and get the first one if no id is provided
-      const resList = await axios.get("http://localhost:8000/api/admin/verifikasi");
+      const resList = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/verifikasi`);
       if (resList.data.status === 'Sukses') {
         const pendingList = resList.data.data;
         setTotalPending(pendingList.length);
@@ -71,7 +71,7 @@ function VerifikasiTukang() {
         }
 
         if (targetId) {
-          const resDetail = await axios.get(`http://localhost:8000/api/tukang/${targetId}`);
+          const resDetail = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/tukang/${targetId}`);
           if (resDetail.data.status === 'Sukses') {
             setTukangData(resDetail.data.data);
           }
@@ -88,7 +88,7 @@ function VerifikasiTukang() {
     if (!tukangData) return;
     if (confirm(`Apakah Anda yakin ingin menyetujui verifikasi untuk ${tukangData.nama}?`)) {
       try {
-        const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${tukangData.id}`, { action: 'approve' });
+        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/verifikasi/${tukangData.id}`, { action: 'approve' });
         if (response.data.status === 'Sukses') {
           alert("Verifikasi Berhasil Disetujui!");
           navigate("/admin/dashboard");
@@ -107,7 +107,7 @@ function VerifikasiTukang() {
     }
     if (confirm("Tolak verifikasi ini?")) {
       try {
-        const response = await axios.put(`http://localhost:8000/api/admin/verifikasi/${tukangData.id}`, { action: 'reject', reason: rejectionReason });
+        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/verifikasi/${tukangData.id}`, { action: 'reject', reason: rejectionReason });
         if (response.data.status === 'Sukses') {
           alert("Verifikasi ditolak. Alasan: " + rejectionReason);
           navigate("/admin/dashboard");
@@ -252,7 +252,7 @@ function VerifikasiTukang() {
               <img 
                 className="w-28 h-28 md:w-36 md:h-36 rounded-2xl object-cover border border-surface-variant/20 shadow-md" 
                 alt={tukangData.nama} 
-                src={tukangData.foto_profil ? (tukangData.foto_profil.startsWith('http') ? tukangData.foto_profil : `http://localhost:8000/storage/${tukangData.foto_profil}`) : `https://ui-avatars.com/api/?name=${tukangData.nama}&background=random`}
+                src={tukangData.foto_profil ? (tukangData.foto_profil.startsWith('http') ? tukangData.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${tukangData.foto_profil}`) : `https://ui-avatars.com/api/?name=${tukangData.nama}&background=random`}
               />
               <div className="absolute -bottom-2 -right-2 bg-secondary text-on-secondary p-1.5 rounded-lg shadow-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
@@ -339,7 +339,7 @@ function VerifikasiTukang() {
                       className={`w-full h-full object-cover transition-transform duration-500 ${isInverted ? "invert" : ""}`} 
                       alt="Indonesian ID Card (KTP)" 
                       id="ktp-image" 
-                      src={tukangData?.foto_ktp ? (tukangData.foto_ktp.startsWith('http') ? tukangData.foto_ktp : `http://localhost:8000/storage/${tukangData.foto_ktp}`) : "https://via.placeholder.com/600x400?text=No+KTP"}
+                      src={tukangData?.foto_ktp ? (tukangData.foto_ktp.startsWith('http') ? tukangData.foto_ktp : `${import.meta.env.VITE_API_BASE_URL}/storage/${tukangData.foto_ktp}`) : "https://via.placeholder.com/600x400?text=No+KTP"}
                     />
                   </div>
 

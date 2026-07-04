@@ -25,17 +25,42 @@ function Profil() {
     }, 3500);
   };
 
-  // Initial user data for change detection
-  const initialData = {
-    fullName: "Reze",
-    email: "chaostknight483@gmail.com",
-    phone: "0812 3456 7890",
-    primaryAddress: "Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan, 12190",
-  };
-
   // Profile data states
-  const [profileData, setProfileData] = useState({ ...initialData });
+  const [profileData, setProfileData] = useState({
+    fullName: "Pelanggan",
+    email: "",
+    phone: "",
+    primaryAddress: "",
+  });
+
+  const [initialData, setInitialData] = useState({
+    fullName: "Pelanggan",
+    email: "",
+    phone: "",
+    primaryAddress: "",
+  });
+
   const [profilePic, setProfilePic] = useState("https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg");
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        const userObj = parsed.user || parsed;
+        const mappedData = {
+          fullName: userObj.name || "Pelanggan",
+          email: userObj.email || "",
+          phone: userObj.no_hp || "",
+          primaryAddress: userObj.alamat || "",
+        };
+        setProfileData(mappedData);
+        setInitialData(mappedData);
+      } catch (e) {
+        console.error("Failed to parse user data from localStorage", e);
+      }
+    }
+  }, []);
 
   // Saved Addresses State (with Coordinates)
   const [addresses, setAddresses] = useState([

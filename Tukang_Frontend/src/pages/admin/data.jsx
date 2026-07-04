@@ -78,7 +78,7 @@ function DataTukang() {
 
   const fetchTukangList = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/tukang");
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang`);
       if (response.data.status === 'Sukses') {
         const fetchedList = response.data.data.map(t => ({
           id: t.id,
@@ -89,7 +89,7 @@ function DataTukang() {
           rating: t.rating || 0.0,
           reviews: t.total_reviews || 0,
           joinDate: new Date(t.created_at).toLocaleDateString('id-ID'),
-          avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `http://localhost:8000/storage/${t.foto_profil}`) : `https://ui-avatars.com/api/?name=${t.nama}&background=random`
+          avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`) : `https://ui-avatars.com/api/?name=${t.nama}&background=random`
         }));
         setTukangList(fetchedList);
       }
@@ -102,7 +102,7 @@ function DataTukang() {
   const handleDeactivate = async (id) => {
     if (confirm(`Apakah Anda yakin ingin mengubah status akun dengan ID ${id}?`)) {
       try {
-        const response = await axios.put(`http://localhost:8000/api/admin/tukang/${id}/status`);
+        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}/status`);
         if (response.data.status === 'Sukses') {
           fetchTukangList(); // Refresh data
           alert(response.data.message);

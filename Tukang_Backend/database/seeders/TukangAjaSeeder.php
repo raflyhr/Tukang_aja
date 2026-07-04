@@ -20,7 +20,11 @@ class TukangAjaSeeder extends Seeder
             'name' => 'Denji',
             'email' => 'denji@tukangaja.com',
             'password' => Hash::make('password123'),
-            'role' => 'tukang'
+            'role' => 'tukang',
+            'no_hp' => '081234567890',
+            'alamat' => 'Jakarta Selatan',
+            'latitude' => -6.2088,
+            'longitude' => 106.8456,
         ]);
 
         $tukang = Tukang::create([
@@ -42,9 +46,59 @@ class TukangAjaSeeder extends Seeder
         ]);
 
         // 2. Buat Beberapa User Pelanggan
-        $pelanggan1 = User::create(['name' => 'Siska Pratama', 'email' => 'siska@mail.com', 'password' => Hash::make('123'), 'role' => 'user']);
-        $pelanggan2 = User::create(['name' => 'Andi Wijaya', 'email' => 'andi@mail.com', 'password' => Hash::make('123'), 'role' => 'user']);
-        $pelanggan3 = User::create(['name' => 'Santi Rahayu', 'email' => 'santi@mail.com', 'password' => Hash::make('123'), 'role' => 'user']);
+        $pelanggan1 = User::create([
+            'name' => 'Siska Pratama',
+            'email' => 'siska@mail.com',
+            'password' => Hash::make('123'),
+            'role' => 'user',
+            'no_hp' => '081111111111',
+            'alamat' => 'Jl. Sudirman No.1',
+            'latitude' => -6.2088,
+            'longitude' => 106.8456,
+        ]);
+        $pelanggan2 = User::create([
+            'name' => 'Andi Wijaya',
+            'email' => 'andi@mail.com',
+            'password' => Hash::make('123'),
+            'role' => 'user',
+            'no_hp' => '082222222222',
+            'alamat' => 'Jl. Thamrin No.2',
+            'latitude' => -6.2088,
+            'longitude' => 106.8456,
+        ]);
+        $pelanggan3 = User::create([
+            'name' => 'Santi Rahayu',
+            'email' => 'santi@mail.com',
+            'password' => Hash::make('123'),
+            'role' => 'user',
+            'no_hp' => '083333333333',
+            'alamat' => 'Jl. Gatot Subroto No.3',
+            'latitude' => -6.2088,
+            'longitude' => 106.8456,
+        ]);
+
+        // Akun Pelanggan Uji Coba (Dimas & Dai)
+        $dimas = User::create([
+            'name' => 'Dimas',
+            'email' => 'dimas@mail.com',
+            'password' => Hash::make('password123'),
+            'role' => 'user',
+            'no_hp' => '081234567891',
+            'alamat' => 'Sleman, Yogyakarta',
+            'latitude' => -7.797068,
+            'longitude' => 110.370529,
+        ]);
+
+        $dai = User::create([
+            'name' => 'Dai',
+            'email' => 'dai@mail.com',
+            'password' => Hash::make('password123'),
+            'role' => 'user',
+            'no_hp' => '081234567892',
+            'alamat' => 'Bantul, Yogyakarta',
+            'latitude' => -7.8890,
+            'longitude' => 110.3290,
+        ]);
 
         // 3. Buat Beberapa Pesanan untuk Tukang Denji
         $pesananAktif = Pesanan::create([
@@ -53,6 +107,7 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Perbaikan Listrik',
             'deskripsi_masalah' => 'Lampu ruang tamu sering kedap-kedip.',
             'alamat_lengkap' => 'Jl. Sudirman No.1',
+            'latitude' => -6.2000,
             'longitude' => 106.84,
             'status' => 'menunggu_pembayaran',
             'harga_penawaran' => 150000
@@ -64,6 +119,8 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Servis AC',
             'deskripsi_masalah' => 'AC tidak dingin sama sekali.',
             'alamat_lengkap' => 'Jl. Thamrin No.2',
+            'latitude' => -6.2100,
+            'longitude' => 106.8100,
             'status' => 'selesai',
             'harga_penawaran' => 250000
         ]);
@@ -74,6 +131,8 @@ class TukangAjaSeeder extends Seeder
             'kategori_layanan' => 'Instalasi Listrik',
             'deskripsi_masalah' => 'Pasang stop kontak baru.',
             'alamat_lengkap' => 'Jl. Gatot Subroto No.3',
+            'latitude' => -6.2200,
+            'longitude' => 106.8200,
             'status' => 'selesai',
             'harga_penawaran' => 100000
         ]);
