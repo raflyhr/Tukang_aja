@@ -26,6 +26,10 @@ import VerifikasiTukang from "./admin/verifikasi";
 import DataTukang from "./admin/data";
 import MonitoringRating from "./admin/monitoring";
 import ProfilAdmin from "./admin/profil";
+import DataPelanggan from "./admin/pelanggan";
+import AdminPesanan from "./admin/pesanan";
+import AdminPembayaran from "./admin/pembayaran";
+import AdminLaporan from "./admin/laporan";
 
 import "./index.css";
 
@@ -64,6 +68,10 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/verifikasi/:id?" element={<VerifikasiTukang />} />
         <Route path="/admin/data" element={<DataTukang />} />
+        <Route path="/admin/pelanggan" element={<DataPelanggan />} />
+        <Route path="/admin/pesanan" element={<AdminPesanan />} />
+        <Route path="/admin/pembayaran" element={<AdminPembayaran />} />
+        <Route path="/admin/laporan" element={<AdminLaporan />} />
         <Route path="/admin/rating" element={<MonitoringRating />} />
         <Route path="/admin/profil" element={<ProfilAdmin />} />
 

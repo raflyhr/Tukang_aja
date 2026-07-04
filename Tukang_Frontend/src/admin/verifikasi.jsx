@@ -134,6 +134,7 @@ function VerifikasiTukang() {
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/admin/dashboard" },
     { id: "verifikasi", label: "Verifikasi Tukang", icon: "how_to_reg", path: "/admin/verifikasi", active: true },
     { id: "data", label: "Data Tukang", icon: "engineering", path: "/admin/data" },
+    { id: "pelanggan", label: "Data Pelanggan", icon: "group", path: "/admin/pelanggan" },
     { id: "rating", label: "Monitoring Rating", icon: "star_rate", path: "/admin/rating" },
     { id: "profil", label: "Profil Admin", icon: "admin_panel_settings", path: "/admin/profil" },
   ];
