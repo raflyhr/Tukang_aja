@@ -6,6 +6,7 @@ import { useEffect} from "react";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [tukangs, setTukangs] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -43,16 +44,23 @@ function Dashboard() {
   const [paymentMethod, setPaymentMethod] = useState("QRIS");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
+  const getOrders = async (userId) => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:8000/api/user/${userId}/pesanan`);
+      setOrders(res.data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch user orders", error);
+    }
+  };
+
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        if (parsed && parsed.user) {
-          setUser(parsed.user);
-        } else {
-          setUser(parsed);
-        }
+        const userObj = parsed.user || parsed;
+        setUser(userObj);
+        getOrders(userObj.id);
       } catch (e) {
         console.error(e);
       }
@@ -72,27 +80,32 @@ function Dashboard() {
     }
 };
 
-  // Active Orders (simulated state)
-  const [activeOrders, setActiveOrders] = useState([
-    {
-      id: "ORD-2026-9812",
-      service: "Perbaikan Pipa Bocor",
-      tukang: "Bambang Susilo",
-      date: "24 Juni 2026",
-      cost: "Rp 250.000",
-      status: "Dalam Proses",
-      statusColor: "text-secondary bg-secondary/10 border-secondary/20",
-    },
-    {
-      id: "ORD-2026-9790",
-      service: "Cuci AC Split (2 Unit)",
-      tukang: "Joko Susilo",
-      date: "24 Juni 2026",
-      cost: "Rp 150.000",
-      status: "Menunggu Kedatangan",
-      statusColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    }
-  ]);
+  // Active Orders (calculated dynamically from orders state)
+  const activeOrders = orders
+    .filter(o => o.status !== "selesai" && o.status !== "batal" && o.status !== "ditolak")
+    .map(o => {
+      let formattedDate = "Baru Saja";
+      if (o.created_at) {
+        const d = new Date(o.created_at);
+        formattedDate = d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+      }
+
+      const cost = o.harga_penawaran ? `Rp ${o.harga_penawaran.toLocaleString("id-ID")}` : "Menunggu Penawaran";
+
+      return {
+        id: `ORD-${o.id}`,
+        service: o.kategori_layanan || o.judul || "Jasa Perbaikan",
+        tukang: o.tukang ? (o.tukang.nama || o.tukang.name) : "Belum Ada",
+        date: formattedDate,
+        cost: cost,
+        status: o.status === "menunggu" ? "Menunggu Konfirmasi" : o.status === "diterima" ? "Dalam Proses" : o.status,
+        statusColor: "text-secondary bg-secondary/10 border-secondary/20",
+      };
+    });
+
+  const totalPengeluaran = orders
+    .filter(o => o.status === "selesai")
+    .reduce((sum, o) => sum + (o.harga_penawaran || 0), 0);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard", active: true },
@@ -156,136 +169,71 @@ function Dashboard() {
     ],
   };
 
-  const recommendedTukang = [
-    {
-      id: "t1",
-      name: "Bambang Susilo",
-      specialty: "pipa",
-      specialtyText: "Spesialis Pipa & Deteksi Kebocoran",
-      distance: "1.2 km",
-      distanceValue: 1.2,
-      rating: 4.9,
-      completedJobs: 154,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDs8Lu1JkjdYYbB0gEPDz5AnBVfMJ3NSVj6AaIrRwz11aUkV8ZBMBntVWf7pu9UI9D2d2AV34cbAWarBRu7rkglulzLscU8ytWB_P23UDj2DxligPU1OzKwGGdyBv232-R9WFCHLleZ09J9-F_X2kOAswEol__7wRLilrK5dUYX-1ePXpWmLdaFVTJvesnu-5TksZM3IpA1BvN-EMB7F6YzyPEsTaVDJ7WbyhBHGUp7n8ASgFlNwP4NEzEYN3gvtniLpOjy5cmWOl70",
-      status: "Tersedia",
-      bio: "Berpengalaman lebih dari 8 tahun dalam menangani segala jenis kebocoran pipa, sanitasi, dan waterproofing atap rumah.",
-      price: 150000,
-      priceFormatted: "Rp 150.000/jam",
-      experience: 8,
-    },
-    {
-      id: "t2",
-      name: "Maya Putri",
-      specialty: "listrik",
-      specialtyText: "Spesialis Listrik & Smart Home",
-      distance: "2.5 km",
-      distanceValue: 2.5,
-      rating: 5.0,
-      completedJobs: 89,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBQ70JmVD3JFhA5GBYSENBj4iOvz8fHvPcEgS4_HNs0H7SbJxYn9onPa141a39fCHWqGRQXaOY3-FRbi34aXFdIgbIZBG4tAdRdj0uIpmKEgJiTDWcp9tYs3Crc70XzdTnbWc1LsUUAXzDeLveVLyG8BZceDsHhAowB_0n8YEtHOyTfqjIUXWdfwqIPa1V6s8dpBHOqu6M9o0mWg17ZBYfinwfS-s_Yxbikr7GOHOABARqmpqNa-spZPM2sMFUMOHGGcLIuc4xuCU9z",
-      status: "Tersedia",
-      bio: "Teknisi kelistrikan bersertifikasi BNSP dan ahli service AC. Cepat, teliti, dan mengutamakan keselamatan kerja.",
-      price: 200000,
-      priceFormatted: "Rp 200.000/jam",
-      experience: 5,
-    },
-    {
-      id: "t3",
-      name: "Joko Susilo",
-      specialty: "ac",
-      specialtyText: "Teknisi AC & Pendingin Ruangan",
-      distance: "0.8 km",
-      distanceValue: 0.8,
-      rating: 4.8,
-      completedJobs: 210,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAL0cRCPI5uo9Ps-ux4AGfokR1MuCIPmBsBQi1vRM0RN8J_qTGz_R7cFHCT9enkqiZuB-UXT7st3S2IR6fkFrajESZ-a10ueGyJ9jZ2258rXOBvr0KbaFV0DqCnaLy2R3GdUjb7SWZSCZy7ZfJXi9yWVuHgrgj4yG6wNUuQkGsmklmfh143xRENb_JoPsOXW6B-O3w3RJBPnt9RHG-YVu2jgTxAaWzQgXBMxblPRM0BcCgu3eqVIHfDCLnriHK3cW0GazAPLAr0aGDH",
-      status: "Sibuk",
-      bio: "Spesialis cuci AC harian, tambah freon, bongkar pasang AC, dan perbaikan kelistrikan AC rumahan.",
-      price: 120000,
-      priceFormatted: "Rp 120.000/jam",
-      experience: 6,
-    },
-    {
-      id: "t4",
-      name: "Hadi Pratama",
-      specialty: "cat",
-      specialtyText: "Spesialis Cat Dinding & Interior",
-      distance: "1.9 km",
-      distanceValue: 1.9,
-      rating: 4.9,
-      completedJobs: 132,
-      image: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop",
-      status: "Tersedia",
-      bio: "Ahli dekorasi dinding, pengecatan rumah baru/lama, serta pengerjaan interior berbahan kayu seperti kusen dan kabinet.",
-      price: 90000,
-      priceFormatted: "Rp 90.000/jam",
-      experience: 4,
-    },
-    {
-      id: "t5",
-      name: "Supriyanto",
-      specialty: "pindahan",
-      specialtyText: "Jasa Pindahan & Cargo",
-      distance: "3.1 km",
-      distanceValue: 3.1,
-      rating: 4.7,
-      completedJobs: 98,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop",
-      status: "Tersedia",
-      bio: "Melayani pindahan kost/rumah menggunakan armada pickup bersih, lengkap dengan kru pengangkut yang ramah dan cekatan.",
-      price: 250000,
-      priceFormatted: "Rp 250.000/jam",
-      experience: 7,
-    },
-    {
-      id: "t6",
-      name: "Siti Rahma",
-      specialty: "kebersihan",
-      specialtyText: "Pakar Pembersihan Rumah & Kasur",
-      distance: "1.5 km",
-      distanceValue: 1.5,
-      rating: 4.9,
-      completedJobs: 176,
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop",
-      status: "Tersedia",
-      bio: "Layanan cuci kasur, sofa, dan pembersihan rumah harian secara menyeluruh menggunakan disinfektan ramah lingkungan.",
-      price: 80000,
-      priceFormatted: "Rp 80.000/jam",
-      experience: 3,
-    },
-    {
-      id: "t7",
-      name: "Dedi Hermawan",
-      specialty: "atap",
-      specialtyText: "Spesialis Genteng & Atap Bocor",
-      distance: "4.2 km",
-      distanceValue: 4.2,
-      rating: 4.6,
-      completedJobs: 67,
-      image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=200&auto=format&fit=crop",
-      status: "Tersedia",
-      bio: "Ahli perbaikan atap bocor, genteng retak, pembersihan talang, serta waterproofing dak beton area luar rumah.",
-      price: 180000,
-      priceFormatted: "Rp 180.000/jam",
-      experience: 5,
-    },
-    {
-      id: "t8",
-      name: "Rian Hidayat",
-      specialty: "pertukangan",
-      specialtyText: "Pengrajin Kayu & Kusen Pintu",
-      distance: "2.1 km",
-      distanceValue: 2.1,
-      rating: 4.8,
-      completedJobs: 120,
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop",
-      status: "Tersedia",
-      bio: "Spesialis pembuatan kusen pintu, jendela, lemari custom, perakitan furnitur knockdown, dan perbaikan barang kayu.",
-      price: 160000,
-      priceFormatted: "Rp 160.000/jam",
-      experience: 6,
-    }
-  ];
+  const getMappedTukangs = () => {
+    if (!tukangs || tukangs.length === 0) return [];
+    return tukangs.map(t => {
+      const keahlianLower = (t.keahlian || "").toLowerCase();
+      let specialty = "listrik"; // default
+      if (keahlianLower.includes("pipa") || keahlianLower.includes("air") || keahlianLower.includes("plumbing")) {
+        specialty = "pipa";
+      } else if (keahlianLower.includes("ac") || keahlianLower.includes("pendingin")) {
+        specialty = "ac";
+      } else if (keahlianLower.includes("cat") || keahlianLower.includes("tembok")) {
+        specialty = "cat";
+      } else if (keahlianLower.includes("atap") || keahlianLower.includes("genteng")) {
+        specialty = "atap";
+      } else if (keahlianLower.includes("kayu") || keahlianLower.includes("pertukangan") || keahlianLower.includes("pintu")) {
+        specialty = "pertukangan";
+      } else if (keahlianLower.includes("pindahan") || keahlianLower.includes("angkut")) {
+        specialty = "pindahan";
+      } else if (keahlianLower.includes("bersih") || keahlianLower.includes("sapu") || keahlianLower.includes("kasur") || keahlianLower.includes("sofa")) {
+        specialty = "kebersihan";
+      }
+
+      let image = "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop";
+      if (t.foto_profil) {
+        image = t.foto_profil.startsWith("http") ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`;
+      }
+
+      let distance = "1.5 km";
+      let distanceValue = 1.5;
+      if (user && user.latitude && user.longitude && t.latitude && t.longitude) {
+        const userLat = parseFloat(user.latitude);
+        const userLng = parseFloat(user.longitude);
+        const tLat = parseFloat(t.latitude);
+        const tLng = parseFloat(t.longitude);
+        const R = 6371;
+        const dLat = (tLat - userLat) * Math.PI / 180;
+        const dLng = (tLng - userLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(userLat * Math.PI / 180) * Math.cos(tLat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const d = R * c;
+        distanceValue = parseFloat(d.toFixed(1));
+        distance = `${distanceValue} km`;
+      }
+
+      return {
+        id: t.id,
+        name: t.nama || "Tukang",
+        specialty: specialty,
+        specialtyText: t.keahlian || "Teknisi Jasa",
+        distance: distance,
+        distanceValue: distanceValue,
+        rating: parseFloat(t.rating) || 5.0,
+        completedJobs: 25 + (t.id * 8),
+        image: image,
+        status: t.is_aktif ? "Tersedia" : "Sibuk",
+        bio: t.deskripsi_pengalaman || "Penyedia jasa terverifikasi.",
+        price: 100000 + (t.tahun_pengalaman * 15000),
+        priceFormatted: `Rp ${(100000 + (t.tahun_pengalaman * 15000)).toLocaleString("id-ID")}/jam`,
+        experience: t.tahun_pengalaman || 2,
+      };
+    });
+  };
+
+  const recommendedTukang = getMappedTukangs();
 
   // Helper: Get matching Tukangs based on category ID
   const getTukangsForCategory = (catId) => {
@@ -894,7 +842,9 @@ function Dashboard() {
                       <p className="text-[9px] font-bold text-on-surface-variant/75 uppercase tracking-wider">
                         Pekerjaan Selesai
                       </p>
-                      <h3 className="text-lg font-extrabold text-on-surface leading-tight">45</h3>
+                      <h3 className="text-lg font-extrabold text-on-surface leading-tight">
+                        {String(orders.filter(o => o.status === "selesai").length).padStart(2, "0")}
+                      </h3>
                     </div>
                   </div>
 
@@ -906,7 +856,9 @@ function Dashboard() {
                       <p className="text-[9px] font-bold text-on-surface-variant/75 uppercase tracking-wider">
                         Total Pengeluaran
                       </p>
-                      <h3 className="text-lg font-extrabold text-on-surface leading-tight">Rp 3.820.000</h3>
+                      <h3 className="text-lg font-extrabold text-on-surface leading-tight">
+                        Rp {totalPengeluaran.toLocaleString("id-ID")}
+                      </h3>
                     </div>
                   </div>
                 </div>
