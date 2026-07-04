@@ -12,6 +12,65 @@ function DataTukang() {
   
   // Interactive Tukang Data state
   const [tukangList, setTukangList] = useState([]);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  const MOCK_TUKANG = [
+    {
+      id: "TKG-001",
+      name: "Budi Santoso",
+      specialty: "Tukang Kayu",
+      location: "Jakarta Barat",
+      status: "Aktif",
+      rating: 4.8,
+      reviews: 24,
+      joinDate: "10/05/2026",
+      avatar: "https://ui-avatars.com/api/?name=Budi+Santoso&background=random"
+    },
+    {
+      id: "TKG-002",
+      name: "Agus Prasetyo",
+      specialty: "Tukang Ledeng",
+      location: "Jakarta Selatan",
+      status: "Ditinjau",
+      rating: 4.5,
+      reviews: 12,
+      joinDate: "15/06/2026",
+      avatar: "https://ui-avatars.com/api/?name=Agus+Prasetyo&background=random"
+    },
+    {
+      id: "TKG-003",
+      name: "Iwan Setiawan",
+      specialty: "Tukang Kelistrikan",
+      location: "Tangerang",
+      status: "Tidak Aktif",
+      rating: 4.2,
+      reviews: 8,
+      joinDate: "01/04/2026",
+      avatar: "https://ui-avatars.com/api/?name=Iwan+Setiawan&background=random"
+    },
+    {
+      id: "TKG-004",
+      name: "Siti Rahma",
+      specialty: "Pembersih Rumah",
+      location: "Depok",
+      status: "Aktif",
+      rating: 4.9,
+      reviews: 35,
+      joinDate: "20/03/2026",
+      avatar: "https://ui-avatars.com/api/?name=Siti+Rahma&background=random"
+    }
+  ];
+
+  const handleUndoDeactivate = () => {
+    setShowToast(false);
+  };
+
+  const filteredTukangs = tukangList.filter((t) =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     fetchTukangList();
@@ -35,7 +94,8 @@ function DataTukang() {
         setTukangList(fetchedList);
       }
     } catch (error) {
-      console.error("Failed to fetch tukang list:", error);
+      console.error("Failed to fetch tukang list, loading mock data:", error);
+      setTukangList(MOCK_TUKANG);
     }
   };
 
@@ -57,6 +117,7 @@ function DataTukang() {
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/admin/dashboard" },
     { id: "verifikasi", label: "Verifikasi Tukang", icon: "how_to_reg", path: "/admin/verifikasi" },
     { id: "data", label: "Data Tukang", icon: "engineering", path: "/admin/data", active: true },
+    { id: "pelanggan", label: "Data Pelanggan", icon: "group", path: "/admin/pelanggan" },
     { id: "rating", label: "Monitoring Rating", icon: "star_rate", path: "/admin/rating" },
     { id: "profil", label: "Profil Admin", icon: "admin_panel_settings", path: "/admin/profil" },
   ];
@@ -228,7 +289,7 @@ function DataTukang() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-variant/10 font-medium">
-                  {tukangList.length === 0 ? (
+                  {filteredTukangs.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="p-8 text-center text-on-surface-variant/65">
                         <span className="material-symbols-outlined text-3xl mb-1.5 text-secondary/45">search_off</span>
@@ -236,7 +297,7 @@ function DataTukang() {
                       </td>
                     </tr>
                   ) : (
-                    tukangList.map((item) => (
+                    filteredTukangs.map((item) => (
                       <tr key={item.id} className="border-b border-surface-variant/10">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
