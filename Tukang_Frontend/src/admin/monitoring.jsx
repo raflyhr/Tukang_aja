@@ -24,7 +24,7 @@ function MonitoringRating() {
 
   const fetchMonitoringData = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/monitoring");
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/monitoring`);
       if (response.data.status === 'Sukses') {
         const { averageRating, totalReviews, problematicCount, performances } = response.data.data;
         setStats({ averageRating, totalReviews, problematicCount });
@@ -37,7 +37,7 @@ function MonitoringRating() {
           reviews: p.ulasans_count || 0,
           complaints: 0, // Mock for now, maybe add logic in backend later
           status: p.status_verifikasi === 'Menunggu' ? 'Ditinjau' : (p.status_verifikasi || (p.is_aktif ? 'Aktif' : 'Nonaktif')),
-          avatar: p.foto_profil ? (p.foto_profil.startsWith('http') ? p.foto_profil : `http://localhost:8000/storage/${p.foto_profil}`) : `https://ui-avatars.com/api/?name=${p.nama}&background=random`
+          avatar: p.foto_profil ? (p.foto_profil.startsWith('http') ? p.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${p.foto_profil}`) : `https://ui-avatars.com/api/?name=${p.nama}&background=random`
         }));
         setPerformances(mappedPerf);
       }
@@ -49,7 +49,7 @@ function MonitoringRating() {
   const handleDeactivate = async (id) => {
     if (confirm(`Apakah Anda yakin ingin menonaktifkan akun dengan ID ${id}?`)) {
       try {
-        const response = await axios.put(`http://localhost:8000/api/admin/tukang/${id}/status`);
+        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}/status`);
         if (response.data.status === 'Sukses') {
           fetchMonitoringData();
           alert(`Akun ${id} telah dinonaktifkan.`);
