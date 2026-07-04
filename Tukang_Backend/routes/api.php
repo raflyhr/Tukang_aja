@@ -66,6 +66,7 @@ Route::get('/user/{id}/pesanan', [PesananController::class, 'getPesananUser']);
 
 // --- Rute Fitur Chat ---
 Route::get('/tukang/{id}/chats', [ChatController::class, 'getTukangChats']);
+Route::get('/user/{id}/chats', [ChatController::class, 'getUserChats']);
 Route::get('/chat/{chat_id}/messages', [ChatController::class, 'getMessages']);
 Route::post('/chat/send', [ChatController::class, 'sendMessage']);
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../components/LogoutModal";
 import axios from "axios";
@@ -14,8 +14,12 @@ function Chat() {
   const [inputText, setInputText] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
-const [rating, setRating] = useState(5);
-const [ulasan, setUlasan] = useState("");
+  const [rating, setRating] = useState(5);
+  const [ulasan, setUlasan] = useState("");
+
+  const [user, setUser] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -32,17 +36,100 @@ const [ulasan, setUlasan] = useState("");
     { id: "selesai", label: "Selesai" },
   ];
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    const newMsg = {
-      id: Date.now(),
-      text: inputText,
-      sender: "me",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    setMessages([...messages, newMsg]);
-    setInputText("");
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        const userObj = parsed.user || parsed;
+        setUser(userObj);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const fetchChats = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${user.id}/chats`);
+      if (res.data.status === 'Sukses') {
+        const mapped = res.data.data.map(c => ({
+          id: c.id,
+          name: c.tukang?.nama || "Tukang",
+          avatar: c.tukang?.foto_profil 
+            ? (c.tukang.foto_profil.startsWith('http') ? c.tukang.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${c.tukang.foto_profil}`)
+            : "https://ui-avatars.com/api/?name=" + encodeURIComponent(c.tukang?.nama || "Tukang") + "&background=random",
+          online: true,
+          time: c.messages && c.messages.length > 0 ? new Date(c.messages[0].created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
+          lastMsg: c.messages && c.messages.length > 0 ? c.messages[0].text : "Belum ada pesan",
+        }));
+        setChats(mapped);
+        
+        // Auto select first chat
+        if (mapped.length > 0 && !activeChatId) {
+          setActiveChatId(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch chats", err);
+    }
   };
+
+  const fetchMessages = async () => {
+    if (!activeChatId) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/chat/${activeChatId}/messages`);
+      if (res.data.status === 'Sukses') {
+        const mappedMsg = res.data.data.map(m => ({
+          id: m.id,
+          sender: m.sender_type, // 'user' or 'tukang'
+          type: m.message_type,
+          text: m.text,
+          time: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }));
+        setMessages(mappedMsg);
+      }
+    } catch (err) {
+      console.error("Failed to fetch messages", err);
+    }
+  };
+
+  // Polling Intervals
+  useEffect(() => {
+    fetchChats();
+    const interval = setInterval(() => {
+      fetchChats();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeChatId]);
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !activeChatId || !user) return;
+    
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/chat/send`, {
+        chat_id: activeChatId,
+        sender_type: 'user',
+        sender_id: user.id,
+        text: inputText
+      });
+      setInputText("");
+      fetchMessages();
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
+  };
+
+  const activeChat = chats.find(c => c.id === activeChatId) || { name: "Loading...", avatar: "" };
 
 const kirimRating = async () => {
     try {
@@ -237,31 +324,48 @@ const kirimRating = async () => {
               </div>
             </div>
             
-            {/* Contact list containing exactly one person */}
+            {/* Contact list mapped dynamically from chats */}
             <div className="flex-1 overflow-y-auto chat-scrollbar">
-              <div className="px-4 py-3.5 bg-surface-container-highest border-l-4 border-secondary cursor-pointer transition-colors">
-                <div className="flex gap-3">
-                  <div className="relative shrink-0">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-high border border-outline-variant/10">
-                      <img
-                        className="w-full h-full object-cover"
-                        alt="Budi Santoso"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAL0cRCPI5uo9Ps-ux4AGfokR1MuCIPmBsBQi1vRM0RN8J_qTGz_R7cFHCT9enkqiZuB-UXT7st3S2IR6fkFrajESZ-a10ueGyJ9jZ2258rXOBvr0KbaFV0DqCnaLy2R3GdUjb7SWZSCZy7ZfJXi9yWVuHgrgj4yG6wNUuQkGsmklmfh143xRENb_JoPsOXW6B-O3w3RJBPnt9RHG-YVu2jgTxAaWzQgXBMxblPRM0BcCgu3eqVIHfDCLnriHK3cW0GazAPLAr0aGDH"
-                      />
+              {chats.length === 0 ? (
+                <div className="p-4 text-center text-xs text-on-surface-variant/60">Belum ada percakapan</div>
+              ) : (
+                chats.map((c) => {
+                  const isActive = c.id === activeChatId;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => setActiveChatId(c.id)}
+                      className={`px-4 py-3.5 cursor-pointer transition-colors ${
+                        isActive
+                          ? "bg-surface-container-highest border-l-4 border-secondary"
+                          : "hover:bg-surface-container-high border-l-4 border-transparent"
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <div className="relative shrink-0">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-high border border-outline-variant/10">
+                            <img
+                              className="w-full h-full object-cover"
+                              alt={c.name}
+                              src={c.avatar}
+                            />
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-surface-container-highest rounded-full"></div>
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <div className="flex justify-between items-baseline mb-1">
+                            <h4 className="font-bold text-on-surface text-sm truncate">{c.name}</h4>
+                            <span className="text-[10px] text-on-surface-variant/50">{c.time}</span>
+                          </div>
+                          <p className="text-xs text-on-surface-variant font-medium truncate">
+                            {c.lastMsg}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-surface-container-highest rounded-full"></div>
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <h4 className="font-bold text-on-surface text-sm truncate">Budi Santoso</h4>
-                      <span className="text-[10px] text-secondary font-bold uppercase">Online</span>
-                    </div>
-                    <p className="text-xs text-on-surface-variant font-medium truncate">
-                      {messages.length > 0 ? messages[messages.length - 1].text : "Belum ada pesan"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                  );
+                })
+              )}
             </div>
           </section>
 
@@ -273,12 +377,12 @@ const kirimRating = async () => {
                 <div className="w-10 h-10 rounded-xl overflow-hidden border border-outline-variant/10">
                   <img
                     className="w-full h-full object-cover"
-                    alt="Budi Santoso"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAL0cRCPI5uo9Ps-ux4AGfokR1MuCIPmBsBQi1vRM0RN8J_qTGz_R7cFHCT9enkqiZuB-UXT7st3S2IR6fkFrajESZ-a10ueGyJ9jZ2258rXOBvr0KbaFV0DqCnaLy2R3GdUjb7SWZSCZy7ZfJXi9yWVuHgrgj4yG6wNUuQkGsmklmfh143xRENb_JoPsOXW6B-O3w3RJBPnt9RHG-YVu2jgTxAaWzQgXBMxblPRM0BcCgu3eqVIHfDCLnriHK3cW0GazAPLAr0aGDH"
+                    alt={activeChat.name}
+                    src={activeChat.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(activeChat.name) + "&background=random"}
                   />
                 </div>
                 <div>
-                  <h3 className="font-bold text-on-surface leading-tight text-sm">Budi Santoso</h3>
+                  <h3 className="font-bold text-on-surface leading-tight text-sm">{activeChat.name}</h3>
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                     <span className="text-xs text-on-surface-variant font-medium">Online</span>
@@ -301,25 +405,29 @@ const kirimRating = async () => {
                 <div className="flex-grow flex flex-col items-center justify-center text-center text-on-surface-variant">
                   <span className="material-symbols-outlined text-5xl opacity-30 mb-3 text-secondary">chat_bubble_outline</span>
                   <p className="text-sm font-semibold">Belum ada obrolan</p>
-                  <p className="text-xs opacity-60 mt-1 max-w-[280px]">Kirimkan pesan pertama untuk memulai obrolan dengan Budi Santoso.</p>
+                  <p className="text-xs opacity-60 mt-1 max-w-[280px]">Kirimkan pesan pertama untuk memulai obrolan dengan {activeChat.name}.</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="flex flex-row-reverse gap-3 max-w-[85%] ml-auto animate-message-in"
-                  >
-                    <div className="space-y-1 items-end flex flex-col">
-                      <div className="bg-secondary-container text-on-secondary-container px-4 py-2.5 rounded-2xl rounded-tr-none shadow-md">
-                        <p className="text-sm">{msg.text}</p>
-                      </div>
-                      <div className="flex items-center gap-1 mr-1">
-                        <span className="text-[10px] text-on-surface-variant">{msg.time}</span>
-                        <span className="material-symbols-outlined text-sm text-secondary">done_all</span>
+                messages.map((msg) => {
+                  const isUser = msg.sender === "user";
+                  return (
+                    <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isUser ? "ml-auto justify-end" : ""}`}>
+                      {!isUser && (
+                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 border border-outline-variant/20">
+                          <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
+                        </div>
+                      )}
+                      <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                        isUser 
+                          ? "bg-secondary/15 text-on-surface border border-secondary/20 rounded-br-none" 
+                          : "bg-surface-container text-on-surface rounded-bl-none"
+                      }`}>
+                        <p>{msg.text}</p>
+                        <span className="text-[9px] text-on-surface-variant/60 block mt-1.5 text-right">{msg.time}</span>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

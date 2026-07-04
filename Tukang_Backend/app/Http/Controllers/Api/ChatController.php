@@ -61,4 +61,17 @@ class ChatController extends Controller
             'data' => $message
         ], 201);
     }
+
+    // Mengambil daftar percakapan untuk user/pelanggan
+    public function getUserChats($user_id)
+    {
+        $chats = Chat::with(['tukang', 'messages' => function($q) {
+            $q->latest()->limit(1);
+        }])->where('user_id', $user_id)->latest()->get();
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => $chats
+        ], 200);
+    }
 }

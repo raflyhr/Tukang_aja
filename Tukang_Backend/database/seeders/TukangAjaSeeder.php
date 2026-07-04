@@ -160,5 +160,12 @@ class TukangAjaSeeder extends Seeder
         Message::create(['chat_id' => $chat1->id, 'sender_type' => 'tukang', 'sender_id' => $tukang->id, 'text' => 'Baik bu Siska, saya cek besok ya.']);
         Message::create(['chat_id' => $chat1->id, 'sender_type' => 'system', 'message_type' => 'negotiation_offer', 'text' => 'Rp 150.000']);
         Message::create(['chat_id' => $chat1->id, 'sender_type' => 'user', 'sender_id' => $pelanggan1->id, 'text' => 'Oke, saya setuju dengan harga tersebut.']);
+
+        // Chat Uji Coba untuk Dimas & Denji
+        $chat2 = Chat::create([
+            'user_id' => $dimas->id,
+            'tukang_id' => $tukang->id
+        ]);
+        Message::create(['chat_id' => $chat2->id, 'sender_type' => 'user', 'sender_id' => $dimas->id, 'text' => 'Halo Mas Denji, saya Dimas. Apakah sedang senggang?']);
     }
 }
