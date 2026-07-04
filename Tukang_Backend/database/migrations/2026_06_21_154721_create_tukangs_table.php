@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tukangs', function (Blueprint $table) {
             $table->id();
             // penghubung database dari login
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('roles')->onDelete('cascade');
             $table->string('nama');
             $table->string('no_hp')->unique();
             $table->string('foto_profil')->nullable();

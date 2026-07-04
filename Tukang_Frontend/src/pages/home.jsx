@@ -115,86 +115,43 @@ function Home() {
           id="hero"
           className="max-w-7xl w-full mx-auto px-6 md:px-12 py-16 md:py-24"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* HERO LEFT */}
-            <div className="flex flex-col items-start text-left">
-              <div className="inline-flex items-center gap-2 text-secondary bg-secondary/10 border border-secondary/25 px-4 py-2 rounded-full text-xs font-semibold tracking-wide">
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Platform Jasa Tukang Untuk Kebutuhan Mahasiswa
-              </div>
-
-              <h1 className="text-4xl md:text-5xl lg:text-4xl font-extrabold mt-6 leading-tight tracking-tight text-on-surface">
-                Temukan Tukang Terdekat <br />
-                dalam <span className="text-secondary">Hitungan Menit</span>
-              </h1>
-
-              <p className="mt-6 text-on-surface-variant leading-relaxed text-sm md:text-base max-w-lg">
-                Solusi handal untuk segala perbaikan rumah Anda. Dari instalasi
-                listrik hingga pindahan rumah, tukang profesional kami siap
-                membantu Anda kapan saja.
-              </p>
-
-              <div className="flex flex-wrap gap-4 mt-8">
-                <Link
-                  to="/register-pelanggan"
-                  className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
-                >
-                  Daftar sebagai pelanggan
-                </Link>
-                <Link
-                  to="/register-tukang"
-                  className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
-                >
-                  Daftar Sebagai Tukang
-                </Link>
-              </div>
+          <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
+            <div className="inline-flex items-center gap-2 text-secondary bg-secondary/10 border border-secondary/25 px-4 py-2 rounded-full text-xs font-semibold tracking-wide">
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Platform Jasa Tukang Untuk Kebutuhan Mahasiswa
             </div>
 
-            {/* HERO RIGHT (CARD) */}
-            <div className="flex justify-center lg:justify-end">
-              <div className="bg-surface-container-high border border-surface-variant/20 p-7 md:p-8 rounded-3xl shadow-2xl flex flex-col gap-6 w-full max-w-md">
-                {/* Top Search Area */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-sm text-on-surface-variant font-medium tracking-wide">
-                    Apa yang perlu diperbaiki?
-                  </label>
-                  <div className="bg-surface-container-highest border border-outline-variant rounded-2xl flex items-center p-1.5 focus-within:border-secondary transition-all">
-                    {/* Magnifying Glass Icon */}
-                    <svg
-                      className="w-5 h-5 text-on-surface-variant/60 ml-2.5 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      ></path>
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="Contoh: Bocor, AC Mati, Pasang Lampu..."
-                      className="bg-transparent border-0 outline-none text-on-surface placeholder:text-on-surface-variant/40 flex-1 text-sm px-2.5 py-2.5 focus:ring-0 focus:outline-none min-w-0"
-                    />
-                    <button className="bg-secondary text-on-secondary font-bold px-5 py-2.5 rounded-xl text-sm transition-all shrink-0 hover:opacity-90 active:scale-95 cursor-pointer">
-                      Cari
-                    </button>
-                  </div>
-                </div>
+            <h1 className="text-4xl md:text-5xl lg:text-5xl font-extrabold mt-6 leading-tight tracking-tight text-on-surface">
+              Temukan Tukang Terdekat <br />
+              dalam <span className="text-secondary">Hitungan Menit</span>
+            </h1>
 
-                {/* Divider Line */}
-                <div className="h-px bg-surface-variant/20 w-full"></div>
+            <p className="mt-6 text-on-surface-variant leading-relaxed text-sm md:text-base max-w-xl mx-auto">
+              Solusi handal untuk segala perbaikan rumah Anda. Dari instalasi
+              listrik hingga pindahan rumah, tukang profesional kami siap
+              membantu Anda kapan saja.
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-4 mt-8">
+              <Link
+                to="/register-pelanggan"
+                className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
+              >
+                Daftar sebagai pelanggan
+              </Link>
+              <Link
+                to="/register-tukang"
+                className="bg-black hover:bg-secondary hover:text-black rounded-2xl px-6 py-3 border border-gray-500 font-semibold"
+              >
+                Daftar Sebagai Tukang
+              </Link>
             </div>
-          </div>
           </div>
         </section>
       </main>

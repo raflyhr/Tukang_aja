@@ -57,7 +57,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'no_hp' => 'required|string|max:20',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:roles',
             'password' => 'required|string|min:8|confirmed',
             'keahlian' => 'required|string',
             'alamat' => 'required|string',
@@ -178,7 +178,7 @@ class AuthController extends Controller
     $request->validate([
         'name' => 'required|string|max:255',
         'no_hp' => 'required|string|max:20',
-        'email' => 'required|string|email|max:255|unique:users',
+        'email' => 'required|string|email|max:255|unique:roles',
         'password' => 'required|string|min:8|confirmed',
         'alamat' => 'required|string',
         'latitude' => 'required|numeric',
