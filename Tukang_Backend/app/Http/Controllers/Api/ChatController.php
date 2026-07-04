@@ -22,6 +22,19 @@ class ChatController extends Controller
         ], 200);
     }
 
+    // Mengambil daftar percakapan untuk pelanggan
+    public function getUserChats($user_id)
+    {
+        $chats = Chat::with(['tukang', 'messages' => function($q) {
+            $q->latest()->limit(1);
+        }])->where('user_id', $user_id)->latest()->get();
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => $chats
+        ], 200);
+    }
+
     // Mengambil isi pesan dalam satu chat
     public function getMessages($chat_id)
     {
@@ -60,5 +73,26 @@ class ChatController extends Controller
             'message' => 'Pesan terkirim',
             'data' => $message
         ], 201);
+    }
+
+    // Menghapus obrolan
+    public function destroy($chat_id)
+    {
+        $chat = Chat::find($chat_id);
+        if (!$chat) {
+            return response()->json([
+                'status' => 'Gagal',
+                'message' => 'Obrolan tidak ditemukan'
+            ], 404);
+        }
+
+        // Hapus pesan terkait (meskipun secara default ON DELETE CASCADE di database biasanya menghapus, kita pastikan manual juga bisa)
+        Message::where('chat_id', $chat_id)->delete();
+        $chat->delete();
+
+        return response()->json([
+            'status' => 'Sukses',
+            'message' => 'Obrolan berhasil dihapus'
+        ], 200);
     }
 }
