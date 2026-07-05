@@ -25,6 +25,7 @@ class User extends Authenticatable
     'latitude',
     'longitude',
     'catatan',
+    'foto_profil',
 ];
 
     public function tukang()

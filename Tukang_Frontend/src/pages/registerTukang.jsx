@@ -95,6 +95,11 @@ function RegisterTukang() {
       return;
     }
 
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Ukuran foto maksimal 2MB untuk menghindari error server.");
+      return;
+    }
+
     setErrors(prev => ({ ...prev, profilePhoto: null }));
     setTempProfileFile(file);
 
@@ -122,6 +127,11 @@ function RegisterTukang() {
 
     if (file.type !== "application/pdf") {
       setErrors(prev => ({ ...prev, portfolioFile: "Format CV/Portofolio wajib PDF" }));
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Ukuran CV/Portofolio maksimal 2MB untuk menghindari error server.");
       return;
     }
     setErrors(prev => ({ ...prev, portfolioFile: null }));

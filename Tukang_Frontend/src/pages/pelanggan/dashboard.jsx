@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import axios from "axios";
-import { useEffect} from "react";
+
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -44,41 +44,52 @@ function Dashboard() {
   const [paymentMethod, setPaymentMethod] = useState("QRIS");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
+  const [dashboardStats, setDashboardStats] = useState({ pesanan_aktif: "00", pekerjaan_selesai: "00", total_pengeluaran: 0 });
+
   const getOrders = async (userId) => {
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/api/user/${userId}/pesanan`);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/pesanan`);
       setOrders(res.data.data || []);
+      
+      const statsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/dashboard-stats`);
+      if (statsRes.data.status === "Sukses") {
+        setDashboardStats(statsRes.data.data);
+      }
     } catch (error) {
-      console.error("Failed to fetch user orders", error);
+      console.error("Failed to fetch user data", error);
     }
   };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
+    const savedUser = localStorage.getItem("pelanggan_user");
+    let userObj = null;
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        const userObj = parsed.user || parsed;
+        userObj = parsed.user || parsed;
         setUser(userObj);
         getOrders(userObj.id);
       } catch (e) {
         console.error(e);
       }
     }
-    getTukangs();
+    getTukangs(userObj);
   }, []);
 
-  const getTukangs = async () => {
+  const getTukangs = async (userObj) => {
     try {
-        const res = await axios.get("http://127.0.0.1:8000/api/tukang");
-
-        setTukangs(res.data.data);
+        let url = `${import.meta.env.VITE_API_BASE_URL}/api/tukang`;
+        if (userObj && userObj.latitude && userObj.longitude) {
+            url += `?latitude=${userObj.latitude}&longitude=${userObj.longitude}`;
+        }
+        const res = await axios.get(url);
+        setTukangs(res.data.data || []);
     } catch (err) {
-        console.log(err);
+        console.error("Gagal load tukang", err);
     } finally {
         setLoading(false);
     }
-};
+  };
 
   // Active Orders (calculated dynamically from orders state)
   const activeOrders = orders
@@ -195,24 +206,8 @@ function Dashboard() {
         image = t.foto_profil.startsWith("http") ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`;
       }
 
-      let distance = "1.5 km";
-      let distanceValue = 1.5;
-      if (user && user.latitude && user.longitude && t.latitude && t.longitude) {
-        const userLat = parseFloat(user.latitude);
-        const userLng = parseFloat(user.longitude);
-        const tLat = parseFloat(t.latitude);
-        const tLng = parseFloat(t.longitude);
-        const R = 6371;
-        const dLat = (tLat - userLat) * Math.PI / 180;
-        const dLng = (tLng - userLng) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(userLat * Math.PI / 180) * Math.cos(tLat * Math.PI / 180) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const d = R * c;
-        distanceValue = parseFloat(d.toFixed(1));
-        distance = `${distanceValue} km`;
-      }
+      let distance = t.distance !== undefined ? `${parseFloat(Number(t.distance).toFixed(1))} km` : "Aktifkan GPS / Update Profil";
+      let distanceValue = t.distance !== undefined ? parseFloat(Number(t.distance).toFixed(1)) : 999;
 
       return {
         id: t.id,
@@ -221,14 +216,18 @@ function Dashboard() {
         specialtyText: t.keahlian || "Teknisi Jasa",
         distance: distance,
         distanceValue: distanceValue,
-        rating: parseFloat(t.rating) || 5.0,
-        completedJobs: 25 + (t.id * 8),
+        rating: t.rating !== undefined && t.rating !== null ? parseFloat(t.rating) : 0,
+        completedJobs: t.completed_jobs_count || 0,
         image: image,
         status: t.is_aktif ? "Tersedia" : "Sibuk",
         bio: t.deskripsi_pengalaman || "Penyedia jasa terverifikasi.",
         price: 100000 + (t.tahun_pengalaman * 15000),
         priceFormatted: `Rp ${(100000 + (t.tahun_pengalaman * 15000)).toLocaleString("id-ID")}/jam`,
         experience: t.tahun_pengalaman || 2,
+        sertifikats: t.sertifikats || [],
+        layanans: t.layanans || [],
+        portofolios: t.portofolios || [],
+        ulasans: t.ulasans || []
       };
     });
   };
@@ -543,8 +542,8 @@ function Dashboard() {
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0">
                 <img
                   className="w-full h-full object-cover"
-                  alt="Reze Profile"
-                  src="https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg"
+                  alt="User Profile"
+                  src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `http://127.0.0.1:8000/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
                 />
               </div>
               <div className="min-w-0">
@@ -585,8 +584,8 @@ function Dashboard() {
             <div className="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30 ml-2">
               <img
                 className="w-full h-full object-cover"
-                alt="Reze Profile"
-                src="https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg"
+                alt="User Profile"
+                src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `http://127.0.0.1:8000/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
               />
             </div>
           </div>
@@ -1297,20 +1296,19 @@ function Dashboard() {
                       <div className="bg-surface-container p-6 rounded-3xl border border-surface-variant/15 space-y-4">
                         <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Sertifikat & Lisensi Profesional</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="bg-surface-container-high/50 p-4 rounded-xl border border-outline-variant/20 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-secondary text-2xl">verified_user</span>
-                            <div>
-                              <p className="text-xs font-bold text-on-surface">Sertifikasi Kompetensi BNSP</p>
-                              <p className="text-[10px] text-on-surface-variant mt-0.5">Memenuhi standar keahlian nasional</p>
-                            </div>
-                          </div>
-                          <div className="bg-surface-container-high/50 p-4 rounded-xl border border-outline-variant/20 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-secondary text-2xl">health_and_safety</span>
-                            <div>
-                              <p className="text-xs font-bold text-on-surface">K3 Safety Standard Certified</p>
-                              <p className="text-[10px] text-on-surface-variant mt-0.5">Keselamatan dan keamanan kerja terjamin</p>
-                            </div>
-                          </div>
+                          {selectedTukang.sertifikats && selectedTukang.sertifikats.length > 0 ? (
+                            selectedTukang.sertifikats.map(cert => (
+                              <div key={cert.id} className="bg-surface-container-high/50 p-4 rounded-xl border border-outline-variant/20 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-secondary text-2xl">verified_user</span>
+                                <div>
+                                  <p className="text-xs font-bold text-on-surface">{cert.judul}</p>
+                                  <p className="text-[10px] text-on-surface-variant mt-0.5">{cert.penerbit} {cert.tahun ? `(${cert.tahun})` : ''}</p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-on-surface-variant italic col-span-2">Belum ada sertifikat.</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1318,7 +1316,7 @@ function Dashboard() {
                     {/* Right: Key Stats */}
                     <div className="lg:col-span-4">
                       <div className="bg-surface-container p-6 rounded-3xl border border-surface-variant/15 space-y-4">
-                        <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Statistik Mitra</h4>
+                        <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Statistik Tukang</h4>
                         <div className="space-y-3.5">
                           <div className="flex justify-between items-center text-xs py-1 border-b border-surface-variant/10">
                             <span className="text-on-surface-variant font-medium">Pengalaman Kerja</span>
@@ -1350,25 +1348,20 @@ function Dashboard() {
 
                 {detailTab === "portofolio" && (
                   <div className="bg-surface-container p-6 rounded-3xl border border-surface-variant/15 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {getPortofolioData(selectedTukang.specialty).map((port, idx) => (
-                        <div key={idx} className="bg-surface-container-high/40 p-4 rounded-2xl border border-outline-variant/30 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <h5 className="font-bold text-xs text-on-surface">{port.label}</h5>
-                            <span className="text-[10px] text-on-surface-variant font-semibold bg-surface-container px-2 py-0.5 rounded-full">{port.desc}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="relative rounded-xl overflow-hidden h-36 border border-outline-variant/30">
-                              <img className="w-full h-full object-cover" src={port.before} alt="Sebelum" />
-                              <span className="absolute bottom-2 left-2 text-[9px] font-bold bg-red-500/90 text-white px-2 py-0.5 rounded uppercase">Sebelum</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedTukang.portofolios && selectedTukang.portofolios.length > 0 ? (
+                        selectedTukang.portofolios.map(port => (
+                          <div key={port.id} className="bg-surface-container-high/40 p-3 rounded-2xl border border-outline-variant/30 space-y-2">
+                            <div className="relative rounded-xl overflow-hidden h-40 border border-outline-variant/30">
+                              <img className="w-full h-full object-cover" src={port.foto_url.startsWith('http') ? port.foto_url : `${import.meta.env.VITE_API_BASE_URL}/storage/${port.foto_url}`} alt={port.judul} />
                             </div>
-                            <div className="relative rounded-xl overflow-hidden h-36 border border-outline-variant/30">
-                              <img className="w-full h-full object-cover" src={port.after} alt="Sesudah" />
-                              <span className="absolute bottom-2 left-2 text-[9px] font-bold bg-green-500/90 text-white px-2 py-0.5 rounded uppercase">Sesudah</span>
-                            </div>
+                            <h5 className="font-bold text-xs text-on-surface truncate">{port.judul}</h5>
+                            <p className="text-[10px] text-on-surface-variant line-clamp-2">{port.deskripsi}</p>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-xs text-on-surface-variant italic col-span-3">Belum ada portofolio pekerjaan.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1406,27 +1399,31 @@ function Dashboard() {
                     </div>
 
                     <div className="space-y-4 pt-2">
-                      {getUlasanData(selectedTukang.id).map((rev, idx) => (
-                        <div key={idx} className="space-y-2 text-xs pb-4 border-b border-surface-variant/10 last:border-0 last:pb-0">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full overflow-hidden bg-surface-container-high shrink-0">
-                                <img className="w-full h-full object-cover" src={rev.avatar} alt={rev.name} />
-                              </div>
-                              <div>
-                                <p className="font-bold text-on-surface text-xs">{rev.name}</p>
-                                <div className="flex items-center gap-0.5 text-secondary mt-0.5">
-                                  {[...Array(rev.rating)].map((_, i) => (
-                                    <span key={i} className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                  ))}
+                      {selectedTukang.ulasans && selectedTukang.ulasans.length > 0 ? (
+                        selectedTukang.ulasans.map((rev) => (
+                          <div key={rev.id} className="space-y-2 text-xs pb-4 border-b border-surface-variant/10 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full overflow-hidden bg-surface-container-high shrink-0 flex items-center justify-center text-on-surface-variant font-bold border border-outline-variant/30">
+                                  {rev.pelanggan ? rev.pelanggan.nama.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-on-surface text-xs">{rev.pelanggan ? rev.pelanggan.nama : 'User'}</p>
+                                  <div className="flex items-center gap-0.5 text-secondary mt-0.5">
+                                    {[...Array(parseInt(rev.rating) || 5)].map((_, i) => (
+                                      <span key={i} className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
+                              <span className="text-[10px] text-on-surface-variant/60 font-semibold">{new Date(rev.created_at).toLocaleDateString("id-ID")}</span>
                             </div>
-                            <span className="text-[10px] text-on-surface-variant/60 font-semibold">{rev.date}</span>
+                            <p className="text-on-surface-variant/90 leading-relaxed font-medium italic pl-10">"{rev.komentar}"</p>
                           </div>
-                          <p className="text-on-surface-variant/90 leading-relaxed font-medium italic pl-10">"{rev.comment}"</p>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-xs text-on-surface-variant italic">Belum ada ulasan untuk tukang ini.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1443,13 +1440,21 @@ function Dashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {getServicePrices(selectedTukang.specialty).map((svc, idx) => (
-                            <tr key={idx} className="border-b border-surface-variant/10 last:border-0 hover:bg-surface-container-high/40 transition-colors">
-                              <td className="p-4 font-bold text-on-surface">{svc.name}</td>
-                              <td className="p-4 font-extrabold text-secondary">{svc.price}</td>
-                              <td className="p-4 text-on-surface-variant font-medium leading-relaxed">{svc.desc}</td>
+                          {selectedTukang.layanans && selectedTukang.layanans.length > 0 ? (
+                            selectedTukang.layanans.map((svc) => (
+                              <tr key={svc.id} className="border-b border-surface-variant/10 last:border-0 hover:bg-surface-container-high/40 transition-colors">
+                                <td className="p-4 font-bold text-on-surface">{svc.nama_layanan}</td>
+                                <td className="p-4 font-extrabold text-secondary">
+                                  {svc.harga ? `Rp ${parseInt(svc.harga).toLocaleString('id-ID')}` : 'Hubungi'} {svc.satuan}
+                                </td>
+                                <td className="p-4 text-on-surface-variant font-medium leading-relaxed">{svc.deskripsi}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="3" className="p-4 text-center text-xs text-on-surface-variant italic">Belum ada daftar harga jasa.</td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -1503,22 +1508,26 @@ function Dashboard() {
                 <select
                   value={selectedService ? selectedService.name : ""}
                   onChange={(e) => {
-                    const services = getServicePrices(selectedTukang.specialty);
+                    const services = selectedTukang.layanans || [];
                     const selectedName = e.target.value;
-                    const found = services.find(s => s.name === selectedName);
+                    const found = services.find(s => s.nama_layanan === selectedName);
                     if (found) {
-                      setSelectedService({ name: found.name, price: found.price, desc: found.desc });
+                      setSelectedService({ name: found.nama_layanan, price: found.harga, desc: found.deskripsi });
                     }
                   }}
                   className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs font-bold text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer"
                   required
                 >
                   <option value="" disabled>-- Pilih Spesifikasi Layanan --</option>
-                  {getServicePrices(selectedTukang.specialty).map((svc, idx) => (
-                    <option key={idx} value={svc.name}>
-                      {svc.name} - ({svc.price})
-                    </option>
-                  ))}
+                  {selectedTukang.layanans && selectedTukang.layanans.length > 0 ? (
+                    selectedTukang.layanans.map((svc) => (
+                      <option key={svc.id} value={svc.nama_layanan}>
+                        {svc.nama_layanan} - ({svc.harga ? `Rp ${parseInt(svc.harga).toLocaleString('id-ID')} ${svc.satuan}` : 'Hubungi'})
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Tukang belum menambahkan layanan, silahkan deskripsikan masalah Anda</option>
+                  )}
                 </select>
               </div>
 
@@ -1616,8 +1625,11 @@ function Dashboard() {
 
       <LogoutModal 
         isOpen={isLogoutModalOpen} 
-        onClose={() => setIsLogoutModalOpen(false)} 
-        onConfirm={() => navigate("/")} 
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => {
+          localStorage.removeItem("pelanggan_token"); localStorage.removeItem("pelanggan_user"); localStorage.removeItem("pelanggan_id"); localStorage.removeItem("pelanggan_role");;
+          navigate("/");
+        }}
         role="pelanggan" 
       />
     </div>

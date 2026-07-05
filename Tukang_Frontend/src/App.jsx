@@ -19,6 +19,7 @@ import TukangDashboard from "./pages/tukang/dashboard";
 import TukangPesanan from "./pages/tukang/pesanan";
 import TukangChat from "./pages/tukang/chat";
 import TukangProfil from "./pages/tukang/profil";
+import TukangLayanan from "./pages/tukang/layanan";
 import Notifications from "./pages/notifications";
 import HelpCenter from "./pages/bantuan";
 import AdminDashboard from "./pages/admin/dashboard";
@@ -63,6 +64,7 @@ function App() {
         <Route path="/tukang/pesanan" element={<TukangPesanan />} />
         <Route path="/tukang/chat" element={<TukangChat />} />
         <Route path="/tukang/profil" element={<TukangProfil />} />
+        <Route path="/tukang/layanan" element={<TukangLayanan />} />
 
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />

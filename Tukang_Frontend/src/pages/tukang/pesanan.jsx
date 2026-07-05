@@ -26,7 +26,7 @@ function TukangPesanan() {
 
   useEffect(() => {
     // Ambil tukang_id dari localStorage
-    const userDataStr = localStorage.getItem("user");
+    const userDataStr = localStorage.getItem("tukang_user");
     let id = null;
     if (userDataStr) {
       try {
@@ -92,6 +92,7 @@ function TukangPesanan() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/tukang/dashboard" },
+    { id: "layanan", label: "Layanan Jasa", icon: "home_repair_service", path: "/tukang/layanan" },
     { id: "pesanan", label: "Pesanan Saya", icon: "assignment", path: "/tukang/pesanan", active: true },
     { id: "chat", label: "Chat", icon: "chat", path: "/tukang/chat" },
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil" },
@@ -118,6 +119,17 @@ function TukangPesanan() {
       alert("Alasan penolakan berhasil disimpan!");
     } catch (err) {
       alert("Gagal menolak pesanan.");
+    }
+  };
+
+  // Handle Action - Finish Job
+  const handleSelesaiKerja = async (id) => {
+    try {
+      await api.put(`/pesanan/${id}/selesai`);
+      fetchOrders();
+      alert("Laporan selesai terkirim! Menunggu konfirmasi pelanggan.");
+    } catch (err) {
+      alert("Gagal menyelesaikan pekerjaan.");
     }
   };
 
@@ -425,6 +437,58 @@ function TukangPesanan() {
                   );
                 }
 
+                // Card: Sedang Dikerjakan / Menunggu Pengerjaan
+                if (order.status === "sedang_dikerjakan" || order.status === "menunggu_pengerjaan") {
+                  return (
+                    <div 
+                      key={order.id} 
+                      className="bg-surface-container rounded-3xl p-6 border border-secondary/30 shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
+                    >
+                      <div className="absolute top-0 right-0 px-4 py-1 bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider rounded-bl-2xl shadow-sm">
+                        Uang Aman di Escrow
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/20 shrink-0">
+                            <img className="w-full h-full object-cover" alt={order.clientName} src={order.clientAvatar} />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-sm text-on-surface">{order.clientName}</h3>
+                            <div className="flex items-center gap-1 text-on-surface-variant/80 text-[11px] mt-0.5">
+                              <span className="material-symbols-outlined text-xs">location_on</span>
+                              {order.clientLoc}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <h4 className="text-secondary font-bold text-sm mb-1">{order.title}</h4>
+                          <p className="text-xs font-bold text-on-surface-variant mt-2">
+                            Silakan datang ke lokasi dan kerjakan pesanan. Uang pelanggan sudah ditahan oleh sistem.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleSelesaiKerja(order.id)}
+                        className="w-full mt-4 bg-secondary text-background text-xs font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform cursor-pointer"
+                      >
+                        Pekerjaan Selesai
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (order.status === "menunggu_konfirmasi_selesai") {
+                  return (
+                    <div key={order.id} className="bg-surface-container rounded-3xl p-6 border border-surface-variant/15 shadow-xl opacity-90">
+                      <h4 className="text-secondary font-bold text-sm mb-1">{order.title}</h4>
+                      <p className="text-xs font-bold text-on-surface-variant mt-2">Menunggu pelanggan mengkonfirmasi hasil kerja untuk mencairkan dana.</p>
+                    </div>
+                  );
+                }
+
                 // Card 4: Ditolak / Form Alasan
                 if (order.status === "ditolak") {
                   return (
@@ -545,3 +609,5 @@ function RejectionCard({ order, rejectReasons, onSaveReason }) {
 }
 
 export default TukangPesanan;
+
+// force refresh

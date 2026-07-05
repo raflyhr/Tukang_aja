@@ -45,7 +45,26 @@ function LogoutModal({ isOpen, onClose, onConfirm, role = "pelanggan" }) {
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={(e) => {
+              const path = window.location.pathname;
+              if (path.startsWith('/tukang')) {
+                localStorage.removeItem('tukang_token');
+                localStorage.removeItem('tukang_user');
+                localStorage.removeItem('tukang_id');
+                localStorage.removeItem('tukang_role');
+              } else if (path.startsWith('/admin')) {
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_user');
+                localStorage.removeItem('admin_id');
+                localStorage.removeItem('admin_role');
+              } else {
+                localStorage.removeItem('pelanggan_token');
+                localStorage.removeItem('pelanggan_user');
+                localStorage.removeItem('pelanggan_id');
+                localStorage.removeItem('pelanggan_role');
+              }
+              if (onConfirm) onConfirm(e);
+            }}
             className="flex-1 py-2.5 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer shadow-lg shadow-secondary/15 border-none"
           >
             Ya, Keluar

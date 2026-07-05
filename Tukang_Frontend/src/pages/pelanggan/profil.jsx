@@ -43,7 +43,7 @@ function Profil() {
   const [profilePic, setProfilePic] = useState("https://i.pinimg.com/736x/3a/5f/ec/3a5fec637c8a8850f6e2732cf42f5c67.jpg");
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
+    const savedUser = localStorage.getItem("pelanggan_user");
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
@@ -56,6 +56,11 @@ function Profil() {
         };
         setProfileData(mappedData);
         setInitialData(mappedData);
+        if (userObj.foto_profil) {
+          setProfilePic(userObj.foto_profil.startsWith("http") ? userObj.foto_profil : `http://127.0.0.1:8000/storage/${userObj.foto_profil}`);
+        } else {
+          setProfilePic(`https://ui-avatars.com/api/?name=${userObj.name || 'Pelanggan'}&background=random`);
+        }
       } catch (e) {
         console.error("Failed to parse user data from localStorage", e);
       }
@@ -447,8 +452,8 @@ function Profil() {
                 />
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-on-surface truncate">Reze</h4>
-                <p className="text-xs text-on-surface-variant/60 truncate">chaostknight483@gmail.com</p>
+                <h4 className="font-bold text-sm text-on-surface truncate">{profileData.fullName}</h4>
+                <p className="text-xs text-on-surface-variant/60 truncate">{profileData.email}</p>
               </div>
             </div>
             <button onClick={() => setIsLogoutModalOpen(true)} className="text-on-surface-variant hover:text-red-400 transition-colors p-1 flex items-center justify-center cursor-pointer bg-transparent border-none" title="Log Out">
@@ -1226,7 +1231,10 @@ function Profil() {
                 Batal
               </button>
               <button
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  localStorage.removeItem("pelanggan_token"); localStorage.removeItem("pelanggan_user"); localStorage.removeItem("pelanggan_id"); localStorage.removeItem("pelanggan_role");;
+                  navigate("/");
+                }}
                 className="flex-1 py-2.5 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:opacity-95 transition-opacity cursor-pointer shadow-lg shadow-secondary/15"
               >
                 Ya, Keluar

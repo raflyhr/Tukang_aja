@@ -18,7 +18,7 @@ class Tukang extends Model
         'foto_profil',
         'tahun_pengalaman',
         'deskripsi_pengalaman',
-        'foto_ktp',
+        'nik',
         'cv_portofolio',
         'is_aktif',
         'radius_layanan',
@@ -49,6 +49,21 @@ public function ulasans()
 public function portofolios()
 {
     return $this->hasMany(Portofolio::class);
+}
+
+public function pesanans()
+{
+    return $this->hasMany(Pesanan::class);
+}
+
+public function sertifikats()
+{
+    return $this->hasMany(SertifikatTukang::class);
+}
+
+public function layanans()
+{
+    return $this->hasMany(LayananTukang::class);
 }
 
 }

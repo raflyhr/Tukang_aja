@@ -41,8 +41,10 @@ Route::post('/pesanan/{id}/terima', [PesananController::class, 'terimaPekerjaan'
 Route::get('/tukang/{id}/pesanan', [PesananController::class, 'getPesananTukang']);
 Route::put('/pesanan/{id}/tawar', [PesananController::class, 'kasihPenawaran']);
 Route::put('/pesanan/{id}/tolak', [PesananController::class, 'tolakPesanan']);
+Route::put('/pesanan/{id}/bayar', [PesananController::class, 'bayarPesanan']);
 Route::put('/pesanan/{id}/selesai', [PesananController::class, 'selesaikanPekerjaan']);
-
+Route::put('/pesanan/{id}/konfirmasi-selesai', [PesananController::class, 'konfirmasiSelesai']);
+Route::put('/pesanan/{id}/komplain', [PesananController::class, 'komplainPesanan']);
 // --- Rute Dashboard Tukang ---
 Route::get('/tukang/{id}/dashboard-stats', [TukangController::class, 'getDashboardStats']);
 Route::get('/tukang/{id}/activities', [TukangController::class, 'getRecentActivities']);
@@ -50,9 +52,16 @@ Route::get('/tukang/{id}/activities', [TukangController::class, 'getRecentActivi
 // --- Rute Fitur Ulasan untuk Tukang ---
 Route::get('/tukang/{id}/ulasan', [UlasanController::class, 'getUlasanTukang']);
 
-// --- Rute Fitur Portofolio (Upload Foto) ---
+// --- Rute Fitur Portofolio, Sertifikat, dan Layanan ---
 Route::post('/tukang/{id}/portofolio', [PortofolioController::class, 'store']);
+Route::delete('/tukang/{id}/portofolio/{portofolio_id}', [PortofolioController::class, 'destroy']);
 Route::get('/tukang/{id}/portofolio', [PortofolioController::class, 'getPortofolioTukang']);
+
+Route::post('/tukang/{id}/sertifikat', [TukangController::class, 'addSertifikat']);
+Route::delete('/tukang/{id}/sertifikat/{sertifikat_id}', [TukangController::class, 'deleteSertifikat']);
+
+Route::post('/tukang/{id}/layanan', [TukangController::class, 'addLayanan']);
+Route::delete('/tukang/{id}/layanan/{layanan_id}', [TukangController::class, 'deleteLayanan']);
 
 // --- Rute Fitur Dompet (Penarikan Dana) ---
 Route::post('/tukang/{id}/tarik-dana', [PenarikanController::class, 'tarikDana']);
@@ -63,6 +72,7 @@ Route::post('/ulasan', [UlasanController::class,'store']);
 
 Route::post('/pesanan', [PesananController::class, 'store']);
 Route::get('/user/{id}/pesanan', [PesananController::class, 'getPesananUser']);
+Route::get('/user/{id}/dashboard-stats', [PesananController::class, 'getDashboardStatsUser']);
 
 // --- Rute Fitur Chat ---
 Route::get('/tukang/{id}/chats', [ChatController::class, 'getTukangChats']);
@@ -76,3 +86,5 @@ Route::put('/admin/verifikasi/{id}', [AdminController::class, 'verifyTukang']);
 Route::get('/admin/tukang', [AdminController::class, 'getAllTukang']);
 Route::put('/admin/tukang/{id}/status', [AdminController::class, 'toggleTukangStatus']);
 Route::get('/admin/monitoring', [AdminController::class, 'getMonitoring']);
+Route::get('/admin/disputes', [AdminController::class, 'getDisputes']);
+Route::put('/admin/disputes/{id}/resolve', [AdminController::class, 'resolveDispute']);

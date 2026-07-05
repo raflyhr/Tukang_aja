@@ -24,7 +24,7 @@ function TukangDashboard() {
   const [workingRadius, setWorkingRadius] = useState(5);
 
   // 20. Filter pekerjaan category state
-  const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const [selectedCategory, setSelectedCategory] = useState("semua");
 
   // 21. Sorting state
   const [selectedSort, setSelectedSort] = useState("Terdekat");
@@ -76,7 +76,7 @@ function TukangDashboard() {
 
   useEffect(() => {
     // Ambil tukang_id dari localStorage (asumsi login menyimpan { data: { tukang: { id: ... } } })    // Get tukang_id from localStorage
-    const userDataStr = localStorage.getItem("user");
+    const userDataStr = localStorage.getItem("tukang_user");
     let id = null;
     if (userDataStr) {
       try {
@@ -223,7 +223,7 @@ function TukangDashboard() {
   // Filter & Sort Logic
   // 22. Uses radius to filter, 20. Uses category to filter
   const filteredOrders = ordersList.filter((order) => {
-    const matchesCategory = selectedCategory === "Semua" || order.category.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesCategory = selectedCategory === "semua" || order.category?.toLowerCase() === selectedCategory.toLowerCase();
     const matchesRadius = order.distance <= workingRadius;
     return matchesCategory && matchesRadius;
   });
@@ -244,6 +244,7 @@ function TukangDashboard() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/tukang/dashboard", active: true },
+    { id: "layanan", label: "Layanan Jasa", icon: "home_repair_service", path: "/tukang/layanan" },
     { id: "pesanan", label: "Pesanan Saya", icon: "assignment", path: "/tukang/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/tukang/chat" },
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil" },
@@ -529,17 +530,27 @@ function TukangDashboard() {
                 <div className="space-y-2">
                   <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Layanan Pekerjaan</span>
                   <div className="flex flex-wrap gap-2">
-                    {["Semua", "Plumbing", "Elektronik", "AC", "Cat", "Listrik"].map((cat) => (
+                    {[
+                      { id: "semua", label: "Semua" },
+                      { id: "listrik", label: "Listrik" },
+                      { id: "ac", label: "AC" },
+                      { id: "pipa", label: "Pipa & Air" },
+                      { id: "cat", label: "Cat Rumah" },
+                      { id: "atap", label: "Atap Rumah" },
+                      { id: "pertukangan", label: "Pertukangan" },
+                      { id: "pindahan", label: "Pindahan" },
+                      { id: "kebersihan", label: "Kebersihan" }
+                    ].map((cat) => (
                       <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
                         className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                          selectedCategory === cat
+                          selectedCategory === cat.id
                             ? "bg-secondary border-secondary text-on-secondary"
                             : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:border-secondary/30"
                         }`}
                       >
-                        {cat}
+                        {cat.label}
                       </button>
                     ))}
                   </div>
@@ -725,40 +736,31 @@ function TukangDashboard() {
                 {/* 13. Dynamic Timeline using State */}
                 <div className="space-y-6 relative before:content-[''] before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1px] before:bg-outline-variant/40">
                   
-                  {recentActivities.map((act) => (
-                    <div key={act.id} className="relative pl-8">
-                      <div className={`absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center z-10 ${
-                        act.type === "completed" 
-                          ? "bg-secondary text-on-secondary" 
-                          : "bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant"
-                      }`}>
-                        <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: act.type === "rating" ? "'FILL' 1" : "" }}>
-                          {act.icon}
-                        </span>
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((act, index) => (
+                      <div key={act.id || index} className="relative pl-8">
+                        <div className={`absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center z-10 ${
+                          act.tipe === "pekerjaan_selesai" 
+                            ? "bg-secondary text-on-secondary" 
+                            : "bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant"
+                        }`}>
+                          <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: act.tipe === "ulasan" ? "'FILL' 1" : "" }}>
+                            {act.tipe === "pekerjaan_selesai" ? "check_circle" : "star"}
+                          </span>
+                        </div>
+                        <p className="text-on-surface font-bold text-xs">{act.judul}</p>
+                        <p className="text-[10px] text-on-surface-variant/75 mt-0.5">{act.deskripsi}</p>
+                        <span className="text-[9px] text-secondary/60 mt-1 block">{act.waktu}</span>
                       </div>
-                      <p className="text-on-surface font-bold text-xs">{act.title}</p>
-                      <p className="text-[10px] text-on-surface-variant/75 mt-0.5">{act.subtitle}</p>
-                      <span className="text-[9px] text-secondary/60 mt-1 block">{act.time}</span>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-2xl mb-1 opacity-50">history</span>
+                      <p className="text-xs">Belum ada aktivitas terbaru</p>
                     </div>
-                  ))}
+                  )}
 
                 </div>
-
-                {/* 14. Progress Target Card - Click opens Stats performance modal */}
-                <div 
-                  onClick={() => setActiveModal("stats")}
-                  className="mt-6 pt-5 border-t border-surface-variant/15 cursor-pointer group hover:opacity-95"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold text-on-surface group-hover:text-secondary transition-colors">Performa Minggu Ini</p>
-                    <span className="text-[10px] text-secondary font-bold">Sangat Baik</span>
-                  </div>
-                  <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
-                    <div className="bg-secondary h-full transition-all duration-1000" style={{ width: `${progressWidth}%` }}></div>
-                  </div>
-                  <p className="text-[10px] text-on-surface-variant/70 mt-2 text-right">{progressWidth}% Target Tercapai</p>
-                </div>
-
               </div>
             </div>
 

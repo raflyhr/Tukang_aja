@@ -12,7 +12,27 @@ class TukangController extends Controller
      */
     public function index(Request $request)
 {
-    $query = \App\Models\Tukang::query();
+    $query = \App\Models\Tukang::with(['sertifikats', 'layanans', 'portofolios', 'ulasans'])
+        ->withCount(['pesanans as completed_jobs_count' => function ($query) {
+            $query->where('status', 'selesai');
+        }]);
+
+    // Haversine Formula: 6371 adalah jari-jari bumi dalam kilometer
+    if ($request->has('latitude') && $request->has('longitude')) {
+        $lat = $request->latitude;
+        $lng = $request->longitude;
+
+        $haversine = "( 6371 * acos( cos( radians(?) ) *
+              cos( radians( latitude ) )
+              * cos( radians( longitude ) - radians(?)
+              ) + sin( radians(?) ) *
+              sin( radians( latitude ) ) )
+            )";
+
+        $query->selectRaw("*, {$haversine} AS distance", [$lat, $lng, $lat])
+            ->whereRaw("{$haversine} <= 50", [$lat, $lng, $lat])
+            ->orderBy('distance', 'asc');
+    }
 
     if ($request->has('alamat')) {
         $query->where('alamat', 'like', '%' . $request->alamat . '%');
@@ -50,7 +70,9 @@ class TukangController extends Controller
     $tukang = \App\Models\Tukang::with([
         'user',
         'ulasans',
-        'portofolios'
+        'portofolios',
+        'sertifikats',
+        'layanans'
     ])->find($id);
 
     if (!$tukang) {
@@ -219,5 +241,55 @@ class TukangController extends Controller
             'status' => 'Sukses',
             'data' => $activities
         ]);
+    }
+
+    public function addSertifikat(Request $request, $id)
+    {
+        $request->validate([
+            'judul' => 'required|string',
+            'penerbit' => 'nullable|string',
+            'tahun' => 'nullable|string',
+            'deskripsi' => 'nullable|string',
+        ]);
+        $sertifikat = \App\Models\SertifikatTukang::create([
+            'tukang_id' => $id,
+            'judul' => $request->judul,
+            'penerbit' => $request->penerbit,
+            'tahun' => $request->tahun,
+            'deskripsi' => $request->deskripsi
+        ]);
+        return response()->json(['status' => 'Sukses', 'data' => $sertifikat]);
+    }
+
+    public function deleteSertifikat($id, $sertifikat_id)
+    {
+        $sertifikat = \App\Models\SertifikatTukang::where('tukang_id', $id)->where('id', $sertifikat_id)->first();
+        if($sertifikat) $sertifikat->delete();
+        return response()->json(['status' => 'Sukses']);
+    }
+
+    public function addLayanan(Request $request, $id)
+    {
+        $request->validate([
+            'nama_layanan' => 'required|string',
+            'harga' => 'nullable|string',
+            'satuan' => 'nullable|string',
+            'deskripsi' => 'nullable|string',
+        ]);
+        $layanan = \App\Models\LayananTukang::create([
+            'tukang_id' => $id,
+            'nama_layanan' => $request->nama_layanan,
+            'harga' => $request->harga,
+            'satuan' => $request->satuan,
+            'deskripsi' => $request->deskripsi
+        ]);
+        return response()->json(['status' => 'Sukses', 'data' => $layanan]);
+    }
+
+    public function deleteLayanan($id, $layanan_id)
+    {
+        $layanan = \App\Models\LayananTukang::where('tukang_id', $id)->where('id', $layanan_id)->first();
+        if($layanan) $layanan->delete();
+        return response()->json(['status' => 'Sukses']);
     }
 }

@@ -37,7 +37,7 @@ return new class extends Migration
             $table->text('deskripsi_pengalaman')->nullable();
 
             // Dokumen Legal
-            $table->string('foto_ktp')->nullable();
+            $table->string('nik', 16)->unique()->nullable();
             $table->string('cv_portofolio')->nullable();
 
             // Status Tukang

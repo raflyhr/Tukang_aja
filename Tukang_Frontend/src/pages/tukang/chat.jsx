@@ -15,6 +15,7 @@ function TukangChat() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/tukang/dashboard" },
+    { id: "layanan", label: "Layanan Jasa", icon: "home_repair_service", path: "/tukang/layanan" },
     { id: "pesanan", label: "Pesanan Saya", icon: "assignment", path: "/tukang/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/tukang/chat", active: true },
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil" },
@@ -28,7 +29,7 @@ function TukangChat() {
 
   useEffect(() => {
     // Ambil tukang_id dari localStorage
-    const userDataStr = localStorage.getItem("user");
+    const userDataStr = localStorage.getItem("tukang_user");
     let id = null;
     if (userDataStr) {
       try {

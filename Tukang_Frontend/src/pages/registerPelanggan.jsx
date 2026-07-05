@@ -23,6 +23,12 @@ function RegisterPelanggan() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Profile photo state
+  const fileInputRef = useRef(null);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [previewPhoto, setPreviewPhoto] = useState("https://lh3.googleusercontent.com/aida-public/AB6AXuC3w7XxEdVxu6osAJ-BpwUvaF3Fu372z07yy2uEuD4Uo75uPr-tQkDt_K0IVvUSH_QfzkulP65j1Mqr14b9BKlSoIvjkiEPSTO1ij3FPKYEeCOrawwfiNXPfORxK2recIG-fF-d3de-LgVEuvl--mWx9Fc-07KZZiLAUi5DIED6NDMdR-aXGvSVlZv-MRFexssxva3OPlRexqaiMMRuHhRvfEXnv0SNrIf-NxTMDpZIX59SfTaRiuZataIrS8AsQXrt6pHKiKhLBgW6");
+
+
   // Toast states
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState(""); // "success" | "error"
@@ -154,23 +160,30 @@ function RegisterPelanggan() {
   }
 
   try {
+    const formData = new FormData();
+    formData.append("name", fullName);
+    formData.append("no_hp", phone);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("password_confirmation", confirmPassword);
+    formData.append("alamat", locationData.address);
+    formData.append("latitude", locationData.latitude);
+    formData.append("longitude", locationData.longitude);
+    if (noteText) formData.append("catatan", noteText);
+    if (profilePhoto) formData.append("foto_profil", profilePhoto);
+
     const response = await axios.post(
       "http://127.0.0.1:8000/api/auth/user/register",
+      formData,
       {
-        name: fullName,
-        no_hp: phone,
-        email: email,
-        password: password,
-        password_confirmation: confirmPassword,
-        alamat: locationData.address,
-        latitude: locationData.latitude,
-        longitude: locationData.longitude,
-        catatan: noteText,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       }
     );
 
     localStorage.setItem(
-      "access_token",
+      "pelanggan_token",
       response.data.access_token
     );
 
@@ -354,12 +367,29 @@ function RegisterPelanggan() {
 
                 {/* Profile Picture Upload (High-end Card) */}
                 <div className="bg-surface-container-high rounded-xl p-md flex flex-col md:flex-row items-center gap-md border border-surface-variant/15 shadow-sm">
-                  <div className="relative group cursor-pointer">
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/jpeg, image/png, image/jpg"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          if (file.size > 2 * 1024 * 1024) {
+                            alert("Ukuran foto maksimal 2MB untuk menghindari error server.");
+                            return;
+                          }
+                          setProfilePhoto(file);
+                          setPreviewPhoto(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
                     <div className="w-32 h-32 rounded-full border-4 border-surface-container-highest bg-surface-variant overflow-hidden flex items-center justify-center transition-all group-hover:border-secondary">
                       <img
                         className="w-full h-full object-cover"
                         alt="Profile Avatar"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3w7XxEdVxu6osAJ-BpwUvaF3Fu372z07yy2uEuD4Uo75uPr-tQkDt_K0IVvUSH_QfzkulP65j1Mqr14b9BKlSoIvjkiEPSTO1ij3FPKYEeCOrawwfiNXPfORxK2recIG-fF-d3de-LgVEuvl--mWx9Fc-07KZZiLAUi5DIED6NDMdR-aXGvSVlZv-MRFexssxva3OPlRexqaiMMRuHhRvfEXnv0SNrIf-NxTMDpZIX59SfTaRiuZataIrS8AsQXrt6pHKiKhLBgW6"
+                        src={previewPhoto}
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="material-symbols-outlined text-white">

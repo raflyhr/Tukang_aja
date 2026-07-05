@@ -5,14 +5,26 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Pesanan;
+use App\Models\Escrow;
+use App\Models\Dispute;
 
 class PesananController extends Controller
 {
+    private function autoCancelExpiredOrders()
+    {
+        // Cancel orders that are waiting for tukang's offer for more than 15 minutes
+        $expiredTime = now()->subMinutes(15);
+        Pesanan::where('status', 'menunggu_penawaran')
+            ->where('updated_at', '<', $expiredTime)
+            ->update(['status' => 'dibatalkan', 'alasan_penolakan' => 'Sistem: Tukang tidak merespon dalam 15 menit']);
+    }
+
     /**
      * Mendapatkan daftar pesanan masuk berdasarkan ID Tukang.
      */
     public function getPesananTukang($tukang_id)
     {
+        $this->autoCancelExpiredOrders();
         $pesanan = Pesanan::with('user')->where('tukang_id', $tukang_id)->latest()->get();
         return response()->json(['status' => 'Sukses', 'data' => $pesanan], 200);
     }
@@ -62,37 +74,97 @@ class PesananController extends Controller
         return response()->json(['message' => 'Pesanan berhasil ditolak.', 'data' => $pesanan], 200);
     }
     /**
-     * Selesaikan pekerjaan dan tambahkan saldo ke Tukang.
+     * Pelanggan melakukan pembayaran. Uang ditahan di Escrow.
+     */
+    public function bayarPesanan(Request $request, $id)
+    {
+        $pesanan = Pesanan::find($id);
+        if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+
+        if ($pesanan->status !== 'menunggu_persetujuan' && $pesanan->status !== 'menunggu_pembayaran') {
+            return response()->json(['message' => 'Pesanan belum bisa dibayar'], 400);
+        }
+
+        $pesanan->status = 'menunggu_pengerjaan';
+        $pesanan->save();
+
+        Escrow::create([
+            'pesanan_id' => $pesanan->id,
+            'jumlah_bayar' => $pesanan->harga_penawaran,
+            'tipe_pembayaran' => $request->tipe ?? 'full',
+            'status_escrow' => 'ditahan'
+        ]);
+
+        return response()->json(['message' => 'Pembayaran berhasil! Uang ditahan oleh sistem.'], 200);
+    }
+
+    /**
+     * Tukang menyelesaikan pekerjaan. (Hanya lapor selesai, belum terima uang)
      */
     public function selesaikanPekerjaan($id)
     {
         $pesanan = Pesanan::find($id);
-        if (!$pesanan) {
-            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+        if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+
+        if ($pesanan->status !== 'sedang_dikerjakan' && $pesanan->status !== 'menunggu_pengerjaan') {
+            return response()->json(['message' => 'Pesanan belum dalam status pengerjaan'], 400);
         }
 
-        if ($pesanan->status === 'selesai') {
-            return response()->json(['message' => 'Pesanan ini sudah diselesaikan sebelumnya'], 400);
+        $pesanan->status = 'menunggu_konfirmasi_selesai';
+        $pesanan->save();
+
+        return response()->json(['message' => 'Laporan selesai dikirim. Menunggu konfirmasi pelanggan.'], 200);
+    }
+
+    /**
+     * Pelanggan mengkonfirmasi pekerjaan selesai. Uang cair ke Tukang.
+     */
+    public function konfirmasiSelesai($id)
+    {
+        $pesanan = Pesanan::find($id);
+        if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+
+        if ($pesanan->status !== 'menunggu_konfirmasi_selesai') {
+            return response()->json(['message' => 'Belum bisa dikonfirmasi'], 400);
         }
 
-        // 1. Ubah status pesanan
         $pesanan->status = 'selesai';
         $pesanan->save();
 
-        // 2. Tambahkan saldo ke Tukang
-        // Karena kita sudah mendefinisikan relasi tukang() di model Pesanan, kita bisa langsung akses
-        $tukang = $pesanan->tukang;
-        if ($tukang) {
-            // Asumsi harga_penawaran adalah harga akhir yang disetujui
-            $tukang->saldo += $pesanan->harga_penawaran;
-            $tukang->save();
+        // Cairkan Escrow ke Tukang
+        $escrow = Escrow::where('pesanan_id', $pesanan->id)->first();
+        if ($escrow) {
+            $escrow->status_escrow = 'dicairkan_ke_tukang';
+            $escrow->save();
+
+            $tukang = $pesanan->tukang;
+            if ($tukang) {
+                $tukang->saldo += $escrow->jumlah_bayar;
+                $tukang->save();
+            }
         }
 
-        return response()->json([
-            'message' => 'Pekerjaan selesai! Saldo Tukang berhasil ditambahkan.',
-            'data' => $pesanan,
-            'saldo_sekarang' => $tukang->saldo ?? 0
-        ], 200);
+        return response()->json(['message' => 'Pekerjaan selesai! Dana telah diteruskan ke Tukang.'], 200);
+    }
+
+    /**
+     * Pelanggan komplain/dispute.
+     */
+    public function komplainPesanan(Request $request, $id)
+    {
+        $pesanan = Pesanan::find($id);
+        if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+
+        $pesanan->status = 'komplain';
+        $pesanan->save();
+
+        Dispute::create([
+            'pesanan_id' => $pesanan->id,
+            'user_id' => $pesanan->user_id,
+            'alasan_komplain' => $request->alasan_komplain ?? 'Tidak ada alasan'
+        ]);
+
+        return response()->json(['message' => 'Komplain berhasil diajukan. Admin akan meninjau pesanan ini.'], 200);
     }
 
     public function store(Request $request)
@@ -130,6 +202,7 @@ class PesananController extends Controller
 
     public function getPesananUser($id)
     {
+        $this->autoCancelExpiredOrders();
         $pesanan = Pesanan::with('tukang')
             ->where('user_id', $id)
             ->latest()
@@ -141,6 +214,30 @@ class PesananController extends Controller
         ]);
     }
 
+    public function getDashboardStatsUser($id)
+    {
+        $pesananAktif = Pesanan::where('user_id', $id)
+            ->whereNotIn('status', ['selesai', 'batal', 'ditolak'])
+            ->count();
+            
+        $pekerjaanSelesai = Pesanan::where('user_id', $id)
+            ->where('status', 'selesai')
+            ->count();
+            
+        $totalPengeluaran = Pesanan::where('user_id', $id)
+            ->where('status', 'selesai')
+            ->sum('harga_penawaran');
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => [
+                'pesanan_aktif' => str_pad($pesananAktif, 2, '0', STR_PAD_LEFT),
+                'pekerjaan_selesai' => str_pad($pekerjaanSelesai, 2, '0', STR_PAD_LEFT),
+                'total_pengeluaran' => $totalPengeluaran
+            ]
+        ]);
+    }
+
     /**
      * Mendapatkan pesanan baru yang tersedia berdasarkan radius dan kategori
      */
@@ -149,11 +246,11 @@ class PesananController extends Controller
         $latitude = $request->query('lat');
         $longitude = $request->query('lng');
         $radius = $request->query('radius', 5); // default 5 km
-        $kategori = $request->query('kategori', 'Semua');
+        $kategori = $request->query('kategori', 'semua');
 
         $query = Pesanan::whereNull('tukang_id')->where('status', 'menunggu');
 
-        if ($kategori !== 'Semua') {
+        if ($kategori !== 'semua') {
             $query->where('kategori_layanan', $kategori);
         }
 
