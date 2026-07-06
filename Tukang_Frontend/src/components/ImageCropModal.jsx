@@ -38,6 +38,21 @@ function ImageCropModal({ isOpen, imageSrc, onClose, onConfirm }) {
     }
   };
 
+  const constrainOffset = (x, y, currentZoom) => {
+    const scaledWidth = imgSize.width * currentZoom;
+    const scaledHeight = imgSize.height * currentZoom;
+    
+    const minX = 128 - scaledWidth / 2;
+    const maxX = scaledWidth / 2 - 128;
+    const minY = 128 - scaledHeight / 2;
+    const maxY = scaledHeight / 2 - 128;
+    
+    return {
+      x: Math.min(Math.max(x, minX), maxX),
+      y: Math.min(Math.max(y, minY), maxY)
+    };
+  };
+
   const handleMouseDown = (e) => {
     setIsDragging(true);
     setStartDrag({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
@@ -45,10 +60,9 @@ function ImageCropModal({ isOpen, imageSrc, onClose, onConfirm }) {
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    setDragOffset({
-      x: e.clientX - startDrag.x,
-      y: e.clientY - startDrag.y,
-    });
+    const rawX = e.clientX - startDrag.x;
+    const rawY = e.clientY - startDrag.y;
+    setDragOffset(constrainOffset(rawX, rawY, zoom));
   };
 
   const handleMouseUp = () => {
@@ -68,10 +82,9 @@ function ImageCropModal({ isOpen, imageSrc, onClose, onConfirm }) {
 
   const handleTouchMove = (e) => {
     if (!isDragging || e.touches.length !== 1) return;
-    setDragOffset({
-      x: e.touches[0].clientX - startDrag.x,
-      y: e.touches[0].clientY - startDrag.y,
-    });
+    const rawX = e.touches[0].clientX - startDrag.x;
+    const rawY = e.touches[0].clientY - startDrag.y;
+    setDragOffset(constrainOffset(rawX, rawY, zoom));
   };
 
   const handleSave = () => {
@@ -178,7 +191,11 @@ function ImageCropModal({ isOpen, imageSrc, onClose, onConfirm }) {
               step="0.05"
               className="w-full accent-secondary cursor-pointer"
               value={zoom}
-              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const newZoom = parseFloat(e.target.value);
+                setZoom(newZoom);
+                setDragOffset(prev => constrainOffset(prev.x, prev.y, newZoom));
+              }}
             />
           </div>
           <p className="text-[10px] text-on-surface-variant text-center leading-relaxed">

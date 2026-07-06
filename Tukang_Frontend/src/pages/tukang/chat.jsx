@@ -381,9 +381,6 @@ function TukangChat() {
                 >
                   <span className="material-symbols-outlined text-sm">delete</span>
                 </button>
-                <button className="p-2 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-colors cursor-pointer">
-                  <span className="material-symbols-outlined text-sm">call</span>
-                </button>
                 {activeChat.negotiation && (
                   <button 
                     onClick={() => setIsNegoPanelOpen(!isNegoPanelOpen)}
