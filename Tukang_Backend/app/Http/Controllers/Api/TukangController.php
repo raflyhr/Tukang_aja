@@ -29,9 +29,14 @@ class TukangController extends Controller
               sin( radians( latitude ) ) )
             )";
 
-        $query->selectRaw("*, {$haversine} AS distance", [$lat, $lng, $lat])
-            ->whereRaw("{$haversine} <= 50", [$lat, $lng, $lat])
-            ->orderBy('distance', 'asc');
+        $query->selectRaw("*, {$haversine} AS distance", [$lat, $lng, $lat]);
+        
+        if ($request->has('radius')) {
+            $radius = floatval($request->radius);
+            $query->whereRaw("{$haversine} <= ?", [$lat, $lng, $lat, $radius]);
+        }
+        
+        $query->orderBy('distance', 'asc');
     }
 
     if ($request->has('alamat')) {
