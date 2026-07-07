@@ -86,7 +86,15 @@ class AuthController extends Controller
         // 1. Handle upload file (simpan ke folder storage/app/public/...)
         $fotoProfilPath = null;
         if ($request->hasFile('foto_profil')) {
-            $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
+            $manager = new ImageManager(new Driver());
+            $filename = Str::random(40) . '.webp';
+            $fotoProfilPath = 'tukang/profil/' . $filename;
+            
+            $image = $manager->read($request->file('foto_profil'));
+            $image->scaleDown(width: 300); // Resize kecil agar makin enteng
+            
+            // Kompres ekstrem ke 5% sesuai permintaan
+            Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
         }
 
         $cvPath = null;
@@ -198,7 +206,15 @@ class AuthController extends Controller
 
     $fotoProfilPath = null;
     if ($request->hasFile('foto_profil')) {
-        $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+        $manager = new ImageManager(new Driver());
+        $filename = Str::random(40) . '.webp';
+        $fotoProfilPath = 'pelanggan/profil/' . $filename;
+        
+        $image = $manager->read($request->file('foto_profil'));
+        $image->scaleDown(width: 300); // Resize kecil
+        
+        // Kompres ekstrem ke 5% sesuai permintaan
+        Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
     }
 
     $user = User::create([
