@@ -270,55 +270,56 @@ function Dashboard() {
   };
 
   // Handle Booking Submit
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!bookingDesc || !bookingDate || !bookingTime) {
       alert("Harap lengkapi deskripsi kerusakan, tanggal, dan waktu.");
       return;
     }
 
-    // Add to active orders list (simulated)
-    const newOrder = {
-      id: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      service: selectedService ? selectedService.name : "Jasa Perbaikan Umum",
-      tukang: selectedTukang.name,
-      date: new Date(bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-      cost: selectedService ? selectedService.price.split(" / ")[0] : "Nego Setelah Kunjungan",
-      status: "Menunggu Konfirmasi",
-      statusColor: "text-orange-400 bg-orange-500/10 border-orange-500/20",
-    };
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      if (!savedUser) return;
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      
+      const payload = {
+        user_id: userObj.id,
+        tukang_id: selectedTukang.id,
+        deskripsi_masalah: bookingDesc,
+        judul: selectedService ? selectedService.name : "Jasa Perbaikan Umum",
+        kategori_layanan: selectedTukang.specialtyText || selectedTukang.specialty || "Pertukangan",
+        latitude: userObj.latitude || -6.2088,
+        longitude: userObj.longitude || 106.8456,
+        alamat_lengkap: userObj.alamat || "Alamat Pelanggan",
+        harga_penawaran: selectedTukang.price || 150000,
+      };
 
-    setActiveOrders([newOrder, ...activeOrders]);
-    setShowSuccessToast(true);
-    setIsBookingModalOpen(false);
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan`, payload);
+      
+      if (response.data.data) {
+        const orderData = response.data.data;
+        const chatRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/chat/start`, {
+          user_id: userObj.id,
+          tukang_id: selectedTukang.id,
+          pesanan_id: orderData.id
+        });
+        
+        setShowSuccessToast(true);
+        setIsBookingModalOpen(false);
+        setBookingDesc("");
+        setBookingDate("");
+        setBookingTime("");
 
-    // Reset Form
-    setBookingDesc("");
-    setBookingDate("");
-    setBookingTime("");
-
-    // Automatically navigate to Chat after 2.5 seconds
-    setTimeout(async () => {
-      setShowSuccessToast(false);
-      try {
-        const savedUser = localStorage.getItem("pelanggan_user");
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          const userObj = parsed.user || parsed;
-          const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/chat/start`, {
-            user_id: userObj.id,
-            tukang_id: selectedTukang.id
-          });
-          if (response.data.status === "Sukses") {
-            navigate("/pelanggan/chat", { state: { activeChatId: response.data.data.id } });
-            return;
-          }
-        }
-      } catch (err) {
-        console.error(err);
+        setTimeout(() => {
+          setShowSuccessToast(false);
+          navigate("/pelanggan/chat", { state: { activeChatId: chatRes.data.data.id } });
+        }, 2000);
       }
-      navigate("/pelanggan/chat");
-    }, 2500);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan booking. Silakan coba lagi.");
+    }
   };
 
   const handleStartChat = async (tukangId) => {

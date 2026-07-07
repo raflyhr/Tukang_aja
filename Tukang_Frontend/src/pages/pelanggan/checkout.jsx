@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
+import axios from "axios";
 
 function CheckoutPembayaran() {
   const location = useLocation();
@@ -86,9 +87,17 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     processPaymentSim();
   };
 
-  const processPaymentSim = () => {
+  const processPaymentSim = async () => {
     setIsPaying(true);
-    setTimeout(() => {
+    try {
+      // Check if it is a real database ID (numeric or is parsed as one)
+      const isRealOrder = !isNaN(Number(paymentData.id));
+      if (isRealOrder) {
+        await axios.put(`http://127.0.0.1:8000/api/pesanan/${paymentData.id}/bayar`, {
+          tipe: 'full'
+        });
+      }
+      
       setIsPaying(false);
       setIsSuccess(true);
       setTimeout(() => {
@@ -103,7 +112,11 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           } 
         });
       }, 1500);
-    }, 2000);
+    } catch (err) {
+      setIsPaying(false);
+      console.error(err);
+      alert(err.response?.data?.message || "Gagal memproses pembayaran. Cek saldo Anda.");
+    }
   };
 
   return (

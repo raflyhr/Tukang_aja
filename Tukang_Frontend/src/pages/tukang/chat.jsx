@@ -24,6 +24,7 @@ function TukangChat() {
 
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [activePesanan, setActivePesanan] = useState(null);
   const [tukangId, setTukangId] = useState(null);
   const [technicianName, setTechnicianName] = useState("Tukang");
   const [avatar, setAvatar] = useState("https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg");
@@ -61,6 +62,7 @@ function TukangChat() {
           online: true,
           time: c.messages && c.messages.length > 0 ? new Date(c.messages[0].created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
           lastMsg: c.messages && c.messages.length > 0 ? c.messages[0].text : "Belum ada pesan",
+          pesanan: c.pesanan,
           negotiation: null, // Kita nonaktifkan dulu detail negosiasi kompleks untuk MVP
         }));
         setChats(mapped);
@@ -68,6 +70,7 @@ function TukangChat() {
         // Auto set active chat jika belum ada
         if (mapped.length > 0 && !activeChatId) {
           setActiveChatId(mapped[0].id);
+          setActivePesanan(mapped[0].pesanan || null);
         }
       }
     } catch (err) {
@@ -182,6 +185,18 @@ function TukangChat() {
       fetchChats();
     } catch (err) {
       alert("Gagal menghapus obrolan");
+    }
+  };
+
+  const handleCompleteOrder = async (pesanan) => {
+    if (!window.confirm("Apakah Anda yakin ingin melaporkan pekerjaan ini telah selesai ke Pelanggan?")) return;
+    try {
+      const response = await api.put(`/pesanan/${pesanan.id}/selesai`);
+      alert(response.data.message || "Laporan pekerjaan selesai telah terkirim!");
+      fetchChats();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Gagal melaporkan pekerjaan selesai.");
     }
   };
 
@@ -326,6 +341,7 @@ function TukangChat() {
                     key={chat.id}
                     onClick={() => {
                       setActiveChatId(chat.id);
+                      setActivePesanan(chat.pesanan || null);
                       setIsNegoPanelOpen(false); // keep chat area clean and wide when changing chats
                     }}
                     className={`p-3.5 rounded-2xl flex gap-3 cursor-pointer transition-all duration-200 ${
@@ -404,6 +420,29 @@ function TukangChat() {
                     )}
                   </div>
                 </div>
+
+                {activePesanan && (
+                  <div className="bg-secondary/10 border-b border-secondary/20 px-5 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs text-on-surface truncate">{activePesanan.judul}</h4>
+                      <div className="text-[10px] text-on-surface-variant/80 mt-0.5 flex flex-wrap items-center gap-2">
+                        <span>Biaya Jasa: <strong className="text-secondary">Rp {activePesanan.harga_penawaran.toLocaleString("id-ID")}</strong></span>
+                        <span>•</span>
+                        <span>Status: <span className="uppercase font-bold text-[9px] bg-secondary/15 text-secondary px-2 py-0.5 rounded-full border border-secondary/10">{activePesanan.status.replace('_', ' ')}</span></span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                      {(activePesanan.status === "menunggu_pengerjaan" || activePesanan.status === "sedang_dikerjakan") && (
+                        <button
+                          onClick={() => handleCompleteOrder(activePesanan)}
+                          className="flex-1 sm:flex-initial text-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                        >
+                          Laporkan Selesai
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Chat Body messages */}
                 <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6">

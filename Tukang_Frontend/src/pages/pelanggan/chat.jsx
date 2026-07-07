@@ -44,6 +44,8 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ulasan, setUlasan] = useState("");
 
   const [currentUser, setCurrentUser] = useState(null);
+  const [activePesanan, setActivePesanan] = useState(null);
+  const [selectedPesananForReview, setSelectedPesananForReview] = useState(null);
 
   useEffect(() => {
     // Ambil pelanggan_id yang di-set di login.jsx secara langsung agar lebih aman
@@ -76,7 +78,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
       const stateChatId = location.state?.activeChatId;
       if (stateChatId) {
         const matchingChat = res.data.data.find(c => c.id === stateChatId);
-        if (matchingChat) {
+        if (matchingChat && activeChatId !== stateChatId) {
           selectChat(matchingChat);
           return;
         }
@@ -94,6 +96,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const selectChat = async (chat) => {
     setActiveChatId(chat.id);
     setActiveChatTukang(chat.tukang);
+    setActivePesanan(chat.pesanan || null);
     try {
       const res = await axios.get(`http://127.0.0.1:8000/api/chat/${chat.id}/messages`);
       setMessages(res.data.data);
@@ -204,35 +207,66 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     }
   };
 
-const kirimRating = async () => {
+  const handlePayOrder = (pesanan) => {
+    navigate("/pelanggan/checkout", {
+      state: {
+        pendingPayment: {
+          id: pesanan.id,
+          service: pesanan.judul,
+          tukang: activeChatTukang?.nama || "Mitra Tukang",
+          amount: `Rp ${pesanan.harga_penawaran.toLocaleString("id-ID")}`,
+          method: "QRIS",
+          status: "Menunggu Pembayaran"
+        }
+      }
+    });
+  };
+
+  const handleCompleteOrder = async (pesanan) => {
+    if (!window.confirm("Apakah Anda yakin pekerjaan ini telah selesai dan ingin mencairkan dana ke Tukang?")) return;
     try {
-        const response = await axios.post(
-            "http://127.0.0.1:8000/api/ulasan",
-            {
-                user_id: 1,
-                pesanan_id: 1,
-                rating: rating,
-                komentar: ulasan,
-                tukang_id: 1,
-            }
-        );
-
-        alert(response.data.message);
-
-        setShowRatingModal(false);
-        setRating(5);
-        setUlasan("");
-
-        navigate("/pelanggan/dashboard");
-
+      const response = await axios.put(`http://127.0.0.1:8000/api/pesanan/${pesanan.id}/konfirmasi-selesai`);
+      alert(response.data.message || "Pekerjaan berhasil diselesaikan!");
+      
+      setSelectedPesananForReview(pesanan);
+      setShowRatingModal(true);
+      
+      if (currentUser && currentUser.id) {
+        fetchChats(currentUser.id);
+      }
     } catch (error) {
-    console.log(error);
-    console.log(error.response);
-    console.log(error.response?.data);
+      console.error("Gagal menyelesaikan pesanan", error);
+      alert(error.response?.data?.message || "Gagal menyelesaikan pesanan.");
+    }
+  };
 
-    alert(JSON.stringify(error.response?.data));
-}
-};
+  const kirimRating = async () => {
+    if (!selectedPesananForReview || !currentUser) {
+      alert("Pilih pesanan yang valid untuk dinilai.");
+      return;
+    }
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/ulasan",
+        {
+          user_id: currentUser.id,
+          pesanan_id: selectedPesananForReview.id,
+          rating: rating,
+          komentar: ulasan,
+          tukang_id: selectedPesananForReview.tukang_id || activeChatTukang?.id || 1,
+        }
+      );
+
+      alert(response.data.message || "Ulasan berhasil dikirim!");
+      setShowRatingModal(false);
+      setRating(5);
+      setUlasan("");
+      navigate("/pelanggan/dashboard");
+    } catch (error) {
+      console.log(error);
+      alert("Gagal mengirim ulasan.");
+    }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -472,6 +506,37 @@ const kirimRating = async () => {
             <div className="p-4 flex items-center justify-between bg-surface-container/60 border-b border-surface-variant/15 z-10 backdrop-blur-md">
               <h3 className="font-bold text-on-surface leading-tight text-sm">Pilih percakapan</h3>
             </div>
+            )}
+
+            {activePesanan && (
+              <div className="bg-secondary/10 border-b border-secondary/20 px-5 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
+                <div className="min-w-0">
+                  <h4 className="font-bold text-xs text-on-surface truncate">{activePesanan.judul}</h4>
+                  <div className="text-[10px] text-on-surface-variant/80 mt-0.5 flex flex-wrap items-center gap-2">
+                    <span>Biaya Jasa: <strong className="text-secondary">Rp {activePesanan.harga_penawaran.toLocaleString("id-ID")}</strong></span>
+                    <span>•</span>
+                    <span>Status: <span className="uppercase font-bold text-[9px] bg-secondary/15 text-secondary px-2 py-0.5 rounded-full border border-secondary/10">{activePesanan.status.replace('_', ' ')}</span></span>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                  {activePesanan.status === "menunggu" && (
+                    <button
+                      onClick={() => handlePayOrder(activePesanan)}
+                      className="flex-1 sm:flex-initial text-center bg-secondary hover:bg-secondary/90 text-on-secondary px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                    >
+                      Bayar Jasa
+                    </button>
+                  )}
+                  {(activePesanan.status === "menunggu_pengerjaan" || activePesanan.status === "sedang_dikerjakan" || activePesanan.status === "menunggu_konfirmasi_selesai") && (
+                    <button
+                      onClick={() => handleCompleteOrder(activePesanan)}
+                      className="flex-1 sm:flex-initial text-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                    >
+                      Konfirmasi Selesai
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Messages Scroll Area */}

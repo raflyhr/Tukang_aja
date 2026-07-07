@@ -12,7 +12,7 @@ class ChatController extends Controller
     // Mengambil daftar percakapan untuk tukang
     public function getTukangChats($tukang_id)
     {
-        $chats = Chat::with(['user', 'messages' => function($q) {
+        $chats = Chat::with(['user', 'pesanan', 'messages' => function($q) {
             $q->latest()->limit(1);
         }])->where('tukang_id', $tukang_id)->latest()->get();
 
@@ -25,7 +25,7 @@ class ChatController extends Controller
     // Mengambil daftar percakapan untuk pelanggan
     public function getUserChats($user_id)
     {
-        $chats = Chat::with(['tukang', 'messages' => function($q) {
+        $chats = Chat::with(['tukang', 'pesanan', 'messages' => function($q) {
             $q->latest()->limit(1);
         }])->where('user_id', $user_id)->latest()->get();
 
@@ -102,7 +102,7 @@ class ChatController extends Controller
         }
 
         // Load relationships
-        $chat->load(['user', 'tukang', 'messages']);
+        $chat->load(['user', 'tukang', 'pesanan', 'messages']);
 
         return response()->json([
             'status' => 'Sukses',
