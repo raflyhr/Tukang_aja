@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../components/LeafletMapPicker";
+import ImageCropModal from "../components/ImageCropModal";
 import axios from "axios";
 
 function RegisterPelanggan() {
@@ -27,6 +28,10 @@ function RegisterPelanggan() {
   const fileInputRef = useRef(null);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [previewPhoto, setPreviewPhoto] = useState("https://lh3.googleusercontent.com/aida-public/AB6AXuC3w7XxEdVxu6osAJ-BpwUvaF3Fu372z07yy2uEuD4Uo75uPr-tQkDt_K0IVvUSH_QfzkulP65j1Mqr14b9BKlSoIvjkiEPSTO1ij3FPKYEeCOrawwfiNXPfORxK2recIG-fF-d3de-LgVEuvl--mWx9Fc-07KZZiLAUi5DIED6NDMdR-aXGvSVlZv-MRFexssxva3OPlRexqaiMMRuHhRvfEXnv0SNrIf-NxTMDpZIX59SfTaRiuZataIrS8AsQXrt6pHKiKhLBgW6");
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [tempProfileFile, setTempProfileFile] = useState(null);
+  const [profilePhotoDetails, setProfilePhotoDetails] = useState({ name: "", size: "" });
 
 
   // Toast states
@@ -104,6 +109,42 @@ function RegisterPelanggan() {
       const prevStep = steps[currentIndex - 1];
       scrollToSection(prevStep);
     }
+  };
+
+  const handleProfilePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedExtensions = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowedExtensions.includes(file.type)) {
+      setErrors(prev => ({ ...prev, profilePhoto: "Format file harus JPG, JPEG, atau PNG" }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Ukuran foto maksimal 2MB untuk menghindari error server.");
+      return;
+    }
+
+    setErrors(prev => ({ ...prev, profilePhoto: null }));
+    setTempProfileFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCropImageSrc(reader.result);
+      setIsCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirmProfileCrop = ({ file, dataUrl }) => {
+    setProfilePhoto(file);
+    setPreviewPhoto(dataUrl);
+    setProfilePhotoDetails({
+      name: tempProfileFile ? tempProfileFile.name : "profile.jpg",
+      size: (file.size / 1024 / 1024).toFixed(2) + " MB"
+    });
+    setIsCropModalOpen(false);
   };
 
   const validateForm = () => {
@@ -373,17 +414,7 @@ function RegisterPelanggan() {
                       ref={fileInputRef} 
                       className="hidden" 
                       accept="image/jpeg, image/png, image/jpg"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          if (file.size > 2 * 1024 * 1024) {
-                            alert("Ukuran foto maksimal 2MB untuk menghindari error server.");
-                            return;
-                          }
-                          setProfilePhoto(file);
-                          setPreviewPhoto(URL.createObjectURL(file));
-                        }
-                      }}
+                      onChange={handleProfilePhotoChange}
                     />
                     <div className="w-32 h-32 rounded-full border-4 border-surface-container-highest bg-surface-variant overflow-hidden flex items-center justify-center transition-all group-hover:border-secondary">
                       <img
@@ -718,6 +749,13 @@ function RegisterPelanggan() {
       {/* Background Decorative Element (Subtle Glassmorphism Glow) */}
       <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
       <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={cropImageSrc}
+        onClose={() => setIsCropModalOpen(false)}
+        onConfirm={handleConfirmProfileCrop}
+      />
     </div>
   );
 }

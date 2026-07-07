@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import api from "../../lib/axios";
+import { supabase } from "../../lib/supabase";
 
 function TukangChat() {
   const navigate = useNavigate();
@@ -93,21 +94,45 @@ function TukangChat() {
     }
   };
 
-  // Polling Interval
   useEffect(() => {
     fetchChats();
-    const interval = setInterval(() => {
-      fetchChats();
-    }, 5000);
-    return () => clearInterval(interval);
   }, [tukangId]);
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 5000);
-    return () => clearInterval(interval);
+    
+    if (!activeChatId) return;
+
+    // Subscribe ke Supabase Realtime
+    const channel = supabase
+      .channel('public:messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${activeChatId}` },
+        (payload) => {
+          const m = payload.new;
+          const incomingMsg = {
+            id: m.id,
+            sender: m.sender_type,
+            type: m.message_type,
+            text: m.text,
+            time: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          };
+          
+          setMessages((prev) => {
+            // Hapus pesan optimistic jika teksnya sama
+            const filtered = prev.filter(msg => !(msg.is_optimistic && msg.text === m.text));
+            // Cek apakah pesan sudah ada
+            if (filtered.some(msg => msg.id === m.id)) return filtered;
+            return [...filtered, incomingMsg];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeChatId]);
 
   const activeChat = chats.find(c => c.id === activeChatId) || { name: "Loading...", avatar: "", messages: [] };
@@ -115,21 +140,48 @@ function TukangChat() {
   const handleSendMessage = async () => {
     if (!inputText.trim() || !activeChatId) return;
     
+    const tempText = inputText;
+    setInputText("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    
+    // 1. Optimistic Update
+    const tempMsg = {
+      id: `temp-${Date.now()}`,
+      sender: "tukang",
+      type: "text",
+      text: tempText,
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      is_optimistic: true
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+    
+    // 2. Background send
     try {
       await api.post(`/chat/send`, {
         chat_id: activeChatId,
         sender_type: 'tukang',
         sender_id: tukangId,
-        text: inputText
+        text: tempText
       });
-      setInputText("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
-      
-      // Langsung fetch pesan terbaru
+      // Fallback: Langsung fetch pesan terbaru jika Realtime gagal
       fetchMessages();
       fetchChats();
     } catch (err) {
       alert("Gagal mengirim pesan");
+      setMessages((prev) => prev.filter(m => m.id !== tempMsg.id));
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!activeChatId) return;
+    if (!window.confirm("Yakin ingin menghapus obrolan ini secara permanen?")) return;
+    try {
+      await api.delete(`/chat/${activeChatId}`);
+      setActiveChatId(null);
+      setMessages([]);
+      fetchChats();
+    } catch (err) {
+      alert("Gagal menghapus obrolan");
     }
   };
 
@@ -322,8 +374,12 @@ function TukangChat() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button className="p-2 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-colors cursor-pointer">
-                  <span className="material-symbols-outlined text-sm">call</span>
+                <button 
+                  onClick={handleDeleteChat}
+                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full text-on-surface-variant transition-colors cursor-pointer"
+                  title="Hapus Obrolan"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
                 </button>
                 {activeChat.negotiation && (
                   <button 
@@ -364,7 +420,7 @@ function TukangChat() {
 
                 const isTukang = msg.sender === "tukang";
                 return (
-                  <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isTukang ? "ml-auto justify-end" : ""}`}>
+                  <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isTukang ? "ml-auto justify-end" : ""} ${msg.is_optimistic ? 'opacity-70' : ''}`}>
                     {!isTukang && (
                       <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 border border-outline-variant/20">
                         <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
@@ -376,7 +432,12 @@ function TukangChat() {
                         : "bg-surface-container text-on-surface rounded-bl-none"
                     }`}>
                       <p>{msg.text}</p>
-                      <span className="text-[9px] text-on-surface-variant/60 block mt-1.5 text-right">{msg.time}</span>
+                      <span className="flex items-center justify-end gap-1 mt-1.5">
+                        <span className="text-[9px] text-on-surface-variant/60 block text-right">{msg.time}</span>
+                        {msg.is_optimistic && (
+                          <span className="material-symbols-outlined text-[10px] text-on-surface-variant/60 animate-spin">sync</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
