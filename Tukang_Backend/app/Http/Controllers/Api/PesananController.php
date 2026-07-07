@@ -81,8 +81,17 @@ class PesananController extends Controller
         $pesanan = Pesanan::find($id);
         if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
 
-        if ($pesanan->status !== 'menunggu_persetujuan' && $pesanan->status !== 'menunggu_pembayaran') {
+        if ($pesanan->status !== 'menunggu' && $pesanan->status !== 'menunggu_persetujuan' && $pesanan->status !== 'menunggu_pembayaran') {
             return response()->json(['message' => 'Pesanan belum bisa dibayar'], 400);
+        }
+
+        $user = $pesanan->user;
+        if ($user) {
+            if ($user->saldo < $pesanan->harga_penawaran) {
+                return response()->json(['message' => 'Saldo Anda tidak mencukupi untuk melakukan pembayaran.'], 400);
+            }
+            $user->saldo -= $pesanan->harga_penawaran;
+            $user->save();
         }
 
         $pesanan->status = 'menunggu_pengerjaan';
@@ -95,7 +104,10 @@ class PesananController extends Controller
             'status_escrow' => 'ditahan'
         ]);
 
-        return response()->json(['message' => 'Pembayaran berhasil! Uang ditahan oleh sistem.'], 200);
+        return response()->json([
+            'message' => 'Pembayaran berhasil! Uang ditahan oleh sistem.',
+            'saldo_sekarang' => $user ? $user->saldo : null
+        ], 200);
     }
 
     /**
@@ -124,7 +136,7 @@ class PesananController extends Controller
         $pesanan = Pesanan::find($id);
         if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
 
-        if ($pesanan->status !== 'menunggu_konfirmasi_selesai') {
+        if ($pesanan->status !== 'menunggu_konfirmasi_selesai' && $pesanan->status !== 'menunggu_pengerjaan' && $pesanan->status !== 'sedang_dikerjakan') {
             return response()->json(['message' => 'Belum bisa dikonfirmasi'], 400);
         }
 
@@ -140,6 +152,12 @@ class PesananController extends Controller
             $tukang = $pesanan->tukang;
             if ($tukang) {
                 $tukang->saldo += $escrow->jumlah_bayar;
+                $tukang->save();
+            }
+        } else {
+            $tukang = $pesanan->tukang;
+            if ($tukang) {
+                $tukang->saldo += $pesanan->harga_penawaran;
                 $tukang->save();
             }
         }
