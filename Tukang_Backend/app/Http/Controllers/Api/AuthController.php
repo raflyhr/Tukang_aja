@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Tukang;
 use Illuminate\Support\Facades\Hash;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -42,7 +46,12 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->role
+                    'role' => $user->role,
+                    'foto_profil' => $user->foto_profil,
+                    'latitude' => $user->latitude,
+                    'longitude' => $user->longitude,
+                    'alamat' => $user->alamat,
+                    'no_hp' => $user->no_hp
                 ],
                 'tukang' => $user->role === 'tukang' ? $user->tukang : null
             ]
@@ -70,33 +79,33 @@ class AuthController extends Controller
             'longitude' => 'required|numeric',
             // Upload file (semua wajib diisi saat register)
             'foto_profil' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'foto_ktp' => 'required|file|mimes:pdf|max:5120',
+            'nik' => 'required|string|size:16|unique:tukangs,nik',
             'cv_portofolio' => 'required|file|mimes:pdf|max:5120',
         ]);
 
-        // 1. Bikin akun User (buat login)
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'tukang',
-        ]);
-
-        // 2. Handle upload file (simpan ke folder storage/app/public/...)
+        // 1. Handle upload file (simpan ke folder storage/app/public/...)
         $fotoProfilPath = null;
         if ($request->hasFile('foto_profil')) {
             $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
-        }
-
-        $fotoKtpPath = null;
-        if ($request->hasFile('foto_ktp')) {
-            $fotoKtpPath = $request->file('foto_ktp')->store('tukang/ktp', 'public');
         }
 
         $cvPath = null;
         if ($request->hasFile('cv_portofolio')) {
             $cvPath = $request->file('cv_portofolio')->store('tukang/cv', 'public');
         }
+
+        // 2. Bikin akun User (buat login)
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'tukang',
+            'no_hp' => $request->no_hp,
+            'alamat' => $request->alamat,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'foto_profil' => $fotoProfilPath,
+        ]);
 
         // 3. Bikin profil Tukang (buat nampung data kerjaan)
         $tukang = Tukang::create([
@@ -111,7 +120,7 @@ class AuthController extends Controller
             'tahun_pengalaman' => $request->tahun_pengalaman ?? 0,
             'deskripsi_pengalaman' => $request->deskripsi_pengalaman,
             'foto_profil' => $fotoProfilPath,
-            'foto_ktp' => $fotoKtpPath,
+            'nik' => $request->nik,
             'cv_portofolio' => $cvPath,
         ]);
 
@@ -184,7 +193,13 @@ class AuthController extends Controller
         'latitude' => 'required|numeric',
         'longitude' => 'required|numeric',
         'catatan' => 'nullable|string',
+        'foto_profil' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
     ]);
+
+    $fotoProfilPath = null;
+    if ($request->hasFile('foto_profil')) {
+        $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+    }
 
     $user = User::create([
         'name' => $request->name,
@@ -196,6 +211,7 @@ class AuthController extends Controller
         'latitude' => $request->latitude,
         'longitude' => $request->longitude,
         'catatan' => $request->catatan,
+        'foto_profil' => $fotoProfilPath,
     ]);
 
     $token = $user->createToken('auth_token_user')->plainTextToken;

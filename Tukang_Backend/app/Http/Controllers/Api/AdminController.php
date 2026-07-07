@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\Tukang;
 use App\Models\Ulasan;
 use Illuminate\Support\Facades\DB;
+use App\Models\Dispute;
+use App\Models\Escrow;
+use App\Models\Pesanan;
 
 class AdminController extends Controller
 {
@@ -120,5 +123,70 @@ class AdminController extends Controller
                 'performances' => $performances
             ]
         ]);
+    }
+
+    public function getDisputes()
+    {
+        $disputes = Dispute::with(['pesanan.user', 'pesanan.tukang'])->orderBy('created_at', 'desc')->get();
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => $disputes
+        ]);
+    }
+
+    public function resolveDispute(Request $request, $id)
+    {
+        $dispute = Dispute::findOrFail($id);
+        $request->validate([
+            'keputusan' => 'required|in:refund_pelanggan,bayar_tukang',
+            'catatan_admin' => 'nullable|string'
+        ]);
+
+        $pesanan = Pesanan::findOrFail($dispute->pesanan_id);
+        $escrow = Escrow::where('pesanan_id', $pesanan->id)->first();
+
+        DB::beginTransaction();
+        try {
+            $dispute->status_dispute = 'resolved';
+            $dispute->keputusan_admin = $request->keputusan;
+            $dispute->catatan_admin = $request->catatan_admin;
+            $dispute->save();
+
+            if ($request->keputusan === 'refund_pelanggan') {
+                if ($escrow) {
+                    $escrow->status = 'refunded';
+                    $escrow->save();
+                }
+                $pesanan->status = 'dibatalkan';
+                // Refund logic (simulated)
+            } else if ($request->keputusan === 'bayar_tukang') {
+                if ($escrow) {
+                    $escrow->status = 'released';
+                    $escrow->save();
+                }
+                $pesanan->status = 'selesai';
+                
+                // Add balance to Tukang
+                $tukang = Tukang::find($pesanan->tukang_id);
+                if ($tukang && $pesanan->harga_penawaran) {
+                    $tukang->saldo = ($tukang->saldo ?? 0) + $pesanan->harga_penawaran;
+                    $tukang->save();
+                }
+            }
+            $pesanan->save();
+            DB::commit();
+
+            return response()->json([
+                'status' => 'Sukses',
+                'message' => 'Dispute berhasil diselesaikan.',
+                'data' => $dispute
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => 'Gagal',
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

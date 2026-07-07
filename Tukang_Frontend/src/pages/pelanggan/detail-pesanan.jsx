@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
+import axios from "axios";
 
 function DetailPesanan() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(null);
 
   const defaultOrder = {
     id: "ORD-2023-9812",
@@ -22,6 +24,34 @@ function DetailPesanan() {
   };
 
   const order = location.state?.order || defaultOrder;
+
+  useEffect(() => {
+    if (order && order.status) {
+      setCurrentStatus(order.status);
+    }
+  }, [order]);
+
+  const handleAction = async (action) => {
+    if (typeof order.id === 'string' && order.id.startsWith("ORD-")) {
+      if(action === 'bayar') setCurrentStatus('menunggu_pengerjaan');
+      if(action === 'konfirmasi-selesai') setCurrentStatus('selesai');
+      if(action === 'komplain') setCurrentStatus('komplain');
+      alert("Simulasi berhasil (Mode Dummy)");
+      return;
+    }
+    try {
+      const response = await axios.put(`http://127.0.0.1:8000/api/pesanan/${order.id}/${action}`);
+      if(response.data) {
+        alert(response.data.message);
+        if(action === 'bayar') setCurrentStatus('menunggu_pengerjaan');
+        if(action === 'konfirmasi-selesai') setCurrentStatus('selesai');
+        if(action === 'komplain') setCurrentStatus('komplain');
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan sistem.");
+    }
+  };
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -209,16 +239,16 @@ function DetailPesanan() {
                 <div className="shrink-0 flex flex-col items-start sm:items-end gap-1">
                   <span className="text-[10px] text-on-surface-variant font-semibold block">Status Pekerjaan</span>
                   <span className={`font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1.5 ${
-                    order.status === "Dalam Perjalanan"
+                    (currentStatus || order.status) === "Dalam Perjalanan"
                       ? "bg-primary-container/20 text-primary"
-                      : order.status === "Pengerjaan"
+                      : (currentStatus || order.status) === "Pengerjaan" || currentStatus === "sedang_dikerjakan" || currentStatus === "menunggu_pengerjaan" || currentStatus === "menunggu_konfirmasi_selesai"
                         ? "bg-on-tertiary-fixed-variant/50 text-tertiary"
-                        : order.status === "Dibatalkan"
+                        : (currentStatus || order.status) === "Dibatalkan" || currentStatus === "komplain"
                           ? "bg-red-500/10 text-red-400"
                           : "bg-green-500/10 text-green-400"
                   }`}>
-                    {order.status === "Dalam Perjalanan" && <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>}
-                    {order.status}
+                    {(currentStatus || order.status) === "Dalam Perjalanan" && <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>}
+                    {currentStatus || order.status}
                   </span>
                 </div>
               </div>
@@ -349,6 +379,46 @@ function DetailPesanan() {
                     <p className="text-[10px] leading-relaxed mt-0.5">Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan, 12190</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="bg-surface-container p-6 rounded-3xl border border-surface-variant/15 shadow-xl space-y-3">
+                <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Tindakan Pesanan</h4>
+                
+                {currentStatus === "menunggu_pembayaran" || currentStatus === "menunggu_persetujuan" ? (
+                  <button onClick={() => handleAction('bayar')} className="w-full bg-secondary text-background font-bold py-3 rounded-xl hover:bg-secondary/90 transition-all shadow-md cursor-pointer">
+                    Bayar & Masuk Escrow
+                  </button>
+                ) : null}
+
+                {currentStatus === "menunggu_konfirmasi_selesai" && (
+                  <>
+                    <button onClick={() => handleAction('konfirmasi-selesai')} className="w-full bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition-all shadow-md cursor-pointer">
+                      Konfirmasi Pekerjaan Selesai
+                    </button>
+                    <button onClick={() => handleAction('komplain')} className="w-full mt-2 bg-red-500/10 text-red-500 font-bold py-3 rounded-xl hover:bg-red-500/20 border border-red-500/30 transition-all shadow-md cursor-pointer">
+                      Komplain Pekerjaan
+                    </button>
+                  </>
+                )}
+
+                {(currentStatus === "menunggu_pengerjaan" || currentStatus === "sedang_dikerjakan") && (
+                  <div className="p-3 bg-secondary/10 border border-secondary/20 rounded-xl text-xs text-secondary font-semibold text-center">
+                    Uang Anda ditahan di Escrow secara aman. Menunggu penyelesaian dari Tukang.
+                  </div>
+                )}
+                
+                {currentStatus === "komplain" && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-500 font-semibold text-center">
+                    Pesanan dalam proses Komplain/Dispute oleh Admin.
+                  </div>
+                )}
+                
+                {currentStatus === "selesai" && (
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-xs text-green-600 font-semibold text-center">
+                    Pekerjaan Selesai. Uang telah diteruskan ke Tukang.
+                  </div>
+                )}
               </div>
             </div>
           </div>

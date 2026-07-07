@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../../components/LogoutModal";
-import axios from "axios";
+import api from "../../lib/axios";
 
 // Fallback Mock Data
 const MOCK_SUMMARY = {
@@ -101,7 +101,7 @@ function AdminDashboard() {
     setIsError(false);
     setIsEmpty(false);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/dashboard-stats`);
+      const response = await api.get('/admin/dashboard-stats');
       if (response.data.status === 'Sukses') {
         const data = response.data.data;
         
@@ -123,7 +123,7 @@ function AdminDashboard() {
           type: v.keahlian,
           location: v.alamat,
           date: new Date(v.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }),
-          avatar: v.foto_profil ? (v.foto_profil.startsWith('http') ? v.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${v.foto_profil}`) : `https://ui-avatars.com/api/?name=${v.nama}&background=random`,
+          avatar: v.foto_profil ? (v.foto_profil.startsWith('http') ? v.foto_profil : `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${v.foto_profil}`) : `https://ui-avatars.com/api/?name=${v.nama}&background=random`,
           status: "pending"
         }));
         setVerifications(fetchedVerifications);
@@ -136,10 +136,7 @@ function AdminDashboard() {
       // Since backend might be offline, we gracefully fallback
       setSummary(MOCK_SUMMARY);
     } finally {
-      // Simulate modern loading transition
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
+      setIsLoading(false);
     }
   };
 
@@ -149,7 +146,7 @@ function AdminDashboard() {
       prev.map(v => (v.id === id ? { ...v, status: "verifying" } : v))
     );
     try {
-      const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/verifikasi/${id}`, { action: 'approve' });
+      const response = await api.put(`/admin/verifikasi/${id}`, { action: 'approve' });
       if (response.data.status === 'Sukses') {
         setVerifications(prev =>
           prev.map(v => (v.id === id ? { ...v, status: "verified" } : v))
@@ -172,7 +169,7 @@ function AdminDashboard() {
         prev.map(v => (v.id === id ? { ...v, status: "rejecting" } : v))
       );
       try {
-        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/verifikasi/${id}`, { action: 'reject' });
+        const response = await api.put(`/admin/verifikasi/${id}`, { action: 'reject' });
         if (response.data.status === 'Sukses') {
           alert("Pendaftar berhasil ditolak.");
           setTimeout(() => {

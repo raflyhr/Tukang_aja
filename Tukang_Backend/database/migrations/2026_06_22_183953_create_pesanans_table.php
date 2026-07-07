@@ -29,8 +29,12 @@ return new class extends Migration
                 'menunggu_penawaran', // Diambil tukang, belum kirim harga
                 'menunggu_persetujuan', // Tukang kirim harga, nunggu ACC client
                 'menunggu_pembayaran', // Client ACC, nunggu bayar (optional flow)
+                'menunggu_pengerjaan', // Sudah dibayar, nunggu tukang datang (escrow)
                 'sedang_dikerjakan', // Sedang dikerjakan
-                'selesai', // Selesai
+                'menunggu_konfirmasi_selesai', // Tukang selesai, nunggu ACC client
+                'komplain', // Client komplain
+                'selesai', // Selesai & Uang cair
+                'dibatalkan', // Dibatalkan (oleh sistem atau user)
                 'ditolak' // Ditolak
             ])->default('menunggu');
             $table->text('alasan_penolakan')->nullable();

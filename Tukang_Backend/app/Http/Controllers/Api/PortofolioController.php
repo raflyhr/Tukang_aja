@@ -53,5 +53,15 @@ class PortofolioController extends Controller
             'status' => 'Sukses',
             'data' => $portofolio
         ], 200);
+    public function destroy($tukang_id, $portofolio_id)
+    {
+        $portofolio = Portofolio::where('tukang_id', $tukang_id)->where('id', $portofolio_id)->first();
+        if($portofolio) {
+            if(\Illuminate\Support\Facades\Storage::disk('public')->exists($portofolio->foto_url)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($portofolio->foto_url);
+            }
+            $portofolio->delete();
+        }
+        return response()->json(['status' => 'Sukses']);
     }
 }

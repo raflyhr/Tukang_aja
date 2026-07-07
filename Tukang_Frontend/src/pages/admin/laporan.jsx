@@ -1,13 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../../components/LogoutModal";
-
-const MOCK_LAPORAN = [
-  { id: "REP-001", pelapor: "Dewi Lestari", terlapor: "Agus Prasetyo", tipe: "Tukang", alasan: "Pekerjaan AC bocor lagi setelah 2 hari dan tidak mau dihubungi", status: "Baru", tanggal: "03 Jul 2026" },
-  { id: "REP-002", pelapor: "Rian Hidayat", terlapor: "Budi Santoso", tipe: "Tukang", alasan: "Terlambat datang lebih dari 2 jam tanpa kabar", status: "Diproses", tanggal: "02 Jul 2026" },
-  { id: "REP-003", pelapor: "Hendra Wijaya", terlapor: "Andi Wijaya", tipe: "Pelanggan", alasan: "Pelanggan tidak membayar sisa biaya material tambahan", status: "Selesai", tanggal: "30 Jun 2026" }
-];
+import axios from "axios";
 
 function AdminLaporan() {
   const navigate = useNavigate();
@@ -15,7 +10,48 @@ function AdminLaporan() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [laporanList, setLaporanList] = useState(MOCK_LAPORAN);
+  const [laporanList, setLaporanList] = useState([]);
+
+  useEffect(() => {
+    fetchDisputes();
+  }, []);
+
+  const fetchDisputes = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/api/admin/disputes");
+      if(res.data.status === 'Sukses') {
+        const mapped = res.data.data.map(d => ({
+          id: d.id,
+          pesanan_id: d.pesanan_id,
+          pelapor: d.pesanan?.user?.name || "Pelanggan",
+          terlapor: d.pesanan?.tukang?.nama || "Tukang",
+          tipe: "Dispute Pekerjaan",
+          alasan: d.alasan_dispute || "Komplain kualitas",
+          status: d.status_dispute === 'pending' ? 'Baru' : 'Selesai',
+          tanggal: new Date(d.created_at).toLocaleDateString('id-ID'),
+          rawStatus: d.status_dispute,
+          keputusan: d.keputusan_admin
+        }));
+        setLaporanList(mapped);
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  const handleResolve = async (id, keputusan) => {
+    if(!confirm(`Yakin ingin menyelesaikan dengan keputusan: ${keputusan}?`)) return;
+    try {
+      await axios.put(`http://127.0.0.1:8000/api/admin/disputes/${id}/resolve`, {
+        keputusan: keputusan,
+        catatan_admin: "Diselesaikan via Admin Panel"
+      });
+      alert("Dispute berhasil diselesaikan");
+      fetchDisputes();
+    } catch(e) {
+      alert("Gagal menyelesaikan dispute");
+    }
+  };
 
   const filteredLaporan = laporanList.filter(l => {
     const matchesSearch = 
@@ -89,8 +125,8 @@ function AdminLaporan() {
 
         <div className="pt-28 pb-12 px-6 md:px-12 max-w-7xl w-full mx-auto space-y-8 flex-grow">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-on-surface">Manajemen Laporan Pengaduan</h1>
-            <p className="text-sm text-on-surface-variant/80 font-normal mt-1">Selesaikan sengketa dan aduan antara pelanggan dan mitra tukang.</p>
+            <h1 className="text-2xl md:text-3xl font-black text-on-surface">Manajemen Dispute & Laporan</h1>
+            <p className="text-sm text-on-surface-variant/80 font-normal mt-1">Selesaikan sengketa escrow antara pelanggan dan mitra tukang.</p>
           </div>
 
           <div className="flex gap-2">
@@ -121,16 +157,17 @@ function AdminLaporan() {
                     <th className="px-6 py-4">Alasan</th>
                     <th className="px-6 py-4">Tanggal</th>
                     <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-variant/10 font-medium">
                   {filteredLaporan.map((item) => (
                     <tr key={item.id} className="border-b border-surface-variant/10">
-                      <td className="px-6 py-4 font-mono font-bold text-secondary">{item.id}</td>
+                      <td className="px-6 py-4 font-mono font-bold text-secondary">DSP-{item.id}</td>
                       <td className="px-6 py-4 text-on-surface">{item.pelapor}</td>
                       <td className="px-6 py-4 text-on-surface">{item.terlapor}</td>
                       <td className="px-6 py-4 text-on-surface-variant">{item.tipe}</td>
-                      <td className="px-6 py-4 text-on-surface-variant max-w-[300px] truncate">{item.alasan}</td>
+                      <td className="px-6 py-4 text-on-surface-variant max-w-[200px] truncate" title={item.alasan}>{item.alasan}</td>
                       <td className="px-6 py-4 text-on-surface-variant">{item.tanggal}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide ${
@@ -142,6 +179,19 @@ function AdminLaporan() {
                         }`}>
                           {item.status}
                         </span>
+                        {item.keputusan && (
+                           <div className="text-[9px] text-on-surface-variant mt-1">{item.keputusan.replace('_', ' ')}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {item.rawStatus === 'pending' ? (
+                          <div className="flex flex-col gap-1 justify-end">
+                            <button onClick={() => handleResolve(item.id, 'refund_pelanggan')} className="px-2 py-1 bg-red-500 text-white text-[9px] font-bold rounded cursor-pointer hover:opacity-80">Refund Pelanggan</button>
+                            <button onClick={() => handleResolve(item.id, 'bayar_tukang')} className="px-2 py-1 bg-green-500 text-white text-[9px] font-bold rounded cursor-pointer hover:opacity-80">Bayar Tukang</button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-on-surface-variant">Selesai</span>
+                        )}
                       </td>
                     </tr>
                   ))}

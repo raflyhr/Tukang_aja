@@ -10,7 +10,7 @@ function TukangProfil() {
   // Ambil data awal secara sinkron (langsung) dari localStorage untuk mencegah efek kedip/delay
   const getInitialProfile = () => {
     try {
-      const userDataStr = localStorage.getItem("user");
+      const userDataStr = localStorage.getItem("tukang_user");
       if (userDataStr) {
         const parsed = JSON.parse(userDataStr);
         if (parsed?.tukang) {
@@ -61,9 +61,22 @@ function TukangProfil() {
   // Skill form state
   const [isSkillFormOpen, setIsSkillFormOpen] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
+  
+  // Dynamic features states
+  const [sertifikats, setSertifikats] = useState([]);
+  const [layanans, setLayanans] = useState([]);
+  const [portofolios, setPortofolios] = useState([]);
+  
+  // Forms state for dynamic features
+  const [newSertifikat, setNewSertifikat] = useState({ judul: "", penerbit: "", tahun: "", deskripsi: "" });
+  const [isSertifikatFormOpen, setIsSertifikatFormOpen] = useState(false);
+  
+  const [newPortofolio, setNewPortofolio] = useState({ judul: "", deskripsi: "", foto: null });
+  const [isPortofolioFormOpen, setIsPortofolioFormOpen] = useState(false);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/tukang/dashboard" },
+    { id: "layanan", label: "Layanan Jasa", icon: "home_repair_service", path: "/tukang/layanan" },
     { id: "pesanan", label: "Pesanan Saya", icon: "assignment", path: "/tukang/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/tukang/chat" },
     { id: "profil", label: "Profil", icon: "person", path: "/tukang/profil", active: true },
@@ -71,7 +84,7 @@ function TukangProfil() {
 
   // Fetch profil saat komponen dimuat
   useEffect(() => {
-    const userDataStr = localStorage.getItem("user");
+    const userDataStr = localStorage.getItem("tukang_user");
     let id = null;
     if (userDataStr) {
       try {
@@ -111,6 +124,10 @@ function TukangProfil() {
         } else {
           setSkills([]);
         }
+        
+        // Populate new dynamic data
+        setSertifikats(data.sertifikats || []);
+        setPortofolios(data.portofolios || []);
       }
     } catch (err) {
       console.error("Gagal load profil", err);
@@ -118,8 +135,8 @@ function TukangProfil() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("tukang_token");
+    localStorage.removeItem("tukang_user");
     navigate("/");
   };
 
@@ -153,6 +170,52 @@ function TukangProfil() {
 
   const handleDeleteSkill = (skillToRemove) => {
     setSkills(skills.filter(s => s !== skillToRemove));
+  };
+
+  const handleAddSertifikat = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post(`/tukang/${profileData.id}/sertifikat`, newSertifikat);
+      if(res.data.status === 'Sukses') {
+        setSertifikats([...sertifikats, res.data.data]);
+        setNewSertifikat({ judul: "", penerbit: "", tahun: "", deskripsi: "" });
+        setIsSertifikatFormOpen(false);
+      }
+    } catch (err) { alert("Gagal menambah sertifikat"); }
+  };
+
+  const handleDeleteSertifikat = async (id) => {
+    try {
+      await api.delete(`/tukang/${profileData.id}/sertifikat/${id}`);
+      setSertifikats(sertifikats.filter(s => s.id !== id));
+    } catch (err) { alert("Gagal menghapus sertifikat"); }
+  };
+
+  const handleAddPortofolio = async (e) => {
+    e.preventDefault();
+    if (!newPortofolio.foto) return alert("Foto wajib diunggah!");
+    try {
+      const formData = new FormData();
+      formData.append('judul', newPortofolio.judul);
+      formData.append('deskripsi', newPortofolio.deskripsi);
+      formData.append('foto', newPortofolio.foto);
+
+      const res = await api.post(`/tukang/${profileData.id}/portofolio`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if(res.data.status === 'Sukses') {
+        setPortofolios([...portofolios, res.data.data]);
+        setNewPortofolio({ judul: "", deskripsi: "", foto: null });
+        setIsPortofolioFormOpen(false);
+      }
+    } catch (err) { alert("Gagal menambah portofolio"); }
+  };
+
+  const handleDeletePortofolio = async (id) => {
+    try {
+      await api.delete(`/tukang/${profileData.id}/portofolio/${id}`);
+      setPortofolios(portofolios.filter(p => p.id !== id));
+    } catch (err) { alert("Gagal menghapus portofolio"); }
   };
 
   return (
@@ -652,6 +715,92 @@ function TukangProfil() {
             </div>
           </div>
 
+          {/* Dinamis: Sertifikat & Lisensi */}
+          <div className="bg-surface-container rounded-3xl border border-surface-variant/15 overflow-hidden shadow-lg p-6 md:p-8 space-y-6">
+            <div className="flex justify-between items-center border-b border-surface-variant/15 pb-4">
+              <h4 className="font-bold text-sm md:text-base text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">verified</span>
+                Sertifikat &amp; Lisensi
+              </h4>
+              <button onClick={() => setIsSertifikatFormOpen(!isSertifikatFormOpen)} className="text-secondary text-xs hover:underline bg-transparent border-none cursor-pointer font-bold">
+                {isSertifikatFormOpen ? "Tutup" : "Tambah"}
+              </button>
+            </div>
+            
+            {isSertifikatFormOpen && (
+              <form onSubmit={handleAddSertifikat} className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" placeholder="Judul Sertifikat" required value={newSertifikat.judul} onChange={(e) => setNewSertifikat({...newSertifikat, judul: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface" />
+                  <input type="text" placeholder="Penerbit" value={newSertifikat.penerbit} onChange={(e) => setNewSertifikat({...newSertifikat, penerbit: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" placeholder="Tahun" value={newSertifikat.tahun} onChange={(e) => setNewSertifikat({...newSertifikat, tahun: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface" />
+                  <input type="text" placeholder="Deskripsi Singkat" value={newSertifikat.deskripsi} onChange={(e) => setNewSertifikat({...newSertifikat, deskripsi: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface" />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="px-4 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-bold hover:opacity-90">Simpan Sertifikat</button>
+                </div>
+              </form>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sertifikats.map((sertifikat) => (
+                <div key={sertifikat.id} className="bg-surface-container-low p-4 rounded-xl border border-surface-variant/20 relative group">
+                  <h5 className="font-bold text-sm text-on-surface">{sertifikat.judul}</h5>
+                  <p className="text-[10px] text-secondary mt-1">{sertifikat.penerbit} {sertifikat.tahun ? `• ${sertifikat.tahun}` : ''}</p>
+                  <p className="text-xs text-on-surface-variant mt-2 line-clamp-2">{sertifikat.deskripsi}</p>
+                  <button onClick={() => handleDeleteSertifikat(sertifikat.id)} className="absolute top-2 right-2 text-red-400 bg-red-500/10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                  </button>
+                </div>
+              ))}
+              {sertifikats.length === 0 && <p className="text-xs text-on-surface-variant/70 italic">Belum ada sertifikat.</p>}
+            </div>
+          </div>
+
+          {/* Dinamis: Portofolio Pekerjaan */}
+          <div className="bg-surface-container rounded-3xl border border-surface-variant/15 overflow-hidden shadow-lg p-6 md:p-8 space-y-6">
+            <div className="flex justify-between items-center border-b border-surface-variant/15 pb-4">
+              <h4 className="font-bold text-sm md:text-base text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">photo_library</span>
+                Portofolio Pekerjaan
+              </h4>
+              <button onClick={() => setIsPortofolioFormOpen(!isPortofolioFormOpen)} className="text-secondary text-xs hover:underline bg-transparent border-none cursor-pointer font-bold">
+                {isPortofolioFormOpen ? "Tutup" : "Tambah"}
+              </button>
+            </div>
+
+            {isPortofolioFormOpen && (
+              <form onSubmit={handleAddPortofolio} className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 space-y-3">
+                <div className="space-y-3">
+                  <input type="text" placeholder="Judul Proyek" required value={newPortofolio.judul} onChange={(e) => setNewPortofolio({...newPortofolio, judul: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface" />
+                  <textarea placeholder="Deskripsi Proyek" value={newPortofolio.deskripsi} onChange={(e) => setNewPortofolio({...newPortofolio, deskripsi: e.target.value})} className="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface h-20 resize-none"></textarea>
+                  <input type="file" accept="image/*" onChange={(e) => setNewPortofolio({...newPortofolio, foto: e.target.files[0]})} className="w-full text-xs text-on-surface-variant" />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="px-4 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-bold hover:opacity-90">Upload Portofolio</button>
+                </div>
+              </form>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {portofolios.map((porto) => (
+                <div key={porto.id} className="bg-surface-container-low rounded-xl border border-surface-variant/20 overflow-hidden relative group">
+                  <div className="h-32 w-full overflow-hidden">
+                    <img src={porto.foto_url.startsWith('http') ? porto.foto_url : `${import.meta.env.VITE_API_BASE_URL}/storage/${porto.foto_url}`} alt={porto.judul} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-3">
+                    <h5 className="font-bold text-xs text-on-surface">{porto.judul}</h5>
+                    <p className="text-[10px] text-on-surface-variant line-clamp-2 mt-1">{porto.deskripsi}</p>
+                  </div>
+                  <button onClick={() => handleDeletePortofolio(porto.id)} className="absolute top-2 right-2 text-red-400 bg-red-500/10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                  </button>
+                </div>
+              ))}
+              {portofolios.length === 0 && <p className="text-xs text-on-surface-variant/70 italic">Belum ada foto portofolio.</p>}
+            </div>
+          </div>
           {/* Rating & Ulasan Terbaru (Full-Width Card at the bottom) */}
           <div className="bg-surface-container rounded-3xl border border-surface-variant/15 overflow-hidden shadow-lg p-6 md:p-8 space-y-6">
             <div className="flex justify-between items-center border-b border-surface-variant/15 pb-4">

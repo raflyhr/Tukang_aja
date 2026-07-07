@@ -29,11 +29,12 @@ function Login() {
       if (response.data.access_token) {
         // Simpen token sama data user di localStorage
         const userData = response.data.data.user;
+        const prefix = userData.role === "tukang" ? "tukang" : userData.role === "admin" ? "admin" : "pelanggan";
         
-        localStorage.setItem("user_id", userData.id);
-        localStorage.setItem("user_role", userData.role);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
-        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem(`${prefix}_id`, userData.id);
+        localStorage.setItem(`${prefix}_role`, userData.role);
+        localStorage.setItem(`${prefix}_user`, JSON.stringify(response.data.data));
+        localStorage.setItem(`${prefix}_token`, response.data.access_token);
         
 
         setToastType("success");
