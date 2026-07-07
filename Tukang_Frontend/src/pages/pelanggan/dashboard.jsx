@@ -298,10 +298,53 @@ function Dashboard() {
     setBookingTime("");
 
     // Automatically navigate to Chat after 2.5 seconds
-    setTimeout(() => {
+    setTimeout(async () => {
       setShowSuccessToast(false);
-      navigate("/pelanggan/chat", { state: { chatWith: selectedTukang.name } });
+      try {
+        const savedUser = localStorage.getItem("pelanggan_user");
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          const userObj = parsed.user || parsed;
+          const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/chat/start`, {
+            user_id: userObj.id,
+            tukang_id: selectedTukang.id
+          });
+          if (response.data.status === "Sukses") {
+            navigate("/pelanggan/chat", { state: { activeChatId: response.data.data.id } });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      navigate("/pelanggan/chat");
     }, 2500);
+  };
+
+  const handleStartChat = async (tukangId) => {
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      if (!savedUser) {
+        navigate("/");
+        return;
+      }
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/chat/start`, {
+        user_id: userObj.id,
+        tukang_id: tukangId
+      });
+      
+      if (response.data.status === "Sukses") {
+        navigate("/pelanggan/chat", { state: { activeChatId: response.data.data.id } });
+      } else {
+        navigate("/pelanggan/chat");
+      }
+    } catch (error) {
+      console.error("Gagal memulai obrolan", error);
+      navigate("/pelanggan/chat");
+    }
   };
 
   // Top Rated Tukang (rating >= 4.9)
@@ -802,7 +845,7 @@ function Dashboard() {
                       <div 
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/pelanggan/chat");
+                          handleStartChat(tukang.id);
                         }}
                         className="p-2.5 rounded-xl border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface-variant transition-all shrink-0 cursor-pointer"
                       >
@@ -1240,7 +1283,7 @@ function Dashboard() {
                 <div className="flex gap-3 w-full md:w-auto shrink-0">
                   <button
                     onClick={() => {
-                      navigate("/pelanggan/chat", { state: { chatWith: selectedTukang.name } });
+                      handleStartChat(selectedTukang.id);
                     }}
                     className="flex-1 md:flex-initial bg-surface-container-high border border-outline-variant/30 hover:border-secondary/40 text-on-surface hover:text-secondary py-3 px-5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
