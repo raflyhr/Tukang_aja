@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import axios from "axios";
 import { supabase } from "../../lib/supabase";
 
 function Chat() {
   const navigate = useNavigate();
+  const location = useLocation();
   
   
   const [user, setUser] = useState(null);
@@ -45,19 +46,20 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Ambil user_id yang di-set di login.jsx secara langsung agar lebih aman
-    const userId = localStorage.getItem("user_id");
+    // Ambil pelanggan_id yang di-set di login.jsx secara langsung agar lebih aman
+    const userId = localStorage.getItem("pelanggan_id");
     if (userId) {
       setCurrentUser({ id: userId });
       fetchChats(userId);
     } else {
-      // Coba fallback dengan parsing user string
-      const userStr = localStorage.getItem("user");
+      // Coba fallback dengan parsing pelanggan_user string
+      const userStr = localStorage.getItem("pelanggan_user");
       if (userStr) {
         try {
-          const user = JSON.parse(userStr);
-          setCurrentUser(user);
-          if (user && user.id) fetchChats(user.id);
+          const parsed = JSON.parse(userStr);
+          const userObj = parsed.user || parsed;
+          setCurrentUser(userObj);
+          if (userObj && userObj.id) fetchChats(userObj.id);
         } catch (e) {
           console.error("Gagal parse data user", e);
         }
@@ -69,6 +71,17 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     try {
       const res = await axios.get(`http://127.0.0.1:8000/api/user/${userId}/chats`);
       setChatList(res.data.data);
+      
+      // Auto-select chat dari router state jika ada
+      const stateChatId = location.state?.activeChatId;
+      if (stateChatId) {
+        const matchingChat = res.data.data.find(c => c.id === stateChatId);
+        if (matchingChat) {
+          selectChat(matchingChat);
+          return;
+        }
+      }
+      
       // Auto-select chat pertama jika belum ada yang terpilih
       if (res.data.data.length > 0 && !activeChatId) {
         selectChat(res.data.data[0]);

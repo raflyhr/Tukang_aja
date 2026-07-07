@@ -79,6 +79,7 @@ Route::get('/tukang/{id}/chats', [ChatController::class, 'getTukangChats']);
 Route::get('/user/{id}/chats', [ChatController::class, 'getUserChats']);
 Route::get('/chat/{chat_id}/messages', [ChatController::class, 'getMessages']);
 Route::post('/chat/send', [ChatController::class, 'sendMessage']);
+Route::post('/chat/start', [ChatController::class, 'startChat']);
 Route::delete('/chat/{chat_id}', [ChatController::class, 'destroy']);
 
 // --- Rute Admin ---

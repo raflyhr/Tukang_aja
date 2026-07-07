@@ -8,7 +8,7 @@ function TukangChat() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNegoPanelOpen, setIsNegoPanelOpen] = useState(false); // Default to false to keep chat spacious
-  const [activeChatId, setActiveChatId] = useState(1);
+  const [activeChatId, setActiveChatId] = useState(null);
   const [inputText, setInputText] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
@@ -360,125 +360,135 @@ function TukangChat() {
 
           {/* 2. Message Feed Panel */}
           <section className="flex-grow flex flex-col h-full bg-surface-container-lowest relative min-w-0">
-            {/* Header Info */}
-            <div className="p-4 flex items-center justify-between bg-surface-container/60 border-b border-surface-variant/15 z-10 backdrop-blur-md">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-outline-variant/20 shrink-0">
-                  <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
-                </div>
-                <div>
-                  <h2 className="font-bold text-xs text-on-surface">{activeChat.name}</h2>
-                  <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online
-                  </span>
-                </div>
+            {!activeChatId ? (
+              <div className="flex-grow flex flex-col items-center justify-center text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-5xl opacity-30 mb-3 text-secondary">chat_bubble_outline</span>
+                <p className="text-sm font-semibold">Belum Ada Percakapan Terpilih</p>
+                <p className="text-xs opacity-60 mt-1 max-w-[280px]">Silakan pilih salah satu percakapan di sebelah kiri untuk melihat pesan.</p>
               </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={handleDeleteChat}
-                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full text-on-surface-variant transition-colors cursor-pointer"
-                  title="Hapus Obrolan"
-                >
-                  <span className="material-symbols-outlined text-sm">delete</span>
-                </button>
-                {activeChat.negotiation && (
-                  <button 
-                    onClick={() => setIsNegoPanelOpen(!isNegoPanelOpen)}
-                    className={`p-2 rounded-full transition-colors cursor-pointer ${
-                      isNegoPanelOpen 
-                        ? "bg-secondary/15 text-secondary" 
-                        : "hover:bg-surface-container-high text-on-surface-variant"
-                    }`}
-                    title="Riwayat Negosiasi"
-                  >
-                    <span className="material-symbols-outlined text-sm">history_edu</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Chat Body messages */}
-            <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6">
-              <div className="flex justify-center">
-                <span className="text-[9px] bg-surface-container px-3.5 py-1 rounded-full text-on-surface-variant/80 uppercase tracking-widest font-extrabold">Hari Ini</span>
-              </div>
-
-              {messages.map((msg) => {
-                if (msg.sender === "system" && msg.type === "negotiation_offer") {
-                  return (
-                    <div key={msg.id} className="flex justify-center my-6">
-                      <div className="bg-surface-container border border-secondary/25 p-5 rounded-3xl max-w-xs w-full text-center shadow-lg">
-                        <span className="material-symbols-outlined text-secondary text-3xl mb-1">payments</span>
-                        <h4 className="font-bold text-xs text-on-surface mb-0.5">Tawaran Harga</h4>
-                        <div className="bg-surface-container-lowest py-2 px-4 rounded-xl mb-4">
-                          <span className="text-lg font-black text-secondary">{msg.text}</span>
-                        </div>
-                      </div>
+            ) : (
+              <>
+                {/* Header Info */}
+                <div className="p-4 flex items-center justify-between bg-surface-container/60 border-b border-surface-variant/15 z-10 backdrop-blur-md">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-outline-variant/20 shrink-0">
+                      <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
                     </div>
-                  );
-                }
-
-                const isTukang = msg.sender === "tukang";
-                return (
-                  <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isTukang ? "ml-auto justify-end" : ""} ${msg.is_optimistic ? 'opacity-70' : ''}`}>
-                    {!isTukang && (
-                      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 border border-outline-variant/20">
-                        <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
-                      </div>
-                    )}
-                    <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
-                      isTukang 
-                        ? "bg-secondary/15 text-on-surface border border-secondary/20 rounded-br-none" 
-                        : "bg-surface-container text-on-surface rounded-bl-none"
-                    }`}>
-                      <p>{msg.text}</p>
-                      <span className="flex items-center justify-end gap-1 mt-1.5">
-                        <span className="text-[9px] text-on-surface-variant/60 block text-right">{msg.time}</span>
-                        {msg.is_optimistic && (
-                          <span className="material-symbols-outlined text-[10px] text-on-surface-variant/60 animate-spin">sync</span>
-                        )}
+                    <div>
+                      <h2 className="font-bold text-xs text-on-surface">{activeChat.name}</h2>
+                      <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online
                       </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={handleDeleteChat}
+                      className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full text-on-surface-variant transition-colors cursor-pointer"
+                      title="Hapus Obrolan"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                    {activeChat.negotiation && (
+                      <button 
+                        onClick={() => setIsNegoPanelOpen(!isNegoPanelOpen)}
+                        className={`p-2 rounded-full transition-colors cursor-pointer ${
+                          isNegoPanelOpen 
+                            ? "bg-secondary/15 text-secondary" 
+                            : "hover:bg-surface-container-high text-on-surface-variant"
+                        }`}
+                        title="Riwayat Negosiasi"
+                      >
+                        <span className="material-symbols-outlined text-sm">history_edu</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-surface/40 border-t border-surface-variant/15 backdrop-blur-md">
-              <div className="flex items-end gap-2.5 max-w-4xl mx-auto">
-                <div className="flex gap-0.5 shrink-0">
-                  <button className="p-2.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant/80 transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm">add_circle</span>
-                  </button>
-                  <button className="p-2.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant/80 transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm">image</span>
-                  </button>
+                {/* Chat Body messages */}
+                <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6">
+                  <div className="flex justify-center">
+                    <span className="text-[9px] bg-surface-container px-3.5 py-1 rounded-full text-on-surface-variant/80 uppercase tracking-widest font-extrabold">Hari Ini</span>
+                  </div>
+
+                  {messages.map((msg) => {
+                    if (msg.sender === "system" && msg.type === "negotiation_offer") {
+                      return (
+                        <div key={msg.id} className="flex justify-center my-6">
+                          <div className="bg-surface-container border border-secondary/25 p-5 rounded-3xl max-w-xs w-full text-center shadow-lg">
+                            <span className="material-symbols-outlined text-secondary text-3xl mb-1">payments</span>
+                            <h4 className="font-bold text-xs text-on-surface mb-0.5">Tawaran Harga</h4>
+                            <div className="bg-surface-container-lowest py-2 px-4 rounded-xl mb-4">
+                              <span className="text-lg font-black text-secondary">{msg.text}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const isTukang = msg.sender === "tukang";
+                    return (
+                      <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isTukang ? "ml-auto justify-end" : ""} ${msg.is_optimistic ? 'opacity-70' : ''}`}>
+                        {!isTukang && (
+                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 border border-outline-variant/20">
+                            <img className="w-full h-full object-cover" alt={activeChat.name} src={activeChat.avatar} />
+                          </div>
+                        )}
+                        <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                          isTukang 
+                            ? "bg-secondary/15 text-on-surface border border-secondary/20 rounded-br-none" 
+                            : "bg-surface-container text-on-surface rounded-bl-none"
+                        }`}>
+                          <p>{msg.text}</p>
+                          <span className="flex items-center justify-end gap-1 mt-1.5">
+                            <span className="text-[9px] text-on-surface-variant/60 block text-right">{msg.time}</span>
+                            {msg.is_optimistic && (
+                              <span className="material-symbols-outlined text-[10px] text-on-surface-variant/60 animate-spin">sync</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex-grow">
-                  <textarea
-                    ref={textareaRef}
-                    value={inputText}
-                    onChange={handleTextareaChange}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    rows={1}
-                    placeholder="Tulis pesan..."
-                    className="w-full bg-surface-container border border-outline-variant/10 rounded-2xl py-3 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 outline-none resize-none chat-scrollbar"
-                  />
+
+                {/* Input Area */}
+                <div className="p-4 bg-surface/40 border-t border-surface-variant/15 backdrop-blur-md">
+                  <div className="flex items-end gap-2.5 max-w-4xl mx-auto">
+                    <div className="flex gap-0.5 shrink-0">
+                      <button className="p-2.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant/80 transition-colors cursor-pointer">
+                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                      </button>
+                      <button className="p-2.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant/80 transition-colors cursor-pointer">
+                        <span className="material-symbols-outlined text-sm">image</span>
+                      </button>
+                    </div>
+                    <div className="flex-grow">
+                      <textarea
+                        ref={textareaRef}
+                        value={inputText}
+                        onChange={handleTextareaChange}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        rows={1}
+                        placeholder="Tulis pesan..."
+                        className="w-full bg-surface-container border border-outline-variant/10 rounded-2xl py-3 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 outline-none resize-none chat-scrollbar"
+                      />
+                    </div>
+                    <button 
+                      onClick={handleSendMessage}
+                      className="bg-secondary text-on-secondary p-3 rounded-2xl flex items-center justify-center shadow-lg shadow-secondary/10 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">send</span>
+                    </button>
+                  </div>
                 </div>
-                <button 
-                  onClick={handleSendMessage}
-                  className="bg-secondary text-on-secondary p-3 rounded-2xl flex items-center justify-center shadow-lg shadow-secondary/10 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-sm">send</span>
-                </button>
-              </div>
-            </div>
+              </>
+            )}
           </section>
 
           {/* 3. Collapsible Negotiation History Drawer (Slides in on desktop or mobile seamlessly, saving chat space) */}

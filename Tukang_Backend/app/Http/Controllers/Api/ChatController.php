@@ -75,6 +75,42 @@ class ChatController extends Controller
         ], 201);
     }
 
+    // Memulai obrolan baru atau mendapatkan yang sudah ada
+    public function startChat(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:roles,id',
+            'tukang_id' => 'required|exists:tukangs,id',
+            'pesanan_id' => 'nullable|exists:pesanans,id'
+        ]);
+
+        $query = Chat::where('user_id', $request->user_id)
+            ->where('tukang_id', $request->tukang_id);
+
+        if ($request->has('pesanan_id') && $request->pesanan_id !== null) {
+            $query->where('pesanan_id', $request->pesanan_id);
+        }
+
+        $chat = $query->first();
+
+        if (!$chat) {
+            $chat = Chat::create([
+                'user_id' => $request->user_id,
+                'tukang_id' => $request->tukang_id,
+                'pesanan_id' => $request->pesanan_id
+            ]);
+        }
+
+        // Load relationships
+        $chat->load(['user', 'tukang', 'messages']);
+
+        return response()->json([
+            'status' => 'Sukses',
+            'message' => 'Obrolan berhasil dimulai',
+            'data' => $chat
+        ], 200);
+    }
+
     // Menghapus obrolan
     public function destroy($chat_id)
     {
