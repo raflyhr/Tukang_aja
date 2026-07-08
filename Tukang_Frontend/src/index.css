@@ -227,3 +227,10 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
   caret-color: #e5e2e1;
 }
+
+/* Hide Microsoft Edge / IE default password reveal eye icon */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+

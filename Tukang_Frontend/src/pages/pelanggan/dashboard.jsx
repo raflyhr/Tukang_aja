@@ -105,7 +105,7 @@ function Dashboard() {
 
       return {
         id: `ORD-${o.id}`,
-        service: o.kategori_layanan || o.judul || "Jasa Perbaikan",
+        service: o.kategori_layanan || o.judul || "Jasa Per8aikan",
         tukang: o.tukang ? (o.tukang.nama || o.tukang.name) : "Belum Ada",
         date: formattedDate,
         cost: cost,
