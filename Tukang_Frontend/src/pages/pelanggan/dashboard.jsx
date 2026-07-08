@@ -43,6 +43,34 @@ function Dashboard() {
   const [bookingTime, setBookingTime] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("QRIS");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [bookingPhoto, setBookingPhoto] = useState(null);
+  const [bookingPhotoPreview, setBookingPhotoPreview] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Ukuran file tidak boleh lebih dari 5MB");
+        return;
+      }
+      setBookingPhoto(file);
+      setBookingPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const closeBookingModal = () => {
+    if (isSubmitting) return;
+    setIsBookingModalOpen(false);
+    setBookingDesc("");
+    setBookingDate("");
+    setBookingTime("");
+    setBookingPhoto(null);
+    if (bookingPhotoPreview) {
+      URL.revokeObjectURL(bookingPhotoPreview);
+      setBookingPhotoPreview("");
+    }
+  };
 
   const [dashboardStats, setDashboardStats] = useState({ pesanan_aktif: "00", pekerjaan_selesai: "00", total_pengeluaran: 0 });
 
@@ -277,31 +305,42 @@ function Dashboard() {
       return;
     }
 
-    // Add to active orders list (simulated)
-    const newOrder = {
-      id: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      service: selectedService ? selectedService.name : "Jasa Perbaikan Umum",
-      tukang: selectedTukang.name,
-      date: new Date(bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-      cost: selectedService ? selectedService.price.split(" / ")[0] : "Nego Setelah Kunjungan",
-      status: "Menunggu Konfirmasi",
-      statusColor: "text-orange-400 bg-orange-500/10 border-orange-500/20",
-    };
+    setIsSubmitting(true);
 
-    setActiveOrders([newOrder, ...activeOrders]);
-    setShowSuccessToast(true);
-    setIsBookingModalOpen(false);
-
-    // Reset Form
-    setBookingDesc("");
-    setBookingDate("");
-    setBookingTime("");
-
-    // Automatically navigate to Chat after 2.5 seconds
+    // Simulate API request delay of 1.5 seconds
     setTimeout(() => {
-      setShowSuccessToast(false);
-      navigate("/pelanggan/chat", { state: { chatWith: selectedTukang.name } });
-    }, 2500);
+      // Add to active orders list (simulated)
+      const newOrder = {
+        id: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        service: selectedService ? selectedService.name : "Jasa Perbaikan Umum",
+        tukang: selectedTukang.name,
+        date: new Date(bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        cost: selectedService ? selectedService.price.split(" / ")[0] : "Nego Setelah Kunjungan",
+        status: "Menunggu Konfirmasi",
+        statusColor: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+      };
+
+      setActiveOrders([newOrder, ...activeOrders]);
+      setIsSubmitting(false);
+      setIsBookingModalOpen(false);
+      setShowSuccessToast(true);
+
+      // Reset Form
+      setBookingDesc("");
+      setBookingDate("");
+      setBookingTime("");
+      setBookingPhoto(null);
+      if (bookingPhotoPreview) {
+        URL.revokeObjectURL(bookingPhotoPreview);
+        setBookingPhotoPreview("");
+      }
+
+      // Automatically navigate to Chat after 1.5 seconds
+      setTimeout(() => {
+        setShowSuccessToast(false);
+        navigate("/pelanggan/chat", { state: { chatWith: selectedTukang.name } });
+      }, 1500);
+    }, 1500);
   };
 
   // Top Rated Tukang (rating >= 4.9)
@@ -1493,8 +1532,9 @@ function Dashboard() {
                 </div>
               </div>
               <button 
-                onClick={() => setIsBookingModalOpen(false)}
-                className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center"
+                onClick={closeBookingModal}
+                disabled={isSubmitting}
+                className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
@@ -1515,8 +1555,9 @@ function Dashboard() {
                       setSelectedService({ name: found.nama_layanan, price: found.harga, desc: found.deskripsi });
                     }
                   }}
-                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs font-bold text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer"
+                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs font-bold text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   required
+                  disabled={isSubmitting}
                 >
                   <option value="" disabled>-- Pilih Spesifikasi Layanan --</option>
                   {selectedTukang.layanans && selectedTukang.layanans.length > 0 ? (
@@ -1537,21 +1578,42 @@ function Dashboard() {
                 <textarea 
                   rows="3"
                   placeholder="Jelaskan kendala Anda secara detail agar mitra kami dapat mempersiapkan peralatan yang tepat (misalnya: Pipa saluran pembuangan air di bawah tempat cuci piring bocor parah sehingga air menggenang)"
-                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-4 font-body-md text-xs text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all font-medium"
+                  className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-4 font-body-md text-xs text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                   value={bookingDesc}
                   onChange={(e) => setBookingDesc(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
-              {/* Photo Upload Simulation */}
+              {/* Photo Upload */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-on-surface-variant ml-1">Unggah Foto Lokasi / Kerusakan (Opsional)</label>
-                <div className="border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center cursor-pointer transition-colors bg-surface-container-high flex flex-col items-center justify-center gap-1">
-                  <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl">upload_file</span>
-                  <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
-                  <span className="text-[10px] text-on-surface-variant/60">Mendukung JPG, PNG hingga 5MB</span>
-                </div>
+                <input 
+                  type="file"
+                  accept="image/*"
+                  id="booking-photo-input"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                  disabled={isSubmitting}
+                />
+                <label 
+                  htmlFor={isSubmitting ? "" : "booking-photo-input"}
+                  className={`border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center transition-colors bg-surface-container-high flex flex-col items-center justify-center gap-2 block ${isSubmitting ? "opacity-60 cursor-not-allowed pointer-events-none" : "cursor-pointer"}`}
+                >
+                  {bookingPhotoPreview ? (
+                    <div className="relative w-full max-h-32 flex flex-col items-center justify-center gap-2">
+                      <img src={bookingPhotoPreview} alt="Preview" className="max-h-24 object-contain rounded-lg border border-outline-variant" />
+                      <span className="text-[10px] text-secondary font-bold truncate max-w-full">{bookingPhoto?.name}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl">upload_file</span>
+                      <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
+                      <span className="text-[10px] text-on-surface-variant/60">Mendukung JPG, PNG hingga 5MB</span>
+                    </>
+                  )}
+                </label>
               </div>
 
               {/* Schedule: Date & Time */}
@@ -1560,10 +1622,11 @@ function Dashboard() {
                   <label className="text-xs font-bold text-on-surface-variant ml-1">Jadwal Kunjungan</label>
                   <input 
                     type="date"
-                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer"
+                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -1571,10 +1634,11 @@ function Dashboard() {
                   <label className="text-xs font-bold text-on-surface-variant ml-1">Jam Kunjungan</label>
                   <input 
                     type="time"
-                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer"
+                    className="w-full bg-surface-container-high border border-outline-variant rounded-xl py-3.5 px-4 text-xs text-on-surface focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     value={bookingTime}
                     onChange={(e) => setBookingTime(e.target.value)}
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -1586,12 +1650,12 @@ function Dashboard() {
                   {["QRIS", "Dana", "OVO", "GoPay"].map((method) => (
                     <div 
                       key={method}
-                      onClick={() => setPaymentMethod(method)}
-                      className={`cursor-pointer p-3 rounded-xl border text-center font-bold text-xs transition-all ${
+                      onClick={() => !isSubmitting && setPaymentMethod(method)}
+                      className={`p-3 rounded-xl border text-center font-bold text-xs transition-all ${
                         paymentMethod === method 
                           ? "bg-secondary/10 border-secondary text-secondary"
                           : "bg-surface-container-high border-outline-variant/30 hover:border-outline-variant text-on-surface-variant"
-                      }`}
+                      } ${isSubmitting ? "opacity-60 cursor-not-allowed pointer-events-none" : "cursor-pointer"}`}
                     >
                       {method}
                     </div>
@@ -1604,17 +1668,31 @@ function Dashboard() {
               <div className="flex gap-4 pt-3">
                 <button 
                   type="button"
-                  onClick={() => setIsBookingModalOpen(false)}
-                  className="flex-1 bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest py-3.5 px-5 rounded-2xl font-bold text-xs transition-all cursor-pointer text-center text-on-surface"
+                  onClick={closeBookingModal}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest py-3.5 px-5 rounded-2xl font-bold text-xs transition-all cursor-pointer text-center text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Batal
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 bg-secondary text-on-secondary hover:bg-secondary/90 py-3.5 px-5 rounded-2xl font-bold text-xs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-secondary text-on-secondary hover:bg-secondary/90 py-3.5 px-5 rounded-2xl font-bold text-xs hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-80 disabled:cursor-not-allowed disabled:scale-100"
                 >
-                  <span className="material-symbols-outlined text-sm font-bold">chat</span>
-                  Kirim & Mulai Chat
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-on-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Mengirim...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm font-bold">chat</span>
+                      Kirim & Mulai Chat
+                    </>
+                  )}
                 </button>
               </div>
 

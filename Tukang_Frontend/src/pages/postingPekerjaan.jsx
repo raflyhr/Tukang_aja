@@ -24,6 +24,20 @@ function PostingPekerjaan() {
   const [address, setAddress] = useState("Jl. Senopati No. 42, Kebayoran Baru, Jakarta Selatan");
   const [budget, setBudget] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Ukuran file tidak boleh lebih dari 5MB");
+        return;
+      }
+      setPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
@@ -36,6 +50,14 @@ function PostingPekerjaan() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmitted(true);
+    
+    // Reset photo
+    setPhoto(null);
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+      setPhotoPreview("");
+    }
+
     setTimeout(() => {
       setIsSubmitted(false);
       // Redirect back to orders lists
@@ -262,14 +284,33 @@ function PostingPekerjaan() {
                   />
                 </div>
 
-                {/* Photo Simulation */}
+                {/* Photo Upload */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-on-surface-variant ml-1">Lampirkan Foto Kerusakan (Opsional)</label>
-                  <div className="border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center cursor-pointer transition-all bg-surface-container-high flex flex-col items-center justify-center gap-1">
-                    <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl animate-pulse">upload_file</span>
-                    <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
-                    <span className="text-[10px] text-on-surface-variant/60">Format JPG, PNG hingga 5MB</span>
-                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="job-photo-input"
+                    className="hidden"
+                    onChange={handlePhotoChange}
+                  />
+                  <label
+                    htmlFor="job-photo-input"
+                    className="border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center cursor-pointer transition-all bg-surface-container-high flex flex-col items-center justify-center gap-2 block"
+                  >
+                    {photoPreview ? (
+                      <div className="relative w-full max-h-32 flex flex-col items-center justify-center gap-2">
+                        <img src={photoPreview} alt="Preview" className="max-h-24 object-contain rounded-lg border border-outline-variant" />
+                        <span className="text-[10px] text-secondary font-bold truncate max-w-full">{photo?.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl animate-pulse">upload_file</span>
+                        <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
+                        <span className="text-[10px] text-on-surface-variant/60">Format JPG, PNG hingga 5MB</span>
+                      </>
+                    )}
+                  </label>
                 </div>
 
                 {/* CTA Submit */}
