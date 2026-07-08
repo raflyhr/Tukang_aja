@@ -6,9 +6,18 @@ import axios from "axios";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [tukangs, setTukangs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(() => {
+    try { const c = sessionStorage.getItem('ta_orders'); return c ? JSON.parse(c) : []; }
+    catch { return []; }
+  });
+  const [tukangs, setTukangs] = useState(() => {
+    try { const c = sessionStorage.getItem('ta_tukangs'); return c ? JSON.parse(c) : []; }
+    catch { return []; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try { return !sessionStorage.getItem('ta_tukangs'); }
+    catch { return true; }
+  });
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -43,17 +52,25 @@ function Dashboard() {
   const [bookingTime, setBookingTime] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("QRIS");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [bookingPhoto, setBookingPhoto] = useState(null);
 
-  const [dashboardStats, setDashboardStats] = useState({ pesanan_aktif: "00", pekerjaan_selesai: "00", total_pengeluaran: 0 });
+  const [dashboardStats, setDashboardStats] = useState(() => {
+    const defaults = { pesanan_aktif: "00", pekerjaan_selesai: "00", total_pengeluaran: 0 };
+    try { const c = sessionStorage.getItem('ta_stats'); return c ? JSON.parse(c) : defaults; }
+    catch { return defaults; }
+  });
 
   const getOrders = async (userId) => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/pesanan`);
-      setOrders(res.data.data || []);
+      const ordersData = res.data.data || [];
+      setOrders(ordersData);
+      sessionStorage.setItem('ta_orders', JSON.stringify(ordersData));
       
       const statsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/dashboard-stats`);
       if (statsRes.data.status === "Sukses") {
         setDashboardStats(statsRes.data.data);
+        sessionStorage.setItem('ta_stats', JSON.stringify(statsRes.data.data));
       }
     } catch (error) {
       console.error("Failed to fetch user data", error);
@@ -83,7 +100,9 @@ function Dashboard() {
             url += `?latitude=${userObj.latitude}&longitude=${userObj.longitude}`;
         }
         const res = await axios.get(url);
-        setTukangs(res.data.data || []);
+        const freshTukangs = (res.data.data || []).filter(t => t.is_aktif);
+        setTukangs(freshTukangs);
+        sessionStorage.setItem('ta_tukangs', JSON.stringify(freshTukangs));
     } catch (err) {
         console.error("Gagal load tukang", err);
     } finally {
@@ -283,19 +302,25 @@ function Dashboard() {
       const parsed = JSON.parse(savedUser);
       const userObj = parsed.user || parsed;
       
-      const payload = {
-        user_id: userObj.id,
-        tukang_id: selectedTukang.id,
-        deskripsi_masalah: bookingDesc,
-        judul: selectedService ? selectedService.name : "Jasa Perbaikan Umum",
-        kategori_layanan: selectedTukang.specialtyText || selectedTukang.specialty || "Pertukangan",
-        latitude: userObj.latitude || -6.2088,
-        longitude: userObj.longitude || 106.8456,
-        alamat_lengkap: userObj.alamat || "Alamat Pelanggan",
-        harga_penawaran: selectedTukang.price || 150000,
-      };
+      const formData = new FormData();
+      formData.append("user_id", userObj.id);
+      formData.append("tukang_id", selectedTukang.id);
+      formData.append("deskripsi_masalah", bookingDesc);
+      formData.append("judul", selectedService ? selectedService.name : "Jasa Perbaikan Umum");
+      formData.append("kategori_layanan", selectedTukang.specialtyText || selectedTukang.specialty || "Pertukangan");
+      formData.append("latitude", userObj.latitude || -6.2088);
+      formData.append("longitude", userObj.longitude || 106.8456);
+      formData.append("alamat_lengkap", userObj.alamat || "Alamat Pelanggan");
+      formData.append("harga_penawaran", selectedTukang.price || 150000);
+      if (bookingPhoto) {
+        formData.append("foto_lampiran", bookingPhoto);
+      }
 
-      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan`, payload);
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       
       if (response.data.data) {
         const orderData = response.data.data;
@@ -310,6 +335,7 @@ function Dashboard() {
         setBookingDesc("");
         setBookingDate("");
         setBookingTime("");
+        setBookingPhoto(null);
 
         setTimeout(() => {
           setShowSuccessToast(false);
@@ -734,7 +760,7 @@ function Dashboard() {
                     <h3 className="text-lg font-bold text-on-surface">Pesanan Aktif</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {activeOrders.map((order) => (
+                    {activeOrders.slice(0, 1).map((order) => (
                       <div key={order.id} className="bg-surface-container border border-secondary/30 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-secondary/60 transition-colors">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -1588,14 +1614,43 @@ function Dashboard() {
                 />
               </div>
 
-              {/* Photo Upload Simulation */}
+              {/* Photo Upload */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-on-surface-variant ml-1">Unggah Foto Lokasi / Kerusakan (Opsional)</label>
-                <div className="border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center cursor-pointer transition-colors bg-surface-container-high flex flex-col items-center justify-center gap-1">
-                  <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl">upload_file</span>
-                  <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
-                  <span className="text-[10px] text-on-surface-variant/60">Mendukung JPG, PNG hingga 5MB</span>
-                </div>
+                {bookingPhoto ? (
+                  <div className="relative border border-secondary/30 rounded-xl p-4 bg-surface-container-high flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-secondary text-2xl">image</span>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-on-surface truncate max-w-[180px]">{bookingPhoto.name}</p>
+                        <p className="text-[10px] text-on-surface-variant/60">{(bookingPhoto.size / (1024 * 1024)).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBookingPhoto(null)}
+                      className="p-1 rounded-full hover:bg-surface-container-highest text-on-surface-variant hover:text-red-400 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ) : (
+                  <label className="border-2 border-dashed border-outline-variant/40 hover:border-secondary/40 rounded-xl p-5 text-center cursor-pointer transition-colors bg-surface-container-high flex flex-col items-center justify-center gap-1 block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setBookingPhoto(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <span className="material-symbols-outlined text-on-surface-variant/70 text-2xl">upload_file</span>
+                    <span className="text-xs font-bold text-on-surface">Pilih File Foto</span>
+                    <span className="text-[10px] text-on-surface-variant/60">Mendukung JPG, PNG hingga 5MB</span>
+                  </label>
+                )}
               </div>
 
               {/* Schedule: Date & Time */}

@@ -136,7 +136,7 @@ function TukangPesanan() {
   // Filter logic
   const filteredOrders = activeTab === "semua" 
     ? orders 
-    : orders.filter(o => o.status === activeTab);
+    : orders.filter(o => o.status === activeTab || (activeTab === "menunggu_penawaran" && o.status === "menunggu"));
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
@@ -278,7 +278,7 @@ function TukangPesanan() {
               {filteredOrders.map((order) => {
                 
                 // Card 1: Menunggu Penawaran
-                if (order.status === "menunggu_penawaran") {
+                if (order.status === "menunggu_penawaran" || order.status === "menunggu") {
                   return (
                     <div 
                       key={order.id} 
@@ -327,18 +327,12 @@ function TukangPesanan() {
                           <span className="text-[10px] text-on-surface-variant/60 uppercase font-semibold">Budget Perkiraan</span>
                           <span className="text-xs font-bold text-on-surface mt-0.5">{order.budgetRange}</span>
                         </div>
-                        {order.hasBidSent ? (
-                          <button className="bg-surface-container-high border border-surface-variant/30 text-on-surface-variant text-xs font-bold px-5 py-2 rounded-xl cursor-not-allowed">
-                            Penawaran Terkirim
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => handleSendBid(order.id)}
-                            className="bg-secondary text-on-secondary text-xs font-bold px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                          >
-                            Kirim Penawaran
-                          </button>
-                        )}
+                        <button 
+                          onClick={() => navigate("/tukang/chat", { state: { activeOrderId: order.id } })}
+                          className="bg-secondary text-on-secondary text-xs font-bold px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                        >
+                          Hubungi Chat
+                        </button>
                       </div>
                     </div>
                   );

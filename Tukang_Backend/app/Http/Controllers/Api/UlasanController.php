@@ -47,15 +47,29 @@ class UlasanController extends Controller
     ]);
 
     // Cek apakah pesanan ada dan sudah selesai
-    $pesanan = \App\Models\Pesanan::where('id', $request->pesanan_id)
-        ->where('user_id', $request->user_id)
-        ->where('tukang_id', $request->tukang_id)
-        ->where('status', 'selesai')
-        ->first();
+    $pesanan = \App\Models\Pesanan::find($request->pesanan_id);
 
     if (!$pesanan) {
         return response()->json([
-            'message' => 'Pesanan belum selesai atau tidak ditemukan.'
+            'message' => 'Pesanan dengan ID ' . $request->pesanan_id . ' tidak ditemukan.'
+        ], 400);
+    }
+
+    if ((int)$pesanan->user_id !== (int)$request->user_id) {
+        return response()->json([
+            'message' => 'ID Pelanggan tidak cocok. Owner pesanan: ' . $pesanan->user_id . ', dikirim: ' . $request->user_id
+        ], 400);
+    }
+
+    if ((int)$pesanan->tukang_id !== (int)$request->tukang_id) {
+        return response()->json([
+            'message' => 'ID Tukang tidak cocok. Tukang di pesanan: ' . $pesanan->tukang_id . ', dikirim: ' . $request->tukang_id
+        ], 400);
+    }
+
+    if ($pesanan->status !== 'selesai') {
+        return response()->json([
+            'message' => 'Pesanan belum selesai. Status saat ini: ' . $pesanan->status
         ], 400);
     }
 

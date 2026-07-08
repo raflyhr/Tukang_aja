@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
+import axios from "axios";
 
 function ProfilTukang() {
   const location = useLocation();
@@ -166,10 +167,96 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     }
   ];
 
-  // Find specialist by name (fallback to first item if not found)
-  const specialist = specialists.find(
-    (s) => s.name.toLowerCase() === specialistName.toLowerCase()
-  ) || specialists[0];
+  const [specialist, setSpecialist] = useState(null);
+
+  useEffect(() => {
+    const loadSpecialist = async () => {
+      const specName = location.state?.specialistName || "Budi Santoso";
+      const specId = location.state?.specialistId;
+
+      // Try mock specialists first
+      const mockSpec = specialists.find(
+        (s) => s.name.toLowerCase() === specName.toLowerCase() || (specId && s.id === specId)
+      );
+
+      if (mockSpec) {
+        setSpecialist(mockSpec);
+        return;
+      }
+
+      // If not mock, load from database
+      try {
+        let dbTukang = null;
+        if (specId) {
+          const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/tukang/${specId}`);
+          dbTukang = res.data.data;
+        } else {
+          const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/tukang`);
+          const allTukangs = res.data.data || [];
+          dbTukang = allTukangs.find(t => t.nama?.toLowerCase() === specName.toLowerCase());
+        }
+
+        if (dbTukang) {
+          const keahlianLower = (dbTukang.keahlian || "").toLowerCase();
+          let specialty = "listrik";
+          if (keahlianLower.includes("pipa") || keahlianLower.includes("air") || keahlianLower.includes("plumbing")) {
+            specialty = "pipa";
+          } else if (keahlianLower.includes("ac") || keahlianLower.includes("pendingin")) {
+            specialty = "ac";
+          } else if (keahlianLower.includes("cat") || keahlianLower.includes("tembok")) {
+            specialty = "cat";
+          } else if (keahlianLower.includes("atap") || keahlianLower.includes("genteng")) {
+            specialty = "atap";
+          } else if (keahlianLower.includes("kayu") || keahlianLower.includes("pertukangan") || keahlianLower.includes("pintu")) {
+            specialty = "pertukangan";
+          }
+
+          let image = "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop";
+          if (dbTukang.foto_profil) {
+            image = dbTukang.foto_profil.startsWith("http") ? dbTukang.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${dbTukang.foto_profil}`;
+          }
+
+          let distance = dbTukang.distance !== undefined ? `${parseFloat(Number(dbTukang.distance).toFixed(1))} km` : "1.5 km";
+
+          setSpecialist({
+            id: dbTukang.id,
+            name: dbTukang.nama || "Tukang",
+            specialty: specialty,
+            specialtyText: dbTukang.keahlian || "Teknisi Jasa",
+            distance: distance,
+            rating: dbTukang.rating !== undefined && dbTukang.rating !== null ? parseFloat(dbTukang.rating) : 4.8,
+            completedJobs: dbTukang.completed_jobs_count || 12,
+            image: image,
+            status: dbTukang.is_aktif ? "Tersedia" : "Sibuk",
+            bio: dbTukang.deskripsi_pengalaman || "Penyedia jasa terverifikasi.",
+            priceFormatted: `Rp ${(100000 + ((dbTukang.tahun_pengalaman || 2) * 15000)).toLocaleString("id-ID")}/jam`,
+            experience: dbTukang.tahun_pengalaman || 2,
+            portfolio: dbTukang.portofolios || [],
+            reviews: dbTukang.ulasans || [],
+            prices: dbTukang.layanans || []
+          });
+        } else {
+          setSpecialist(specialists[0]);
+        }
+      } catch (err) {
+        console.error("Gagal load detail tukang dari DB", err);
+        setSpecialist(specialists[0]);
+      }
+    };
+
+    loadSpecialist();
+  }, [location.state]);
+
+  if (!specialist) {
+    return (
+      <div className="bg-background text-on-surface min-h-screen flex justify-center items-center font-sans">
+        <div className="text-center space-y-4">
+          <span className="material-symbols-outlined text-5xl animate-spin text-secondary">sync</span>
+          <p className="text-sm font-semibold">Memuat profil mitra...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
@@ -325,7 +412,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
             <div className="flex gap-3 w-full md:w-auto shrink-0">
               <button
-                onClick={() => navigate("/pelanggan/chat", { state: { orderId: "DIRECT", specialistId: specialist.name } })}
+                onClick={() => navigate("/pelanggan/chat", { state: { orderId: "DIRECT", specialistId: specialist.id || specialist.name } })}
                 className="flex-1 md:flex-initial bg-surface-container-high border border-outline-variant/30 hover:border-secondary/40 text-on-surface hover:text-secondary py-3 px-5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-xs">chat</span>

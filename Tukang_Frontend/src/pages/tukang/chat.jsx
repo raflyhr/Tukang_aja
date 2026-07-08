@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import api from "../../lib/axios";
 import { supabase } from "../../lib/supabase";
 
 function TukangChat() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNegoPanelOpen, setIsNegoPanelOpen] = useState(false); // Default to false to keep chat spacious
   const [activeChatId, setActiveChatId] = useState(null);
@@ -58,7 +59,11 @@ function TukangChat() {
         const mapped = res.data.data.map(c => ({
           id: c.id,
           name: c.user?.name || "Pelanggan",
-          avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDgDnbyp9rLOAb2jO9oe7bGmKYJuagcArNETRx627Q4zAm3lGT5ALP5IwniAJz3ZIJ8wx59z7gLbaEk1P6TrsKEWNIN2M9Ld-IKiHVVPhGYrwJMC0TepBIOIw_Ic5YREwRxHMT-rW5Vhmb8k9Dn9zSkPSjiXr-54QLPIlqJ5_liD9xmSiZg4gB_TTjoD8JVyMJnRtyWMOdd9nFj6HqxxES9P06QWNZtumNkEggXQiZJPzpEQNQOvuVGUUDPzztYZORsOb2rq0PfltCx", // fallback
+          avatar: c.user?.foto_profil 
+            ? (c.user.foto_profil.startsWith("http") 
+                ? c.user.foto_profil 
+                : `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${c.user.foto_profil}`) 
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.user?.name || 'Pelanggan')}&background=random`,
           online: true,
           time: c.messages && c.messages.length > 0 ? new Date(c.messages[0].created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
           lastMsg: c.messages && c.messages.length > 0 ? c.messages[0].text : "Belum ada pesan",
@@ -67,6 +72,17 @@ function TukangChat() {
         }));
         setChats(mapped);
         
+        // Auto set active chat jika ada dari router state
+        const stateOrderId = location.state?.activeOrderId;
+        if (stateOrderId) {
+          const matchingChat = mapped.find(c => c.pesanan?.id === stateOrderId);
+          if (matchingChat) {
+            setActiveChatId(matchingChat.id);
+            setActivePesanan(matchingChat.pesanan || null);
+            return;
+          }
+        }
+
         // Auto set active chat jika belum ada
         if (mapped.length > 0 && !activeChatId) {
           setActiveChatId(mapped[0].id);
@@ -197,6 +213,27 @@ function TukangChat() {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Gagal melaporkan pekerjaan selesai.");
+    }
+  };
+
+  const handleSendBid = async (id) => {
+    const harga = prompt("Masukkan nominal harga penawaran Anda (misal: 150000):");
+    if (!harga) return;
+    try {
+      await api.put(`/pesanan/${id}/tawar`, { harga_penawaran: parseInt(harga) });
+      alert("Penawaran harga berhasil dikirim!");
+      fetchChats();
+      // Reload active order info
+      const res = await api.get(`/tukang/${tukangId}/chats`);
+      if (res.data.status === 'Sukses') {
+        const found = res.data.data.find(c => c.id === activeChatId);
+        if (found) {
+          setActivePesanan(found.pesanan || null);
+        }
+      }
+      fetchMessages();
+    } catch (err) {
+      alert("Gagal mengirim penawaran.");
     }
   };
 
@@ -432,6 +469,14 @@ function TukangChat() {
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                      {(activePesanan.status === "menunggu_penawaran" || activePesanan.status === "menunggu") && (
+                        <button
+                          onClick={() => handleSendBid(activePesanan.id)}
+                          className="flex-1 sm:flex-initial text-center bg-secondary hover:bg-secondary/90 text-on-secondary px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                        >
+                          Kirim Penawaran
+                        </button>
+                      )}
                       {(activePesanan.status === "menunggu_pengerjaan" || activePesanan.status === "sedang_dikerjakan") && (
                         <button
                           onClick={() => handleCompleteOrder(activePesanan)}

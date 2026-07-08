@@ -13,6 +13,7 @@ class TukangController extends Controller
     public function index(Request $request)
 {
     $query = \App\Models\Tukang::with(['sertifikats', 'layanans', 'portofolios', 'ulasans'])
+        ->where('is_aktif', true)
         ->withCount(['pesanans as completed_jobs_count' => function ($query) {
             $query->where('status', 'selesai');
         }]);

@@ -17,7 +17,8 @@ class Pesanan extends Model
         'alamat_lengkap',
         'harga_penawaran',
         'status',
-        'alasan_penolakan'
+        'alasan_penolakan',
+        'foto_lampiran'
     ];
 
     /**

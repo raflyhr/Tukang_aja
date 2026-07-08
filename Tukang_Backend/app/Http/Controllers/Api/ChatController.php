@@ -84,14 +84,10 @@ class ChatController extends Controller
             'pesanan_id' => 'nullable|exists:pesanans,id'
         ]);
 
-        $query = Chat::where('user_id', $request->user_id)
-            ->where('tukang_id', $request->tukang_id);
-
-        if ($request->has('pesanan_id') && $request->pesanan_id !== null) {
-            $query->where('pesanan_id', $request->pesanan_id);
-        }
-
-        $chat = $query->first();
+        // Cari chat yang sudah ada antara user dan tukang ini (apapun pesanan_id-nya)
+        $chat = Chat::where('user_id', $request->user_id)
+            ->where('tukang_id', $request->tukang_id)
+            ->first();
 
         if (!$chat) {
             $chat = Chat::create([
@@ -99,6 +95,10 @@ class ChatController extends Controller
                 'tukang_id' => $request->tukang_id,
                 'pesanan_id' => $request->pesanan_id
             ]);
+        } elseif ($request->has('pesanan_id') && $request->pesanan_id !== null) {
+            // Update pesanan_id ke yang terbaru jika dikirim
+            $chat->pesanan_id = $request->pesanan_id;
+            $chat->save();
         }
 
         // Load relationships

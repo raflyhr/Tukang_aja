@@ -47,6 +47,23 @@ class PesananController extends Controller
         $pesanan->status = 'menunggu_persetujuan';
         $pesanan->save();
 
+        // Cari chat terkait untuk mengirim pesan sistem penawaran harga
+        $chat = \App\Models\Chat::where('pesanan_id', $pesanan->id)->first();
+        if (!$chat) {
+            $chat = \App\Models\Chat::where('user_id', $pesanan->user_id)
+                ->where('tukang_id', $pesanan->tukang_id)
+                ->first();
+        }
+
+        if ($chat) {
+            \App\Models\Message::create([
+                'chat_id' => $chat->id,
+                'sender_type' => 'system',
+                'message_type' => 'negotiation_offer',
+                'text' => 'Rp ' . number_format($request->harga_penawaran, 0, ',', '.')
+            ]);
+        }
+
         return response()->json([
             'message' => 'Penawaran harga berhasil dikirim, menunggu persetujuan pelanggan.',
             'data' => $pesanan
@@ -196,7 +213,13 @@ class PesananController extends Controller
             'longitude' => 'required|numeric',
             'alamat_lengkap' => 'required|string',
             'harga_penawaran' => 'required|integer',
+            'foto_lampiran' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
+
+        $path = null;
+        if ($request->hasFile('foto_lampiran')) {
+            $path = $request->file('foto_lampiran')->store('pesanan', 'public');
+        }
 
         $pesanan = Pesanan::create([
             'user_id' => $request->user_id,
@@ -209,7 +232,8 @@ class PesananController extends Controller
             'alamat_lengkap' => $request->alamat_lengkap,
             'harga_penawaran' => $request->harga_penawaran,
             'budget_perkiraan' => $request->budget_perkiraan ?? null,
-            'status' => 'menunggu',
+            'status' => $request->tukang_id ? 'menunggu_penawaran' : 'menunggu',
+            'foto_lampiran' => $path,
         ]);
 
         return response()->json([

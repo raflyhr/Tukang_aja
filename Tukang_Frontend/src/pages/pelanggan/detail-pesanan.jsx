@@ -303,35 +303,35 @@ function DetailPesanan() {
                 <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Penyedia Jasa Anda</h4>
                 <div className="flex items-center gap-3">
                   <div 
-                    onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.specialist } })}
+                    onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.tukang?.nama || order.specialist, specialistId: order.tukang?.id } })}
                     className="w-12 h-12 rounded-xl overflow-hidden border border-outline-variant/20 shrink-0 cursor-pointer"
                   >
                     <img 
                       className="w-full h-full object-cover" 
                       src={order.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=80&auto=format&fit=crop"} 
-                      alt={order.specialist} 
+                      alt={order.tukang?.nama || order.specialist} 
                     />
                   </div>
                   <div>
                     <h5 
-                      onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.specialist } })}
+                      onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.tukang?.nama || order.specialist, specialistId: order.tukang?.id } })}
                       className="font-bold text-sm text-on-surface hover:text-secondary cursor-pointer"
                     >
-                      {order.specialist}
+                      {order.tukang?.nama || order.specialist}
                     </h5>
                     <p className="text-[10px] text-on-surface-variant">Mitra Terverifikasi TukangAja</p>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
-                    onClick={() => navigate("/pelanggan/chat", { state: { orderId: order.id, specialistId: order.specialist } })}
+                    onClick={() => navigate("/pelanggan/chat", { state: { orderId: order.id, specialistId: order.tukang?.id || order.specialist } })}
                     className="flex-grow bg-secondary/15 text-secondary border border-secondary/20 hover:bg-secondary/25 text-[11px] font-bold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-xs">chat</span>
                     Kirim Chat
                   </button>
                   <button 
-                    onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.specialist } })}
+                    onClick={() => navigate("/pelanggan/profil-tukang", { state: { specialistName: order.tukang?.nama || order.specialist, specialistId: order.tukang?.id } })}
                     className="bg-surface-container-high border border-outline-variant/30 hover:border-secondary/40 text-on-surface text-[11px] font-bold py-2 px-3 rounded-xl transition-all cursor-pointer"
                   >
                     Lihat Profil

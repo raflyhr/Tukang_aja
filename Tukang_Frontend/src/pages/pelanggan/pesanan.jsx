@@ -56,7 +56,14 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     { id: "riwayat", label: "Riwayat" },
   ];
 
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(() => {
+    try {
+      const c = sessionStorage.getItem('ta_orders');
+      return c ? JSON.parse(c) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     getPesanan();
@@ -65,8 +72,10 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const getPesanan = async () => {
     try {
       const userId = localStorage.getItem("pelanggan_id");
-      const res = await axios.get(`http://127.0.0.1:8000/api/user/${userId}/pesanan`);
-      setOrders(res.data.data);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/pesanan`);
+      const ordersData = res.data.data || [];
+      setOrders(ordersData);
+      sessionStorage.setItem('ta_orders', JSON.stringify(ordersData));
     } catch (error) {
       console.log(error);
     }
