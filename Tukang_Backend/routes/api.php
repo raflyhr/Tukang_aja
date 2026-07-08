@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PenarikanController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\NotificationController;
 
 // --- Rute Otentikasi Universal (Satu Login untuk Semua Role) ---
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -81,6 +82,12 @@ Route::get('/chat/{chat_id}/messages', [ChatController::class, 'getMessages']);
 Route::post('/chat/send', [ChatController::class, 'sendMessage']);
 Route::post('/chat/start', [ChatController::class, 'startChat']);
 Route::delete('/chat/{chat_id}', [ChatController::class, 'destroy']);
+
+// --- Rute Fitur Notifikasi ---
+Route::get('/user/{id}/notifications', [NotificationController::class, 'index']);
+Route::put('/user/{id}/notifications/read-all', [NotificationController::class, 'markAllRead']);
+Route::put('/notifications/{id}/toggle-read', [NotificationController::class, 'toggleRead']);
+Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
 // --- Rute Admin ---
 Route::get('/admin/dashboard-stats', [AdminController::class, 'getDashboardStats']);

@@ -65,11 +65,20 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     }
   });
 
+  const [isOrdersLoading, setIsOrdersLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem('ta_orders');
+    } catch {
+      return true;
+    }
+  });
+
   useEffect(() => {
     getPesanan();
   }, []);
 
   const getPesanan = async () => {
+    setIsOrdersLoading(true);
     try {
       const userId = localStorage.getItem("pelanggan_id");
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/pesanan`);
@@ -78,6 +87,8 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
       sessionStorage.setItem('ta_orders', JSON.stringify(ordersData));
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsOrdersLoading(false);
     }
   };
 
@@ -225,6 +236,23 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
       {/* Main Content Wrapper */}
       <main className="flex-grow lg:ml-64 min-h-screen relative flex flex-col">
+        {/* Loading overlay when fetching orders (restricted to main content area) */}
+        {isOrdersLoading && (
+          <div className="absolute inset-0 bg-[#0d0d0d]/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-4 transition-all duration-300">
+            <div className="relative flex items-center justify-center">
+              {/* Outer spinning ring */}
+              <div className="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+              {/* Inner logo/icon */}
+              <span className="material-symbols-outlined text-secondary text-2xl absolute animate-pulse">
+                receipt_long
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <h3 className="text-lg font-bold text-on-surface">Memuat Pesanan Saya</h3>
+              <p className="text-xs text-on-surface-variant animate-pulse">Mohon tunggu sebentar...</p>
+            </div>
+          </div>
+        )}
         {/* TopAppBar */}
         <header className="fixed top-0 right-0 left-0 lg:left-64 z-40 flex justify-between items-center px-6 md:px-12 h-20 bg-surface/80 backdrop-blur-xl border-b border-surface-variant/20 transition-all duration-300">
           <div className="flex items-center gap-4 flex-1">

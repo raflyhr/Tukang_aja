@@ -4,21 +4,19 @@ import axios from "axios";
 import LeafletMapPicker from "../components/LeafletMapPicker";
 import ImageCropModal from "../components/ImageCropModal";
 
-const AVAILABLE_SKILLS = [
-  "Anti Bocor",
-  "Instalasi Pipa",
-  "Instalasi Listrik Rumah",
-  "Pasang AC Baru",
-  "Pembersihan Karpet",
-  "Pengecatan Dekoratif",
-  "Restorasi Kayu",
-  "Las Konstruksi",
-  "Pasang Keramik Dinding",
-  "Perawatan Taman",
-  "Perbaikan Pompa Air",
-  "Pemasangan Baja Ringan",
-  "Lainnya"
-];
+const SKILLS_BY_CATEGORY = {
+  "Plumbing (Pipa & Kran)": ["Instalasi Pipa", "Perbaikan Pompa Air", "Anti Bocor", "Lainnya"],
+  "Electrical (Kelistrikan)": ["Instalasi Listrik Rumah", "Lainnya"],
+  "Masonry (Tukang Bangunan)": ["Pasang Keramik Dinding", "Las Konstruksi", "Lainnya"],
+  "AC Specialist (Pendingin)": ["Pasang AC Baru", "Lainnya"],
+  "Painting (Pengecatan)": ["Pengecatan Dekoratif", "Lainnya"],
+  "Carpentry (Kayu)": ["Restorasi Kayu", "Lainnya"],
+  "Atap Rumah": ["Anti Bocor", "Pemasangan Baja Ringan", "Lainnya"],
+  "Keramik": ["Pasang Keramik Dinding", "Lainnya"],
+  "Pengelasan (Las)": ["Las Konstruksi", "Lainnya"],
+  "Cleaning Service": ["Pembersihan Karpet", "Lainnya"],
+  "Taman": ["Perawatan Taman", "Lainnya"]
+};
 
 function RegisterTukang() {
   const navigate = useNavigate();
@@ -54,9 +52,6 @@ function RegisterTukang() {
   });
 
   // Keahlian State
-  const [mainCategory, setMainCategory] = useState("Pilih kategori");
-  const [additionalSkills, setAdditionalSkills] = useState([]);
-  const [customSkill, setCustomSkill] = useState("");
   const [yearsExp, setYearsExp] = useState("");
   const [jobDesc, setJobDesc] = useState("");
 
@@ -66,9 +61,6 @@ function RegisterTukang() {
   const [portfolioFile, setPortfolioFile] = useState(null);
   const [portfolioPreview, setPortfolioPreview] = useState("");
   const [portfolioDetails, setPortfolioDetails] = useState({ name: "", size: "" });
-
-  // Work Radius State
-  const [workRadius, setWorkRadius] = useState("5 km");
 
   // Consent State
   const [consentCorrect, setConsentCorrect] = useState(false);
@@ -185,17 +177,7 @@ function RegisterTukang() {
       newErrors.confirmPassword = "Kata sandi dan konfirmasi kata sandi tidak cocok";
     }
 
-    if (mainCategory === "Pilih kategori") {
-      newErrors.mainCategory = "Kategori utama wajib dipilih";
-    }
 
-    if (additionalSkills.length === 0) {
-      newErrors.additionalSkills = "Pilih minimal 1 keahlian tambahan";
-    }
-
-    if (additionalSkills.includes("Lainnya") && !customSkill.trim()) {
-      newErrors.customSkill = "Harap sebutkan keahlian lainnya yang Anda miliki";
-    }
 
     if (yearsExp === "") {
       newErrors.yearsExp = "Tahun pengalaman wajib diisi";
@@ -267,11 +249,7 @@ function RegisterTukang() {
       formData.append("alamat", locationData.address || "");
       formData.append("latitude", locationData.latitude || "");
       formData.append("longitude", locationData.longitude || "");
-      formData.append("keahlian", mainCategory);
-      const finalSkills = additionalSkills.map(skill => 
-        skill === "Lainnya" ? (customSkill.trim() || "Lainnya") : skill
-      );
-      formData.append("keahlian_tambahan", finalSkills.join(", "));
+
       formData.append("tahun_pengalaman", yearsExp);
       formData.append("deskripsi_pengalaman", jobDesc);
       
@@ -317,17 +295,12 @@ function RegisterTukang() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const sections = ["profile", "services", "experience", "documents", "verification"];
+    const sections = ["profile", "experience", "documents", "verification"];
     const observerCallback = (entries) => {
       if (isScrollingRef.current) return;
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          const id = entry.target.id;
-          if (id === "experience") {
-            setActiveStep("services");
-          } else {
-            setActiveStep(id);
-          }
+          setActiveStep(entry.target.id);
         }
       });
     };
@@ -355,11 +328,7 @@ function RegisterTukang() {
 
   const scrollToSection = (id) => {
     isScrollingRef.current = true;
-    let tabName = id;
-    if (id === "experience") {
-      tabName = "services";
-    }
-    setActiveStep(tabName);
+    setActiveStep(id);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
@@ -373,7 +342,7 @@ function RegisterTukang() {
     }, 850);
   };
 
-  const steps = ["profile", "services", "documents", "verification"];
+  const steps = ["profile", "experience", "documents", "verification"];
 
   const handleNext = () => {
     const currentIndex = steps.indexOf(activeStep);
@@ -473,22 +442,22 @@ function RegisterTukang() {
               <span className="font-label-md text-label-md">Profil</span>
             </div>
 
-            {/* Services Step */}
+            {/* Experience Step */}
             <div
-              onClick={() => scrollToSection("services")}
+              onClick={() => scrollToSection("experience")}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg active:opacity-80 transition-all cursor-pointer ${
-                activeStep === "services"
+                activeStep === "experience"
                   ? "text-secondary font-bold bg-surface-container-highest"
                   : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50"
               }`}
             >
               <span
                 className="material-symbols-outlined"
-                data-icon="construction"
+                data-icon="history"
               >
-                construction
+                history
               </span>
-              <span className="font-label-md text-label-md">Layanan</span>
+              <span className="font-label-md text-label-md">Pengalaman</span>
             </div>
 
             {/* Documents & Verification Step */}
@@ -751,115 +720,7 @@ function RegisterTukang() {
                 </div>
               </section>
 
-              {/* Section 2: Expertise */}
-              <section
-                id="services"
-                className="scroll-mt-24 bg-surface-container rounded-xl p-md md:p-lg border border-surface-variant/20 shadow-lg"
-              >
-                <div className="flex items-center gap-3 mb-gutter">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    data-icon="construction"
-                  >
-                    construction
-                  </span>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">
-                    Keahlian Layanan
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-                  <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
-                    <label className="font-label-md text-label-md text-on-surface-variant px-1">
-                      Kategori Keahlian Utama
-                    </label>
-                    <select
-                      value={mainCategory}
-                      onChange={(e) => setMainCategory(e.target.value)}
-                      className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md appearance-none cursor-pointer outline-none focus:border-secondary"
-                    >
-                      <option>Pilih kategori</option>
-                      <option>Plumbing (Pipa & Kran)</option>
-                      <option>Electrical (Kelistrikan)</option>
-                      <option>Masonry (Tukang Bangunan)</option>
-                      <option>AC Specialist (Pendingin)</option>
-                      <option>Painting (Pengecatan)</option>
-                      <option>Carpentry (Kayu)</option>
-                      <option>Atap Rumah</option>
-                      <option>Keramik</option>
-                      <option>Pengelasan (Las)</option>
-                      <option>Cleaning Service</option>
-                      <option>Taman</option>
-                    </select>
-                  </div>
 
-                  <div className="flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200">
-                    <label className="font-label-md text-label-md text-on-surface-variant px-1">
-                      Radius Jangkauan Kerja
-                    </label>
-                    <select
-                      value={workRadius}
-                      onChange={(e) => setWorkRadius(e.target.value)}
-                      className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md appearance-none cursor-pointer outline-none focus:border-secondary"
-                    >
-                      <option value="5 km">5 km</option>
-                      <option value="10 km">10 km</option>
-                      <option value="15 km">15 km</option>
-                      <option value="20 km">20 km</option>
-                      <option value="25 km">25 km</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-xs md:col-span-2 mt-2">
-                    <label className="font-label-md text-label-md text-on-surface-variant px-1 mb-1">
-                      Keahlian Tambahan (Pilih beberapa)
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {AVAILABLE_SKILLS.map((skill) => {
-                        const isSelected = additionalSkills.includes(skill);
-                        return (
-                          <button
-                            key={skill}
-                            type="button"
-                            onClick={() => handleToggleSkill(skill)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-all duration-200 cursor-pointer ${
-                              isSelected
-                                ? "bg-secondary text-on-secondary border-secondary shadow-md scale-95"
-                                : "bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-secondary hover:bg-surface-variant/20"
-                            }`}
-                          >
-                            {isSelected && (
-                              <span className="material-symbols-outlined text-xs">
-                                check
-                              </span>
-                            )}
-                            {skill}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {additionalSkills.includes("Lainnya") && (
-                      <div className="mt-4 flex flex-col gap-xs focus-within:scale-[1.01] transition-transform duration-200 w-full">
-                        <label className="font-label-md text-label-md text-on-surface-variant px-1">
-                          Sebutkan Keahlian Lainnya
-                        </label>
-                        <input
-                          type="text"
-                          className="bg-surface-container-high border border-outline-variant text-on-surface rounded-lg px-md py-sm font-body-md text-body-md transition-all focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none"
-                          placeholder="Masukkan keahlian lainnya..."
-                          value={customSkill}
-                          onChange={(e) => setCustomSkill(e.target.value)}
-                        />
-                        {errors.customSkill && (
-                          <span className="text-xs text-red-500 px-1 mt-0.5 block">
-                            {errors.customSkill}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </section>
 
               {/* Section 3: Experience */}
               <section

@@ -11,13 +11,25 @@ function TukangLayanan() {
   const [isActiveWorking, setIsActiveWorking] = useState(true);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
-  const [layanans, setLayanans] = useState([]);
+  const [layanans, setLayanans] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem("tukang_layanans");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [tukangId, setTukangId] = useState(null);
 
   // Form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [newLayanan, setNewLayanan] = useState({ harga: "", satuan: "", deskripsi: "" });
+  const [unitOption, setUnitOption] = useState("/ Unit");
+  const [customUnit, setCustomUnit] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // 8 Kategori Utama based on user requirements
   const kategoriUtama = [
@@ -70,7 +82,9 @@ function TukangLayanan() {
     try {
       const res = await api.get(`/tukang/${id}`);
       if (res.data.status === 'Sukses' && res.data.data) {
-        setLayanans(res.data.data.layanans || []);
+        const layanansData = res.data.data.layanans || [];
+        setLayanans(layanansData);
+        sessionStorage.setItem("tukang_layanans", JSON.stringify(layanansData));
       }
     } catch (err) {
       console.error(err);
@@ -80,6 +94,9 @@ function TukangLayanan() {
   const openForm = (kategori) => {
     setSelectedCategory(kategori);
     setNewLayanan({ harga: "", satuan: "", deskripsi: "" });
+    setUnitOption("/ Unit");
+    setCustomUnit("");
+    setIsDropdownOpen(false);
     setIsFormOpen(true);
   };
 
@@ -87,30 +104,41 @@ function TukangLayanan() {
     e.preventDefault();
     if (!tukangId || !selectedCategory) return;
 
+    setIsSaving(true);
     try {
+      const finalSatuan = unitOption === "Lainnya" ? customUnit : unitOption;
       const payload = {
         nama_layanan: selectedCategory.nama, // Use the fixed category name
         harga: newLayanan.harga,
-        satuan: newLayanan.satuan,
+        satuan: finalSatuan,
         deskripsi: newLayanan.deskripsi
       };
 
       const res = await api.post(`/tukang/${tukangId}/layanan`, payload);
       if(res.data.status === 'Sukses') {
-        setLayanans([...layanans, res.data.data]);
+        const next = [...layanans, res.data.data];
+        setLayanans(next);
+        sessionStorage.setItem("tukang_layanans", JSON.stringify(next));
         setIsFormOpen(false);
       }
     } catch (err) {
       alert("Gagal menambah layanan");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDeleteLayanan = async (id) => {
+    setDeletingId(id);
     try {
       await api.delete(`/tukang/${tukangId}/layanan/${id}`);
-      setLayanans(layanans.filter(l => l.id !== id));
+      const next = layanans.filter(l => l.id !== id);
+      setLayanans(next);
+      sessionStorage.setItem("tukang_layanans", JSON.stringify(next));
     } catch (err) {
       alert("Gagal menghapus layanan");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -256,16 +284,53 @@ function TukangLayanan() {
                     </div>
                     <div>
                       <label className="text-xs font-bold text-on-surface-variant mb-1.5 block">Satuan</label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          className="w-full flex items-center justify-between bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-secondary/50 cursor-pointer text-left"
+                        >
+                          <span>{unitOption}</span>
+                          <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                            keyboard_arrow_down
+                          </span>
+                        </button>
+                        
+                        {isDropdownOpen && (
+                          <div className="absolute left-0 right-0 mt-2 z-50 bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-2xl overflow-hidden py-1">
+                            {["/ Unit", "/ Jam", "/ Hari", "Lainnya"].map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => {
+                                  setUnitOption(opt);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-secondary/15 hover:text-secondary transition-colors cursor-pointer block ${
+                                  unitOption === opt ? 'bg-secondary/10 text-secondary' : 'text-on-surface-variant'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {unitOption === "Lainnya" && (
+                    <div className="focus-within:scale-[1.01] transition-transform duration-200">
+                      <label className="text-xs font-bold text-on-surface-variant mb-1.5 block">Satuan Kustom</label>
                       <input 
                         type="text" 
-                        placeholder="Contoh: / Unit, / Jam, / Hari" 
+                        placeholder="Contoh: / Meter, / m², / Dus" 
                         required
-                        value={newLayanan.satuan} 
-                        onChange={(e) => setNewLayanan({...newLayanan, satuan: e.target.value})} 
+                        value={customUnit} 
+                        onChange={(e) => setCustomUnit(e.target.value)} 
                         className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-secondary/50" 
                       />
                     </div>
-                  </div>
+                  )}
                   <div>
                     <label className="text-xs font-bold text-on-surface-variant mb-1.5 block">Deskripsi Detail</label>
                     <textarea 
@@ -277,8 +342,22 @@ function TukangLayanan() {
                     />
                   </div>
                   <div className="flex justify-end pt-2">
-                    <button type="submit" className="px-6 py-2.5 bg-secondary text-on-secondary rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-secondary/20 transition-all">
-                      Simpan Layanan
+                    <button 
+                      type="submit" 
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-secondary text-on-secondary rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-secondary/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                    >
+                      {isSaving ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-on-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : (
+                        "Simpan Layanan"
+                      )}
                     </button>
                   </div>
                 </form>
@@ -320,10 +399,22 @@ function TukangLayanan() {
                         
                         <button 
                           onClick={() => handleDeleteLayanan(layanan.id)}
-                          className="absolute top-3 right-3 text-red-400 bg-red-500/10 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
+                          disabled={deletingId === layanan.id}
+                          className={`absolute top-3 right-3 text-red-400 bg-red-500/10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-red-500/20 disabled:cursor-not-allowed ${
+                            deletingId === layanan.id 
+                              ? "opacity-100 cursor-default" 
+                              : "opacity-0 group-hover:opacity-100"
+                          }`}
                           title="Hapus Layanan"
                         >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                          {deletingId === layanan.id ? (
+                            <svg className="animate-spin h-4 w-4 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          )}
                         </button>
                       </div>
                     );

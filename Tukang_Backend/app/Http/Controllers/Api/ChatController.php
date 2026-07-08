@@ -68,6 +68,33 @@ class ChatController extends Controller
         // Update updated_at di tabel chats
         Chat::where('id', $request->chat_id)->update(['updated_at' => now()]);
 
+        // Kirim notifikasi ke penerima pesan
+        $chat = Chat::with(['user', 'tukang'])->find($request->chat_id);
+        if ($chat) {
+            $recipientId = null;
+            $senderName = '';
+            
+            if ($request->sender_type === 'tukang') {
+                $recipientId = $chat->user_id; // id pelanggan di tabel roles
+                $senderName = $chat->tukang->nama ?? 'Mitra Tukang';
+            } else if ($request->sender_type === 'user') {
+                if ($chat->tukang) {
+                    $recipientId = $chat->tukang->user_id; // id user akun dari tukang di tabel roles
+                }
+                $senderName = $chat->user->name ?? 'Pelanggan';
+            }
+
+            if ($recipientId) {
+                \App\Models\Notification::create([
+                    'user_id' => $recipientId,
+                    'category' => 'pesan',
+                    'title' => 'Pesan Baru dari ' . $senderName,
+                    'message' => '"' . \Illuminate\Support\Str::limit($request->text, 80) . '"',
+                    'unread' => true
+                ]);
+            }
+        }
+
         return response()->json([
             'status' => 'Sukses',
             'message' => 'Pesan terkirim',

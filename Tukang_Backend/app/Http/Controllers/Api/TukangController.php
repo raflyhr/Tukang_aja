@@ -12,8 +12,8 @@ class TukangController extends Controller
      */
     public function index(Request $request)
 {
-    $query = \App\Models\Tukang::with(['sertifikats', 'layanans', 'portofolios', 'ulasans'])
-        ->where('is_aktif', true)
+    $query = \App\Models\Tukang::where('is_aktif', true)
+        ->where('keahlian', '!=', 'Belum memilih')
         ->withCount(['pesanans as completed_jobs_count' => function ($query) {
             $query->where('status', 'selesai');
         }]);
@@ -289,6 +289,19 @@ class TukangController extends Controller
             'satuan' => $request->satuan,
             'deskripsi' => $request->deskripsi
         ]);
+
+        // Update Tukang's keahlian dynamically based on active services
+        $tukang = \App\Models\Tukang::find($id);
+        if ($tukang) {
+            $categories = \App\Models\LayananTukang::where('tukang_id', $id)
+                ->pluck('nama_layanan')
+                ->unique()
+                ->toArray();
+            $tukang->update([
+                'keahlian' => empty($categories) ? 'Belum memilih' : implode(', ', $categories)
+            ]);
+        }
+
         return response()->json(['status' => 'Sukses', 'data' => $layanan]);
     }
 
@@ -296,6 +309,19 @@ class TukangController extends Controller
     {
         $layanan = \App\Models\LayananTukang::where('tukang_id', $id)->where('id', $layanan_id)->first();
         if($layanan) $layanan->delete();
+
+        // Update Tukang's keahlian dynamically based on active services
+        $tukang = \App\Models\Tukang::find($id);
+        if ($tukang) {
+            $categories = \App\Models\LayananTukang::where('tukang_id', $id)
+                ->pluck('nama_layanan')
+                ->unique()
+                ->toArray();
+            $tukang->update([
+                'keahlian' => empty($categories) ? 'Belum memilih' : implode(', ', $categories)
+            ]);
+        }
+
         return response()->json(['status' => 'Sukses']);
     }
 }

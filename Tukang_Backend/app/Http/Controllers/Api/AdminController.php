@@ -61,6 +61,15 @@ class AdminController extends Controller
         if ($request->action === 'approve') {
             $tukang->status_verifikasi = 'Aktif';
             $tukang->is_aktif = true;
+            
+            // Buat notifikasi sistem untuk Tukang
+            \App\Models\Notification::create([
+                'user_id' => $tukang->user_id,
+                'category' => 'sistem',
+                'title' => 'Verifikasi Berhasil',
+                'message' => 'Dokumen KTP dan Sertifikat keahlian Anda telah diverifikasi oleh tim TukangAja.',
+                'unread' => true
+            ]);
         } else {
             $tukang->status_verifikasi = 'Ditolak';
             $tukang->is_aktif = false;

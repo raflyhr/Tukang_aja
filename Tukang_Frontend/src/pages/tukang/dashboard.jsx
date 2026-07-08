@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import api from "../../lib/axios";
+import { supabase } from "../../lib/supabase";
 
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility";
@@ -56,11 +57,19 @@ function TukangDashboard() {
     monthlyIncome: "0",
   });
 
-  // 13. Dynamic Recent Activities State
   const [recentActivities, setRecentActivities] = useState([]);
+  const [tukangLayanans, setTukangLayanans] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem("tukang_layanans");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Order List State
   const [ordersList, setOrdersList] = useState([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
 
   // User Location & Auth State
   const [userLocation, setUserLocation] = useState({ lat: null, lng: null });
@@ -95,22 +104,6 @@ function TukangDashboard() {
       return;
     }
     setTukangId(id);
-
-    // Get Geolocation
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          showToast("Lokasi berhasil didapatkan", "success");
-        },
-        (error) => {
-          showToast("Gagal mendapatkan lokasi, pastikan izin browser diaktifkan", "error");
-        }
-      );
-    }
   }, []);
 
   const fetchDashboardData = async () => {
@@ -130,13 +123,109 @@ function TukangDashboard() {
       if (actRes.data.status === "Sukses") {
         setRecentActivities(actRes.data.data);
       }
+
+      const profilRes = await api.get(`/tukang/${tukangId}`);
+      if (profilRes.data.status === "Sukses") {
+        setIsActiveWorking(!!profilRes.data.data.is_aktif);
+        const layanansData = profilRes.data.data.layanans || [];
+        setTukangLayanans(layanansData);
+        sessionStorage.setItem("tukang_layanans", JSON.stringify(layanansData));
+        
+        // Geolocation fallback
+        setUserLocation({
+          lat: parseFloat(profilRes.data.data.latitude || -7.7693966),
+          lng: parseFloat(profilRes.data.data.longitude || 110.3804236)
+        });
+      }
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
     }
   };
 
+  useEffect(() => {
+    if (tukangId) {
+      // Subscribe to Supabase Postgres Changes
+      const channel = supabase
+        .channel('public:layanan_tukangs')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'layanan_tukangs', filter: `tukang_id=eq.${tukangId}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setTukangLayanans(prev => {
+                const next = [...prev, payload.new];
+                sessionStorage.setItem("tukang_layanans", JSON.stringify(next));
+                return next;
+              });
+            } else if (payload.eventType === 'DELETE') {
+              setTukangLayanans(prev => {
+                const next = prev.filter(l => l.id !== payload.old.id);
+                sessionStorage.setItem("tukang_layanans", JSON.stringify(next));
+                return next;
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              setTukangLayanans(prev => {
+                const next = prev.map(l => l.id === payload.new.id ? payload.new : l);
+                sessionStorage.setItem("tukang_layanans", JSON.stringify(next));
+                return next;
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [tukangId]);
+
+  const getDynamicCategories = () => {
+    const base = [{ id: "semua", label: "Semua" }];
+    const addedNames = [...new Set(tukangLayanans.map(l => l.nama_layanan))];
+    const blueprints = [
+      { nama: "Listrik", id: "listrik", label: "Listrik" },
+      { nama: "AC", id: "ac", label: "AC" },
+      { nama: "Pipa & Air", id: "pipa", label: "Pipa & Air" },
+      { nama: "Cat Rumah", id: "cat", label: "Cat Rumah" },
+      { nama: "Atap Rumah", id: "atap", label: "Atap Rumah" },
+      { nama: "Pertukangan", id: "pertukangan", label: "Pertukangan" },
+      { nama: "Pindahan Rumah", id: "pindahan", label: "Pindahan" },
+      { nama: "Kebersihan Rumah", id: "kebersihan", label: "Kebersihan" }
+    ];
+    const matched = blueprints.filter(bp => addedNames.includes(bp.nama));
+    return [...base, ...matched];
+  };
+
+  const handleToggleActiveWorking = async (checked) => {
+    setIsActiveWorking(checked);
+    try {
+      await api.put(`/tukang/${tukangId}/status`, {
+        is_aktif: checked
+      });
+      showToast(
+        `Status diubah menjadi ${checked ? "Online" : "Offline"}`,
+        checked ? "success" : "default"
+      );
+      // Sync local storage
+      const userDataStr = localStorage.getItem("tukang_user");
+      if (userDataStr) {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed && parsed.tukang) {
+          parsed.tukang.is_aktif = checked;
+          localStorage.setItem("tukang_user", JSON.stringify(parsed));
+        }
+      }
+    } catch (error) {
+      console.error("Error updating working status:", error);
+      showToast("Gagal mengubah status kerja", "error");
+      setIsActiveWorking(!checked);
+    }
+  };
+
   const fetchAvailableOrders = async () => {
     if (!userLocation.lat || !userLocation.lng) return;
+    setIsOrdersLoading(true);
     try {
       const res = await api.get(`/pesanan/available`, {
         params: {
@@ -144,6 +233,7 @@ function TukangDashboard() {
           lng: userLocation.lng,
           radius: workingRadius,
           kategori: selectedCategory,
+          tukang_id: tukangId,
         }
       });
       if (res.data.status === "Sukses") {
@@ -164,8 +254,10 @@ function TukangDashboard() {
         }));
         setOrdersList(formatted);
       }
-    } catch (error) {
-      console.error("Error fetching available orders:", error);
+    } catch (e) {
+      console.error("Gagal memuat pesanan tersedia:", e);
+    } finally {
+      setIsOrdersLoading(false);
     }
   };
 
@@ -176,8 +268,24 @@ function TukangDashboard() {
   useEffect(() => {
     if (isActiveWorking) {
       fetchAvailableOrders();
+      
+      // Subscribe to real-time changes on the pesanans table
+      const channel = supabase
+        .channel('public:pesanans')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pesanans' },
+          (payload) => {
+            fetchAvailableOrders();
+          }
+        )
+        .subscribe();
+
       const polling = setInterval(fetchAvailableOrders, 30000);
-      return () => clearInterval(polling);
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(polling);
+      };
     }
   }, [userLocation, workingRadius, selectedCategory, isActiveWorking]);
 
@@ -416,13 +524,7 @@ function TukangDashboard() {
                 <input
                   type="checkbox"
                   checked={isActiveWorking}
-                  onChange={(e) => {
-                    setIsActiveWorking(e.target.checked);
-                    showToast(
-                      `Status diubah menjadi ${e.target.checked ? "Online" : "Offline"}`,
-                      e.target.checked ? "success" : "default"
-                    );
-                  }}
+                  onChange={(e) => handleToggleActiveWorking(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-12 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
@@ -530,17 +632,7 @@ function TukangDashboard() {
                 <div className="space-y-2">
                   <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Layanan Pekerjaan</span>
                   <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: "semua", label: "Semua" },
-                      { id: "listrik", label: "Listrik" },
-                      { id: "ac", label: "AC" },
-                      { id: "pipa", label: "Pipa & Air" },
-                      { id: "cat", label: "Cat Rumah" },
-                      { id: "atap", label: "Atap Rumah" },
-                      { id: "pertukangan", label: "Pertukangan" },
-                      { id: "pindahan", label: "Pindahan" },
-                      { id: "kebersihan", label: "Kebersihan" }
-                    ].map((cat) => (
+                    {getDynamicCategories().map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
@@ -595,7 +687,21 @@ function TukangDashboard() {
               </div>
 
               {/* Feed items container */}
-              <div className="space-y-4">
+              <div className="space-y-4 relative min-h-[200px]">
+                {/* Local Loader overlay inside the feed container */}
+                {(isOrdersLoading || !userLocation.lat || !userLocation.lng) && isActiveWorking && (
+                  <div className="absolute inset-0 bg-[#0d0d0d]/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-3 rounded-3xl transition-all duration-300">
+                    <div className="relative flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+                      <span className="material-symbols-outlined text-secondary text-xl absolute animate-pulse">
+                        engineering
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <p className="text-[11px] font-bold text-on-surface">Mencari Pesanan...</p>
+                    </div>
+                  </div>
+                )}
                 {!isActiveWorking ? (
                   // 1. Offline warnings state
                   <div className="bg-surface-container/60 border border-dashed border-outline-variant/30 p-8 rounded-3xl text-center space-y-3">

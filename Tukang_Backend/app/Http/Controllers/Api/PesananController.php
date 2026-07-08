@@ -114,6 +114,26 @@ class PesananController extends Controller
         $pesanan->status = 'menunggu_pengerjaan';
         $pesanan->save();
 
+        // Buat notifikasi transaksi untuk pelanggan (user)
+        \App\Models\Notification::create([
+            'user_id' => $pesanan->user_id,
+            'category' => 'transaksi',
+            'title' => 'Pembayaran Berhasil',
+            'message' => 'Pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') telah dikonfirmasi sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '.',
+            'unread' => true
+        ]);
+
+        // Buat notifikasi transaksi untuk tukang
+        if ($pesanan->tukang) {
+            \App\Models\Notification::create([
+                'user_id' => $pesanan->tukang->user_id,
+                'category' => 'transaksi',
+                'title' => 'Pembayaran Berhasil',
+                'message' => 'Pelanggan telah melakukan pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '. Silakan segera mulai bekerja.',
+                'unread' => true
+            ]);
+        }
+
         Escrow::create([
             'pesanan_id' => $pesanan->id,
             'jumlah_bayar' => $pesanan->harga_penawaran,
@@ -236,6 +256,19 @@ class PesananController extends Controller
             'foto_lampiran' => $path,
         ]);
 
+        if ($pesanan->tukang_id) {
+            $tukang = \App\Models\Tukang::find($pesanan->tukang_id);
+            if ($tukang) {
+                \App\Models\Notification::create([
+                    'user_id' => $tukang->user_id,
+                    'category' => 'transaksi',
+                    'title' => 'Pesanan Baru Tersedia',
+                    'message' => $pesanan->kategori_layanan . ' - ' . $pesanan->judul . ' membutuhkan penawaran jasa Anda segera.',
+                    'unread' => true
+                ]);
+            }
+        }
+
         return response()->json([
             'message' => 'Pesanan berhasil dibuat.',
             'data' => $pesanan
@@ -289,8 +322,15 @@ class PesananController extends Controller
         $longitude = $request->query('lng');
         $radius = $request->query('radius', 5); // default 5 km
         $kategori = $request->query('kategori', 'semua');
+        $tukangId = $request->query('tukang_id');
 
-        $query = Pesanan::whereNull('tukang_id')->where('status', 'menunggu');
+        // Load marketplace orders OR direct orders assigned to this Tukang
+        $query = Pesanan::where(function($q) use ($tukangId) {
+            $q->whereNull('tukang_id')->where('status', 'menunggu');
+            if ($tukangId) {
+                $q->orWhere('tukang_id', $tukangId)->whereIn('status', ['menunggu', 'menunggu_penawaran']);
+            }
+        });
 
         if ($kategori !== 'semua') {
             $query->where('kategori_layanan', $kategori);
@@ -305,7 +345,7 @@ class PesananController extends Controller
                          * sin(radians(latitude))))";
 
             $query->selectRaw("*, {$haversine} AS jarak")
-                  ->having('jarak', '<=', $radius)
+                  ->whereRaw("{$haversine} <= ?", [$radius])
                   ->orderBy('jarak', 'asc');
         } else {
             $query->latest();

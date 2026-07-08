@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import axios from "axios";
+import { supabase } from "../../lib/supabase";
 
 
 function Dashboard() {
@@ -18,6 +19,8 @@ function Dashboard() {
     try { return !sessionStorage.getItem('ta_tukangs'); }
     catch { return true; }
   });
+  const [isTukangLoading, setIsTukangLoading] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -93,6 +96,93 @@ function Dashboard() {
     getTukangs(userObj);
   }, []);
 
+  useEffect(() => {
+    if (selectedTukang && selectedTukang.id) {
+      const channel = supabase
+        .channel(`public:layanan_tukangs:${selectedTukang.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'layanan_tukangs', filter: `tukang_id=eq.${selectedTukang.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setSelectedTukang(prev => {
+                if (prev && prev.id === selectedTukang.id) {
+                  return { ...prev, layanans: [...(prev.layanans || []), payload.new] };
+                }
+                return prev;
+              });
+            } else if (payload.eventType === 'DELETE') {
+              setSelectedTukang(prev => {
+                if (prev && prev.id === selectedTukang.id) {
+                  return { ...prev, layanans: (prev.layanans || []).filter(l => l.id !== payload.old.id) };
+                }
+                return prev;
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              setSelectedTukang(prev => {
+                if (prev && prev.id === selectedTukang.id) {
+                  return { ...prev, layanans: (prev.layanans || []).map(l => l.id === payload.new.id ? payload.new : l) };
+                }
+                return prev;
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [selectedTukang?.id]);
+
+  useEffect(() => {
+    // Subscribe to real-time changes on the tukangs table
+    const channel = supabase
+      .channel('public:tukangs')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tukangs' },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            setTukangs(prev => {
+              const updated = prev.map(t => {
+                if (t.id === payload.new.id) {
+                  return {
+                    ...t,
+                    ...payload.new
+                  };
+                }
+                return t;
+              });
+              const activeOnly = updated.filter(t => t.is_aktif && t.keahlian !== "Belum memilih");
+              sessionStorage.setItem('ta_tukangs', JSON.stringify(activeOnly));
+              return activeOnly;
+            });
+          } else if (payload.eventType === 'INSERT') {
+            if (payload.new.is_aktif && payload.new.keahlian !== "Belum memilih") {
+              setTukangs(prev => {
+                const next = [...prev.filter(t => t.id !== payload.new.id), payload.new];
+                sessionStorage.setItem('ta_tukangs', JSON.stringify(next));
+                return next;
+              });
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setTukangs(prev => {
+              const next = prev.filter(t => t.id !== payload.old.id);
+              sessionStorage.setItem('ta_tukangs', JSON.stringify(next));
+              return next;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const getTukangs = async (userObj) => {
     try {
         let url = `${import.meta.env.VITE_API_BASE_URL}/api/tukang`;
@@ -100,7 +190,7 @@ function Dashboard() {
             url += `?latitude=${userObj.latitude}&longitude=${userObj.longitude}`;
         }
         const res = await axios.get(url);
-        const freshTukangs = (res.data.data || []).filter(t => t.is_aktif);
+        const freshTukangs = (res.data.data || []).filter(t => t.is_aktif && t.keahlian !== "Belum memilih");
         setTukangs(freshTukangs);
         sessionStorage.setItem('ta_tukangs', JSON.stringify(freshTukangs));
     } catch (err) {
@@ -203,22 +293,38 @@ function Dashboard() {
     if (!tukangs || tukangs.length === 0) return [];
     return tukangs.map(t => {
       const keahlianLower = (t.keahlian || "").toLowerCase();
-      let specialty = "listrik"; // default
-      if (keahlianLower.includes("pipa") || keahlianLower.includes("air") || keahlianLower.includes("plumbing")) {
-        specialty = "pipa";
-      } else if (keahlianLower.includes("ac") || keahlianLower.includes("pendingin")) {
-        specialty = "ac";
-      } else if (keahlianLower.includes("cat") || keahlianLower.includes("tembok")) {
-        specialty = "cat";
-      } else if (keahlianLower.includes("atap") || keahlianLower.includes("genteng")) {
-        specialty = "atap";
-      } else if (keahlianLower.includes("kayu") || keahlianLower.includes("pertukangan") || keahlianLower.includes("pintu")) {
-        specialty = "pertukangan";
-      } else if (keahlianLower.includes("pindahan") || keahlianLower.includes("angkut")) {
-        specialty = "pindahan";
-      } else if (keahlianLower.includes("bersih") || keahlianLower.includes("sapu") || keahlianLower.includes("kasur") || keahlianLower.includes("sofa")) {
-        specialty = "kebersihan";
+      let specialties = [];
+      if (keahlianLower.includes("listrik") || keahlianLower.includes("bolt")) {
+        specialties.push("listrik");
       }
+      if (keahlianLower.includes("pipa") || keahlianLower.includes("air") || keahlianLower.includes("plumbing")) {
+        specialties.push("pipa");
+      }
+      if (keahlianLower.includes("ac") || keahlianLower.includes("pendingin")) {
+        specialties.push("ac");
+      }
+      if (keahlianLower.includes("cat") || keahlianLower.includes("tembok")) {
+        specialties.push("cat");
+      }
+      if (keahlianLower.includes("atap") || keahlianLower.includes("genteng")) {
+        specialties.push("atap");
+      }
+      if (keahlianLower.includes("kayu") || keahlianLower.includes("pertukangan") || keahlianLower.includes("pintu")) {
+        specialties.push("pertukangan");
+      }
+      if (keahlianLower.includes("pindahan") || keahlianLower.includes("angkut")) {
+        specialties.push("pindahan");
+      }
+      if (keahlianLower.includes("bersih") || keahlianLower.includes("sapu") || keahlianLower.includes("kasur") || keahlianLower.includes("sofa")) {
+        specialties.push("kebersihan");
+      }
+
+      // Default fallback
+      if (specialties.length === 0) {
+        specialties.push("listrik");
+      }
+
+      const specialty = specialties[0];
 
       let image = "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop";
       if (t.foto_profil) {
@@ -232,6 +338,7 @@ function Dashboard() {
         id: t.id,
         name: t.nama || "Tukang",
         specialty: specialty,
+        specialties: specialties,
         specialtyText: t.keahlian || "Teknisi Jasa",
         distance: distance,
         distanceValue: distanceValue,
@@ -255,7 +362,7 @@ function Dashboard() {
 
   // Helper: Get matching Tukangs based on category ID
   const getTukangsForCategory = (catId) => {
-    return recommendedTukang.filter(t => t.specialty === catId);
+    return recommendedTukang.filter(t => t.specialties && t.specialties.includes(catId));
   };
 
   // Trigger search from input
@@ -282,8 +389,64 @@ function Dashboard() {
   };
 
   // Handle Tukang Select
-  const handleTukangSelect = (tukang) => {
-    setSelectedTukang(tukang);
+  const handleTukangSelect = async (tukang) => {
+    setIsTukangLoading(true);
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/tukang/${tukang.id}`);
+      if (res.data.status === "Sukses") {
+        const t = res.data.data;
+        const keahlianLower = (t.keahlian || "").toLowerCase();
+        let specialty = "listrik"; // default
+        if (keahlianLower.includes("pipa") || keahlianLower.includes("air") || keahlianLower.includes("plumbing")) {
+          specialty = "pipa";
+        } else if (keahlianLower.includes("ac") || keahlianLower.includes("pendingin")) {
+          specialty = "ac";
+        } else if (keahlianLower.includes("cat") || keahlianLower.includes("tembok")) {
+          specialty = "cat";
+        } else if (keahlianLower.includes("atap") || keahlianLower.includes("genteng")) {
+          specialty = "atap";
+        } else if (keahlianLower.includes("kayu") || keahlianLower.includes("pertukangan") || keahlianLower.includes("pintu")) {
+          specialty = "pertukangan";
+        } else if (keahlianLower.includes("pindahan") || keahlianLower.includes("angkut")) {
+          specialty = "pindahan";
+        } else if (keahlianLower.includes("bersih") || keahlianLower.includes("sapu") || keahlianLower.includes("kasur") || keahlianLower.includes("sofa")) {
+          specialty = "kebersihan";
+        }
+
+        let image = "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop";
+        if (t.foto_profil) {
+          image = t.foto_profil.startsWith("http") ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`;
+        }
+
+        setSelectedTukang({
+          id: t.id,
+          name: t.nama || "Tukang",
+          specialty: specialty,
+          specialtyText: t.keahlian || "Teknisi Jasa",
+          distance: tukang.distance,
+          distanceValue: tukang.distanceValue,
+          rating: t.rating !== undefined && t.rating !== null ? parseFloat(t.rating) : 0,
+          completedJobs: t.completed_jobs_count || tukang.completedJobs,
+          image: image,
+          status: t.is_aktif ? "Tersedia" : "Sibuk",
+          bio: t.deskripsi_pengalaman || "Penyedia jasa terverifikasi.",
+          price: 100000 + (t.tahun_pengalaman * 15000),
+          priceFormatted: `Rp ${(100000 + (t.tahun_pengalaman * 15000)).toLocaleString("id-ID")}/jam`,
+          experience: t.tahun_pengalaman || 2,
+          sertifikats: t.sertifikats || [],
+          layanans: t.layanans || [],
+          portofolios: t.portofolios || [],
+          ulasans: t.ulasans || []
+        });
+      } else {
+        setSelectedTukang(tukang);
+      }
+    } catch (err) {
+      console.error("Gagal load detail tukang", err);
+      setSelectedTukang(tukang);
+    } finally {
+      setIsTukangLoading(false);
+    }
     setViewState("tukang");
     window.scrollTo(0, 0);
   };
@@ -349,6 +512,7 @@ function Dashboard() {
   };
 
   const handleStartChat = async (tukangId) => {
+    setIsChatLoading(true);
     try {
       const savedUser = localStorage.getItem("pelanggan_user");
       if (!savedUser) {
@@ -371,6 +535,8 @@ function Dashboard() {
     } catch (error) {
       console.error("Gagal memulai obrolan", error);
       navigate("/pelanggan/chat");
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -403,7 +569,7 @@ function Dashboard() {
 
     // Filter by Specialty
     if (filterSpecialty !== "all") {
-      list = list.filter(t => t.specialty === filterSpecialty);
+      list = list.filter(t => t.specialties && t.specialties.includes(filterSpecialty));
     }
 
     // Filter by Search Query
@@ -554,6 +720,42 @@ function Dashboard() {
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
+      
+      {/* Full screen loading overlay when selecting a Tukang */}
+      {isTukangLoading && (
+        <div className="fixed inset-0 bg-[#0d0d0d]/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-4 transition-all duration-300">
+          <div className="relative flex items-center justify-center">
+            {/* Outer spinning ring */}
+            <div className="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+            {/* Inner logo/icon */}
+            <span className="material-symbols-outlined text-secondary text-2xl absolute animate-pulse">
+              construction
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <h3 className="text-lg font-bold text-on-surface">Memuat Profil Tukang</h3>
+            <p className="text-xs text-on-surface-variant animate-pulse">Mohon tunggu sebentar...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Full screen loading overlay when starting a chat */}
+      {isChatLoading && (
+        <div className="fixed inset-0 bg-[#0d0d0d]/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-4 transition-all duration-300">
+          <div className="relative flex items-center justify-center">
+            {/* Outer spinning ring */}
+            <div className="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+            {/* Inner logo/icon */}
+            <span className="material-symbols-outlined text-secondary text-2xl absolute animate-pulse">
+              chat
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <h3 className="text-lg font-bold text-on-surface">Menghubungkan Obrolan</h3>
+            <p className="text-xs text-on-surface-variant animate-pulse">Membuka ruang chat, mohon tunggu...</p>
+          </div>
+        </div>
+      )}
       
       {/* Toast Notification for Success Booking */}
       {showSuccessToast && (
@@ -803,8 +1005,8 @@ function Dashboard() {
               <section className="space-y-4">
                 <div className="flex justify-between items-center flex-wrap gap-4 pb-2 border-b border-surface-variant/10">
                   <div>
-                    <h3 className="text-lg font-bold text-on-surface">Tukang Rekomendasi</h3>
-                    <p className="text-on-surface-variant text-xs mt-0.5">Daftar mitra penyedia jasa handal pilihan untuk Anda</p>
+                    <h3 className="text-lg font-bold text-on-surface">Tukang Online</h3>
+                    <p className="text-on-surface-variant text-xs mt-0.5">Daftar mitra penyedia jasa yang sedang aktif dan online</p>
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
                     {[

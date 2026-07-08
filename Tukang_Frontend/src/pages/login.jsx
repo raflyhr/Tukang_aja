@@ -12,11 +12,13 @@ function Login() {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState(""); // "success" | "error"
   const [showToast, setShowToast] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
       // Panggil API Login Universal
@@ -43,6 +45,7 @@ function Login() {
         
         // Pindah ke halaman dashboard yang sesuai
         setTimeout(() => {
+          setIsLoading(false);
           if (userData.role === "tukang") {
             navigate("/tukang/dashboard");
           } else if (userData.role === "admin") {
@@ -53,6 +56,7 @@ function Login() {
         }, 1200);
       }
     } catch (error) {
+      setIsLoading(false);
       // Nangkep error dari Laravel (misal 401 atau 403)
       setToastType("error");
       setToastMessage(error.response?.data?.message || "Email atau password salah");
@@ -67,6 +71,24 @@ function Login() {
   return (
     <div className="bg-background font-body-md text-on-surface min-h-screen flex items-center justify-center relative select-none">
       
+      {/* Full screen loading overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-[#0d0d0d]/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-4 transition-all duration-300">
+          <div className="relative flex items-center justify-center">
+            {/* Outer spinning ring */}
+            <div className="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin"></div>
+            {/* Inner logo/icon */}
+            <span className="material-symbols-outlined text-secondary text-2xl absolute animate-pulse">
+              construction
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <h3 className="text-lg font-bold text-on-surface">Memverifikasi Akun</h3>
+            <p className="text-xs text-on-surface-variant animate-pulse">Mohon tunggu sebentar...</p>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification Bar */}
       {showToast && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
@@ -200,13 +222,14 @@ function Login() {
                       mail
                     </span>
                     <input
-                      className="w-full pl-10 pr-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all text-sm text-on-surface placeholder:text-on-surface-variant/40"
+                      className="w-full pl-10 pr-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all text-sm text-on-surface placeholder:text-on-surface-variant/40 disabled:opacity-50"
                       id="email"
                       placeholder="nama@email.com"
                       required
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -224,18 +247,20 @@ function Login() {
                       lock
                     </span>
                     <input
-                      className="w-full pl-10 pr-10 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all text-sm text-on-surface placeholder:text-on-surface-variant/40"
+                      className="w-full pl-10 pr-10 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-secondary/50 focus:border-secondary outline-none transition-all text-sm text-on-surface placeholder:text-on-surface-variant/40 disabled:opacity-50"
                       id="password"
                       placeholder="•••••••"
                       required
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
                     />
                     <button
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer bg-transparent border-none"
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
                     >
                       <span className="material-symbols-outlined text-xl">
                         {showPassword ? "visibility_off" : "visibility"}
@@ -267,13 +292,26 @@ function Login() {
 
                 {/* Submit Button */}
                 <button
-                  className="w-full py-3.5 bg-secondary text-on-secondary font-bold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-secondary/15 cursor-pointer border-none"
+                  className="w-full py-3.5 bg-secondary text-on-secondary font-bold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-secondary/15 cursor-pointer border-none disabled:opacity-70 disabled:cursor-not-allowed"
                   type="submit"
+                  disabled={isLoading}
                 >
-                  <span className="font-bold text-sm">Masuk Sekarang</span>
-                  <span className="material-symbols-outlined text-lg">
-                    arrow_forward
-                  </span>
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-on-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="font-bold text-sm">Memproses...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-sm">Masuk Sekarang</span>
+                      <span className="material-symbols-outlined text-lg">
+                        arrow_forward
+                      </span>
+                    </>
+                  )}
                 </button>
 
                 {/* Divider */}

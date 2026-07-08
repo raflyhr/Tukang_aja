@@ -31,6 +31,7 @@ import DataPelanggan from "./pages/admin/pelanggan";
 import AdminPesanan from "./pages/admin/pesanan";
 import AdminPembayaran from "./pages/admin/pembayaran";
 import AdminLaporan from "./pages/admin/laporan";
+import { ProtectedRoute, GeneralProtectedRoute } from "./components/ProtectedRoute";
 
 import "./index.css";
 
@@ -48,38 +49,38 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         {/* Pelanggan (Customer) Routes */}
-        <Route path="/pelanggan/dashboard" element={<Dashboard />} />
-        <Route path="/pelanggan/pesanan" element={<Pesanan />} />
-        <Route path="/pelanggan/chat" element={<Chat />} />
-        <Route path="/pelanggan/pembayaran" element={<Pembayaran />} />
-        <Route path="/pelanggan/profil" element={<Profil />} />
-        <Route path="/pelanggan/detail-pesanan" element={<DetailPesanan />} />
-        <Route path="/pelanggan/profil-tukang" element={<ProfilTukang />} />
-        <Route path="/posting-pekerjaan" element={<PostingPekerjaan />} />
-        <Route path="/pelanggan/checkout" element={<CheckoutPembayaran />} />
-        <Route path="/pelanggan/riwayat-login" element={<RiwayatLogin />} />
+        <Route path="/pelanggan/dashboard" element={<ProtectedRoute allowedRole="pelanggan"><Dashboard /></ProtectedRoute>} />
+        <Route path="/pelanggan/pesanan" element={<ProtectedRoute allowedRole="pelanggan"><Pesanan /></ProtectedRoute>} />
+        <Route path="/pelanggan/chat" element={<ProtectedRoute allowedRole="pelanggan"><Chat /></ProtectedRoute>} />
+        <Route path="/pelanggan/pembayaran" element={<ProtectedRoute allowedRole="pelanggan"><Pembayaran /></ProtectedRoute>} />
+        <Route path="/pelanggan/profil" element={<ProtectedRoute allowedRole="pelanggan"><Profil /></ProtectedRoute>} />
+        <Route path="/pelanggan/detail-pesanan" element={<ProtectedRoute allowedRole="pelanggan"><DetailPesanan /></ProtectedRoute>} />
+        <Route path="/pelanggan/profil-tukang" element={<ProtectedRoute allowedRole="pelanggan"><ProfilTukang /></ProtectedRoute>} />
+        <Route path="/posting-pekerjaan" element={<ProtectedRoute allowedRole="pelanggan"><PostingPekerjaan /></ProtectedRoute>} />
+        <Route path="/pelanggan/checkout" element={<ProtectedRoute allowedRole="pelanggan"><CheckoutPembayaran /></ProtectedRoute>} />
+        <Route path="/pelanggan/riwayat-login" element={<ProtectedRoute allowedRole="pelanggan"><RiwayatLogin /></ProtectedRoute>} />
 
         {/* Tukang (Technician) Routes */}
-        <Route path="/tukang/dashboard" element={<TukangDashboard />} />
-        <Route path="/tukang/pesanan" element={<TukangPesanan />} />
-        <Route path="/tukang/chat" element={<TukangChat />} />
-        <Route path="/tukang/profil" element={<TukangProfil />} />
-        <Route path="/tukang/layanan" element={<TukangLayanan />} />
+        <Route path="/tukang/dashboard" element={<ProtectedRoute allowedRole="tukang"><TukangDashboard /></ProtectedRoute>} />
+        <Route path="/tukang/pesanan" element={<ProtectedRoute allowedRole="tukang"><TukangPesanan /></ProtectedRoute>} />
+        <Route path="/tukang/chat" element={<ProtectedRoute allowedRole="tukang"><TukangChat /></ProtectedRoute>} />
+        <Route path="/tukang/profil" element={<ProtectedRoute allowedRole="tukang"><TukangProfil /></ProtectedRoute>} />
+        <Route path="/tukang/layanan" element={<ProtectedRoute allowedRole="tukang"><TukangLayanan /></ProtectedRoute>} />
 
         {/* Admin Routes */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/verifikasi/:id?" element={<VerifikasiTukang />} />
-        <Route path="/admin/data" element={<DataTukang />} />
-        <Route path="/admin/pelanggan" element={<DataPelanggan />} />
-        <Route path="/admin/pesanan" element={<AdminPesanan />} />
-        <Route path="/admin/pembayaran" element={<AdminPembayaran />} />
-        <Route path="/admin/laporan" element={<AdminLaporan />} />
-        <Route path="/admin/rating" element={<MonitoringRating />} />
-        <Route path="/admin/profil" element={<ProfilAdmin />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/verifikasi/:id?" element={<ProtectedRoute allowedRole="admin"><VerifikasiTukang /></ProtectedRoute>} />
+        <Route path="/admin/data" element={<ProtectedRoute allowedRole="admin"><DataTukang /></ProtectedRoute>} />
+        <Route path="/admin/pelanggan" element={<ProtectedRoute allowedRole="admin"><DataPelanggan /></ProtectedRoute>} />
+        <Route path="/admin/pesanan" element={<ProtectedRoute allowedRole="admin"><AdminPesanan /></ProtectedRoute>} />
+        <Route path="/admin/pembayaran" element={<ProtectedRoute allowedRole="admin"><AdminPembayaran /></ProtectedRoute>} />
+        <Route path="/admin/laporan" element={<ProtectedRoute allowedRole="admin"><AdminLaporan /></ProtectedRoute>} />
+        <Route path="/admin/rating" element={<ProtectedRoute allowedRole="admin"><MonitoringRating /></ProtectedRoute>} />
+        <Route path="/admin/profil" element={<ProtectedRoute allowedRole="admin"><ProfilAdmin /></ProtectedRoute>} />
 
         {/* General Pages */}
-        <Route path="/notifikasi" element={<Notifications />} />
-        <Route path="/bantuan" element={<HelpCenter />} />
+        <Route path="/notifikasi" element={<GeneralProtectedRoute><Notifications /></GeneralProtectedRoute>} />
+        <Route path="/bantuan" element={<GeneralProtectedRoute><HelpCenter /></GeneralProtectedRoute>} />
         
         {/* Fallback redirect to /admin/dashboard */}
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />

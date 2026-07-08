@@ -68,10 +68,10 @@ class AuthController extends Controller
             'no_hp' => 'required|string|max:20',
             'email' => 'required|string|email|max:255|unique:roles',
             'password' => 'required|string|min:8|confirmed',
-            'keahlian' => 'required|string',
+            'keahlian' => 'nullable|string',
             'alamat' => 'required|string',
             // Field tambahan 
-            'keahlian_tambahan' => 'required|string',
+            'keahlian_tambahan' => 'nullable|string',
             'tahun_pengalaman' => 'required|integer|min:0',
             'deskripsi_pengalaman' => 'required|string',
             // Lokasi (otomatis dari peta, bukan diketik user)
@@ -86,15 +86,20 @@ class AuthController extends Controller
         // 1. Handle upload file (simpan ke folder storage/app/public/...)
         $fotoProfilPath = null;
         if ($request->hasFile('foto_profil')) {
-            $manager = new ImageManager(new Driver());
-            $filename = Str::random(40) . '.webp';
-            $fotoProfilPath = 'tukang/profil/' . $filename;
-            
-            $image = $manager->read($request->file('foto_profil'));
-            $image->scaleDown(width: 300); // Resize kecil agar makin enteng
-            
-            // Kompres ekstrem ke 5% sesuai permintaan
-            Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+            if (extension_loaded('gd')) {
+                $manager = new ImageManager(new Driver());
+                $filename = Str::random(40) . '.webp';
+                $fotoProfilPath = 'tukang/profil/' . $filename;
+                
+                $image = $manager->read($request->file('foto_profil'));
+                $image->scaleDown(width: 300); // Resize kecil agar makin enteng
+                
+                // Kompres ekstrem ke 5% sesuai permintaan
+                Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+            } else {
+                // Fallback jika GD extension tidak aktif
+                $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
+            }
         }
 
         $cvPath = null;
@@ -123,7 +128,7 @@ class AuthController extends Controller
             'alamat' => $request->alamat,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'keahlian' => $request->keahlian,
+            'keahlian' => $request->keahlian ?? 'Belum memilih',
             'keahlian_tambahan' => $request->keahlian_tambahan,
             'tahun_pengalaman' => $request->tahun_pengalaman ?? 0,
             'deskripsi_pengalaman' => $request->deskripsi_pengalaman,
@@ -206,15 +211,20 @@ class AuthController extends Controller
 
     $fotoProfilPath = null;
     if ($request->hasFile('foto_profil')) {
-        $manager = new ImageManager(new Driver());
-        $filename = Str::random(40) . '.webp';
-        $fotoProfilPath = 'pelanggan/profil/' . $filename;
-        
-        $image = $manager->read($request->file('foto_profil'));
-        $image->scaleDown(width: 300); // Resize kecil
-        
-        // Kompres ekstrem ke 5% sesuai permintaan
-        Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+        if (extension_loaded('gd')) {
+            $manager = new ImageManager(new Driver());
+            $filename = Str::random(40) . '.webp';
+            $fotoProfilPath = 'pelanggan/profil/' . $filename;
+            
+            $image = $manager->read($request->file('foto_profil'));
+            $image->scaleDown(width: 300); // Resize kecil
+            
+            // Kompres ekstrem ke 5% sesuai permintaan
+            Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+        } else {
+            // Fallback jika GD extension tidak aktif
+            $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+        }
     }
 
     $user = User::create([

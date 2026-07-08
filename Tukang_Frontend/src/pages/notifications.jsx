@@ -1,65 +1,100 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { supabase } from "../lib/supabase";
 
 function Notifications() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("semua");
   const [searchQuery, setSearchQuery] = useState("");
+  const [notifications, setNotifications] = useState([]);
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      category: "transaksi",
-      title: "Pembayaran Berhasil",
-      message: "Pembayaran untuk pesanan #4412 (Perbaikan Listrik) telah dikonfirmasi sebesar Rp 150.000.",
-      time: "10 menit yang lalu",
-      unread: true
-    },
-    {
-      id: 2,
-      category: "pesan",
-      title: "Pesan Baru dari Siska Pratama",
-      message: '"Oke, saya setuju dengan harga tersebut jika termasuk penggantian kabel..."',
-      time: "25 menit yang lalu",
-      unread: true
-    },
-    {
-      id: 3,
-      category: "sistem",
-      title: "Verifikasi Berhasil",
-      message: "Dokumen KTP dan Sertifikat keahlian Anda telah diverifikasi oleh tim TukangAja.",
-      time: "2 jam yang lalu",
-      unread: false
-    },
-    {
-      id: 4,
-      category: "transaksi",
-      title: "Pesanan Baru Tersedia",
-      message: "Perbaikan Pipa Bocor di BSD City membutuhkan penawaran jasa Anda segera.",
-      time: "1 hari yang lalu",
-      unread: false
-    },
-    {
-      id: 5,
-      category: "sistem",
-      title: "Tips Keamanan Akun",
-      message: "Jangan pernah memberikan kode verifikasi atau OTP kepada siapa pun demi keamanan akun Anda.",
-      time: "3 hari yang lalu",
-      unread: false
+  const pelangganId = localStorage.getItem("pelanggan_id");
+  const tukangId = localStorage.getItem("tukang_id");
+  const adminId = localStorage.getItem("admin_id");
+  const userId = pelangganId || tukangId || adminId;
+
+  const fetchNotifications = async (uid) => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${uid}/notifications`);
+      setNotifications(res.data.data || []);
+    } catch (error) {
+      console.error("Gagal mengambil notifikasi", error);
     }
-  ]);
-
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
 
-  const toggleRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: !n.unread } : n));
+  useEffect(() => {
+    if (userId) {
+      fetchNotifications(userId);
+
+      // Subscribe ke Supabase Realtime untuk table notifications
+      const channel = supabase
+        .channel('public:notifications')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setNotifications(prev => [payload.new, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
+            } else if (payload.eventType === 'DELETE') {
+              setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [userId]);
+
+  const markAllRead = async () => {
+    if (!userId) return;
+    try {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/notifications/read-all`);
+      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    } catch (error) {
+      console.error("Gagal menandai semua dibaca", error);
+    }
   };
 
-  const deleteNotification = (id, e) => {
+  const toggleRead = async (id) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/${id}/toggle-read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: !n.unread } : n));
+    } catch (error) {
+      console.error("Gagal mengubah status baca", error);
+    }
+  };
+
+  const deleteNotification = async (id, e) => {
     e.stopPropagation();
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (error) {
+      console.error("Gagal menghapus notifikasi", error);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Baru saja";
+    if (diffMins < 60) return `${diffMins} menit yang lalu`;
+    if (diffHours < 24) return `${diffHours} jam yang lalu`;
+    if (diffDays === 1) return "Kemarin";
+    if (diffDays < 30) return `${diffDays} hari yang lalu`;
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
   };
 
   const getCategoryIcon = (category) => {
@@ -235,7 +270,7 @@ function Notifications() {
                     <div className="flex-grow pr-6">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <h3 className="font-bold text-xs text-on-surface">{notif.title}</h3>
-                        <span className="text-[9px] text-on-surface-variant/60 font-semibold">{notif.time}</span>
+                        <span className="text-[9px] text-on-surface-variant/60 font-semibold">{formatTime(notif.created_at)}</span>
                       </div>
                       <p className="text-xs text-on-surface-variant/90 mt-1 leading-relaxed">{notif.message}</p>
                     </div>
