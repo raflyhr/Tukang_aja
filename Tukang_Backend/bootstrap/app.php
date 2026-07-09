@@ -15,20 +15,23 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\Throwable $e) {
-            echo "<h1>ORIGINAL ERROR:</h1><pre>" . (string) $e . "</pre>";
-            die();
-        });
+        //
     })->create();
 
 $storagePath = '/tmp/storage';
 if (defined('IS_VERCEL')) {
-    if (!is_dir($storagePath)) {
-        mkdir($storagePath, 0777, true);
-        mkdir($storagePath . '/framework/cache', 0777, true);
-        mkdir($storagePath . '/framework/sessions', 0777, true);
-        mkdir($storagePath . '/framework/views', 0777, true);
-        mkdir($storagePath . '/logs', 0777, true);
+    $dirs = [
+        $storagePath,
+        $storagePath . '/framework/cache',
+        $storagePath . '/framework/cache/data',
+        $storagePath . '/framework/sessions',
+        $storagePath . '/framework/views',
+        $storagePath . '/logs'
+    ];
+    foreach ($dirs as $dir) {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
     }
     $app->useStoragePath($storagePath);
 }

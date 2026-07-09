@@ -10,19 +10,4 @@ $_ENV['APP_ROUTES_CACHE'] = '/tmp/storage/framework/cache/routes.php';
 $_ENV['APP_EVENTS_CACHE'] = '/tmp/storage/framework/cache/events.php';
 $_ENV['APP_PROVIDERS_CACHE'] = '/tmp/storage/framework/cache/providers.php';
 
-try {
-    require __DIR__ . '/../public/index.php';
-} catch (\Throwable $e) {
-    echo "<h1>Fatal Error Caught in api/index.php</h1>";
-    echo "<pre>";
-    $current = $e;
-    while ($current) {
-        echo "Exception: " . get_class($current) . "\n";
-        echo "Message: " . $current->getMessage() . "\n";
-        echo "File: " . $current->getFile() . ":" . $current->getLine() . "\n";
-        echo "Trace:\n" . $current->getTraceAsString() . "\n\n";
-        echo "----------------------------------------\n\n";
-        $current = $current->getPrevious();
-    }
-    echo "</pre>";
-}
+require __DIR__ . '/../public/index.php';
