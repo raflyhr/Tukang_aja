@@ -15,7 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Throwable $e) {
+            echo "<h1>ORIGINAL ERROR:</h1><pre>" . (string) $e . "</pre>";
+            die();
+        });
     })->create();
 
 $storagePath = '/tmp/storage';
