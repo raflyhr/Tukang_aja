@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })->create();
 
 $storagePath = '/tmp/storage';
-if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL'])) {
+if (defined('IS_VERCEL')) {
     if (!is_dir($storagePath)) {
         mkdir($storagePath, 0777, true);
         mkdir($storagePath . '/framework/cache', 0777, true);
