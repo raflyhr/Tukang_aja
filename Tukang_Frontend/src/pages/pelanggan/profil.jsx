@@ -57,7 +57,7 @@ function Profil() {
         setProfileData(mappedData);
         setInitialData(mappedData);
         if (userObj.foto_profil) {
-          setProfilePic(userObj.foto_profil.startsWith("http") ? userObj.foto_profil : `http://127.0.0.1:8000/storage/${userObj.foto_profil}`);
+          setProfilePic(userObj.foto_profil.startsWith("http") ? userObj.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${userObj.foto_profil}`);
         } else {
           setProfilePic(`https://ui-avatars.com/api/?name=${userObj.name || 'Pelanggan'}&background=random`);
         }

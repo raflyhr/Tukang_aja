@@ -68,7 +68,7 @@ function TukangChat() {
           avatar: c.user?.foto_profil 
             ? (c.user.foto_profil.startsWith("http") 
                 ? c.user.foto_profil 
-                : `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${c.user.foto_profil}`) 
+                : `${import.meta.env.VITE_API_BASE_URL}/storage/${c.user.foto_profil}`) 
             : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.user?.name || 'Pelanggan')}&background=random`,
           online: true,
           time: c.messages && c.messages.length > 0 ? new Date(c.messages[0].created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",

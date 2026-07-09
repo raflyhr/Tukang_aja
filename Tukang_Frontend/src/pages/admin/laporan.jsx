@@ -18,7 +18,7 @@ function AdminLaporan() {
 
   const fetchDisputes = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/admin/disputes");
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/disputes`);
       if(res.data.status === 'Sukses') {
         const mapped = res.data.data.map(d => ({
           id: d.id,
@@ -42,7 +42,7 @@ function AdminLaporan() {
   const handleResolve = async (id, keputusan) => {
     if(!confirm(`Yakin ingin menyelesaikan dengan keputusan: ${keputusan}?`)) return;
     try {
-      await axios.put(`http://127.0.0.1:8000/api/admin/disputes/${id}/resolve`, {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/disputes/${id}/resolve`, {
         keputusan: keputusan,
         catatan_admin: "Diselesaikan via Admin Panel"
       });

@@ -217,7 +217,7 @@ function RegisterPelanggan() {
     if (profilePhoto) formData.append("foto_profil", profilePhoto);
 
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/auth/user/register",
+      `${import.meta.env.VITE_API_BASE_URL}/api/auth/user/register`,
       formData,
       {
         headers: {

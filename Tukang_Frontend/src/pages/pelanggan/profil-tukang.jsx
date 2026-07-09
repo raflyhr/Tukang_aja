@@ -305,7 +305,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
                 <img
                   className="w-full h-full object-cover"
                   alt="User Profile"
-                  src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `http://127.0.0.1:8000/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
+                  src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
                 />
               </div>
               <div className="min-w-0">
@@ -347,7 +347,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
               <img
                 className="w-full h-full object-cover"
                 alt="User Profile"
-                src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `http://127.0.0.1:8000/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
+                src={user && user.foto_profil ? (user.foto_profil.startsWith("http") ? user.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${user.foto_profil}`) : `https://ui-avatars.com/api/?name=${user ? user.name : 'Pelanggan'}&background=random`}
               />
             </div>
           </div>

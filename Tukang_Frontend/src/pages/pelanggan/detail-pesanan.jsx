@@ -40,7 +40,7 @@ function DetailPesanan() {
       return;
     }
     try {
-      const response = await axios.put(`http://127.0.0.1:8000/api/pesanan/${order.id}/${action}`);
+      const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${order.id}/${action}`);
       if(response.data) {
         alert(response.data.message);
         if(action === 'bayar') setCurrentStatus('menunggu_pengerjaan');
