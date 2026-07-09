@@ -18,7 +18,10 @@ class Pesanan extends Model
         'harga_penawaran',
         'status',
         'alasan_penolakan',
-        'foto_lampiran'
+        'foto_lampiran',
+        'tanggal_kunjungan',
+        'jam_kunjungan',
+        'metode_pembayaran'
     ];
 
     /**
@@ -37,7 +40,11 @@ class Pesanan extends Model
         return $this->belongsTo(Tukang::class);
     }
     public function ulasan()
-{
-    return $this->hasOne(Ulasan::class);
-}
+    {
+        return $this->hasOne(Ulasan::class);
+    }
+    public function chat()
+    {
+        return $this->hasOne(Chat::class);
+    }
 }

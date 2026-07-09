@@ -40,7 +40,7 @@ class UlasanController extends Controller
 {
     $request->validate([
         'user_id' => 'required|exists:roles,id',
-        'tukang_id' => 'requicred|exists:tukangs,id',
+        'tukang_id' => 'required|exists:tukangs,id',
         'pesanan_id' => 'required|exists:pesanans,id',
         'rating' => 'required|integer|min:1|max:5',
         'komentar' => 'nullable|string'

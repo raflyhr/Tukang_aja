@@ -475,6 +475,9 @@ function Dashboard() {
       formData.append("longitude", userObj.longitude || 106.8456);
       formData.append("alamat_lengkap", userObj.alamat || "Alamat Pelanggan");
       formData.append("harga_penawaran", selectedTukang.price || 150000);
+      formData.append("tanggal_kunjungan", bookingDate);
+      formData.append("jam_kunjungan", bookingTime);
+      formData.append("metode_pembayaran", paymentMethod);
       if (bookingPhoto) {
         formData.append("foto_lampiran", bookingPhoto);
       }

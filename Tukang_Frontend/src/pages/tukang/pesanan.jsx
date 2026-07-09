@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import api from "../../lib/axios";
+import { supabase } from "../../lib/supabase";
 
 function TukangPesanan() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ function TukangPesanan() {
   ];
 
   const [orders, setOrders] = useState([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [tukangId, setTukangId] = useState(null);
 
   useEffect(() => {
@@ -47,18 +49,23 @@ function TukangPesanan() {
 
   const fetchOrders = async () => {
     if (!tukangId) return;
+    setIsOrdersLoading(true);
     try {
       const res = await api.get(`/tukang/${tukangId}/pesanan`);
       if (res.data.status === 'Sukses') {
         const mappedOrders = res.data.data.map(order => ({
           id: order.id,
-          clientName: order.user?.name || "Pelanggan",
+          clientName: order.user?.nama || order.user?.name || "Pelanggan",
           clientLoc: order.alamat_lengkap,
-          clientAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBKTfl-bPc3TYOy5r-jjyWK-ywD97kiKmUzf_fckpbG-fUGriGzIBeAYvujKLJIrVAaFR_vAJ-IPv7FSCgP8PVrxcSvLSiS3wILfbXS_YBz2fAaK6QbKEibAKOEdSbdNxSzP_1_P6gigW-WXYWGSUkNpqGCi9S8d0Mbhv7sTh-o5PXLb1XzNaj-x3BKXoYylvhC_l_RPbMK9V1uVH_HsOJeC-UFwuZ5dFhLWeri2WlVrGC41Qbkjt2paaIKIH8i6E9HxuTNhfn7nl4V",
+          clientAvatar: order.user?.foto_profil 
+            ? (order.user.foto_profil.startsWith("http") ? order.user.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${order.user.foto_profil}`)
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(order.user?.nama || "Pelanggan")}&background=random`,
           status: order.status,
           title: order.judul,
           desc: order.deskripsi_masalah,
-          images: order.foto_lampiran ? JSON.parse(order.foto_lampiran) : [],
+          images: order.foto_lampiran 
+            ? (order.foto_lampiran.startsWith("http") ? [order.foto_lampiran] : [`${import.meta.env.VITE_API_BASE_URL}/storage/${order.foto_lampiran}`]) 
+            : [],
           budgetRange: order.budget_perkiraan || "Belum ditentukan",
           bidValue: order.harga_penawaran ? `Rp ${order.harga_penawaran.toLocaleString('id-ID')}` : "",
           totalValue: order.harga_penawaran ? `Rp ${order.harga_penawaran.toLocaleString('id-ID')}` : "",
@@ -73,11 +80,31 @@ function TukangPesanan() {
       }
     } catch (err) {
       console.error("Gagal memuat pesanan:", err);
+    } finally {
+      setIsOrdersLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!tukangId) return;
+
     fetchOrders();
+
+    // Subscribe to real-time changes on the pesanans table for this Tukang
+    const channel = supabase
+      .channel('public:pesanans-tukang')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pesanans', filter: `tukang_id=eq.${tukangId}` },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [tukangId]);
 
   const filterTabs = [
@@ -267,13 +294,21 @@ function TukangPesanan() {
             })}
           </div>
 
-          {/* Orders Grid/List */}
-          {filteredOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-              <span className="material-symbols-outlined text-5xl text-on-surface-variant/40">assignment_late</span>
-              <p className="text-on-surface-variant text-sm">Tidak ada pesanan dengan status ini.</p>
-            </div>
-          ) : (
+          <div className="relative min-h-[300px]">
+            {isOrdersLoading && (
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center z-20 rounded-3xl transition-all">
+                <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs text-on-surface-variant/80 mt-3 font-semibold">Memuat Pesanan...</p>
+              </div>
+            )}
+
+            {/* Orders Grid/List */}
+            {filteredOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+                <span className="material-symbols-outlined text-5xl text-on-surface-variant/40">assignment_late</span>
+                <p className="text-on-surface-variant text-sm">Tidak ada pesanan dengan status ini.</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {filteredOrders.map((order) => {
                 
@@ -499,6 +534,7 @@ function TukangPesanan() {
               })}
             </div>
           )}
+          </div>
 
         </div>
       </main>

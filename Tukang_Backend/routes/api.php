@@ -43,6 +43,7 @@ Route::get('/tukang/{id}/pesanan', [PesananController::class, 'getPesananTukang'
 Route::put('/pesanan/{id}/tawar', [PesananController::class, 'kasihPenawaran']);
 Route::put('/pesanan/{id}/tolak', [PesananController::class, 'tolakPesanan']);
 Route::put('/pesanan/{id}/bayar', [PesananController::class, 'bayarPesanan']);
+Route::put('/pesanan/{id}/bypass-midtrans', [PesananController::class, 'bypassMidtrans']);
 Route::put('/pesanan/{id}/selesai', [PesananController::class, 'selesaikanPekerjaan']);
 Route::put('/pesanan/{id}/konfirmasi-selesai', [PesananController::class, 'konfirmasiSelesai']);
 Route::put('/pesanan/{id}/komplain', [PesananController::class, 'komplainPesanan']);
@@ -98,3 +99,6 @@ Route::put('/admin/tukang/{id}/status', [AdminController::class, 'toggleTukangSt
 Route::get('/admin/monitoring', [AdminController::class, 'getMonitoring']);
 Route::get('/admin/disputes', [AdminController::class, 'getDisputes']);
 Route::put('/admin/disputes/{id}/resolve', [AdminController::class, 'resolveDispute']);
+
+// --- Rute Midtrans Webhook Callback ---
+Route::post('/payment/notification', [PesananController::class, 'handleMidtransNotification']);

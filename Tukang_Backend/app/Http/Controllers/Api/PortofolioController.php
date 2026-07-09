@@ -53,6 +53,7 @@ class PortofolioController extends Controller
             'status' => 'Sukses',
             'data' => $portofolio
         ], 200);
+    }
     public function destroy($tukang_id, $portofolio_id)
     {
         $portofolio = Portofolio::where('tukang_id', $tukang_id)->where('id', $portofolio_id)->first();

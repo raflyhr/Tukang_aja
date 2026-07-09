@@ -25,6 +25,11 @@ function TukangChat() {
 
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [isChatsLoading, setIsChatsLoading] = useState(false);
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+  const [bidAmount, setBidAmount] = useState("");
+  const [biddingPesananId, setBiddingPesananId] = useState(null);
   const [activePesanan, setActivePesanan] = useState(null);
   const [tukangId, setTukangId] = useState(null);
   const [technicianName, setTechnicianName] = useState("Tukang");
@@ -53,6 +58,7 @@ function TukangChat() {
 
   const fetchChats = async () => {
     if (!tukangId) return;
+    setIsChatsLoading(true);
     try {
       const res = await api.get(`/tukang/${tukangId}/chats`);
       if (res.data.status === 'Sukses') {
@@ -91,11 +97,14 @@ function TukangChat() {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsChatsLoading(false);
     }
   };
 
   const fetchMessages = async () => {
     if (!activeChatId) return;
+    setIsMessagesLoading(true);
     try {
       const res = await api.get(`/chat/${activeChatId}/messages`);
       if (res.data.status === 'Sukses') {
@@ -110,6 +119,8 @@ function TukangChat() {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsMessagesLoading(false);
     }
   };
 
@@ -216,11 +227,10 @@ function TukangChat() {
     }
   };
 
-  const handleSendBid = async (id) => {
-    const harga = prompt("Masukkan nominal harga penawaran Anda (misal: 150000):");
-    if (!harga) return;
+  const handleSendBid = async (id, amount) => {
+    if (!amount) return;
     try {
-      await api.put(`/pesanan/${id}/tawar`, { harga_penawaran: parseInt(harga) });
+      await api.put(`/pesanan/${id}/tawar`, { harga_penawaran: parseInt(amount) });
       alert("Penawaran harga berhasil dikirim!");
       fetchChats();
       // Reload active order info
@@ -371,43 +381,60 @@ function TukangChat() {
             </div>
 
             <div className="flex-grow overflow-y-auto chat-scrollbar px-3 py-2 space-y-1">
-              {chats.map((chat) => {
-                const isActive = chat.id === activeChatId;
-                return (
-                  <div
-                    key={chat.id}
-                    onClick={() => {
-                      setActiveChatId(chat.id);
-                      setActivePesanan(chat.pesanan || null);
-                      setIsNegoPanelOpen(false); // keep chat area clean and wide when changing chats
-                    }}
-                    className={`p-3.5 rounded-2xl flex gap-3 cursor-pointer transition-all duration-200 ${
-                      isActive 
-                        ? "bg-secondary/10 border-l-4 border-secondary" 
-                        : "hover:bg-surface-container-high"
-                    }`}
-                  >
-                    <div className="relative shrink-0">
-                      <div className="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/10">
-                        <img className="w-full h-full object-cover" alt={chat.name} src={chat.avatar} />
+              {isChatsLoading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="p-3.5 rounded-2xl flex gap-3 animate-pulse bg-surface-container/50">
+                    <div className="w-11 h-11 rounded-full bg-surface-container-highest shrink-0"></div>
+                    <div className="flex-grow min-w-0 space-y-2 mt-1">
+                      <div className="flex justify-between">
+                        <div className="h-3 w-20 bg-surface-container-highest rounded"></div>
+                        <div className="h-2 w-8 bg-surface-container-highest rounded"></div>
                       </div>
-                      {chat.online && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface-container rounded-full"></div>
-                      )}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-xs text-on-surface truncate">{chat.name}</h3>
-                        <span className="text-[9px] text-on-surface-variant/70 font-semibold">{chat.time}</span>
-                      </div>
-                      {chat.negotiation?.active && (
-                        <p className="text-[10px] text-secondary font-extrabold mt-1">Nego: {chat.negotiation.price}</p>
-                      )}
-                      <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">{chat.lastMsg}</p>
+                      <div className="h-2.5 w-32 bg-surface-container-highest rounded"></div>
                     </div>
                   </div>
-                );
-              })}
+                ))
+              ) : chats.length === 0 ? (
+                <div className="text-center py-10 text-[10px] text-on-surface-variant/50">Belum ada percakapan</div>
+              ) : (
+                chats.map((chat) => {
+                  const isActive = chat.id === activeChatId;
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => {
+                        setActiveChatId(chat.id);
+                        setActivePesanan(chat.pesanan || null);
+                        setIsNegoPanelOpen(false); // keep chat area clean and wide when changing chats
+                      }}
+                      className={`p-3.5 rounded-2xl flex gap-3 cursor-pointer transition-all duration-200 ${
+                        isActive 
+                          ? "bg-secondary/10 border-l-4 border-secondary" 
+                          : "hover:bg-surface-container-high"
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <div className="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/10">
+                          <img className="w-full h-full object-cover" alt={chat.name} src={chat.avatar} />
+                        </div>
+                        {chat.online && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface-container rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-bold text-xs text-on-surface truncate">{chat.name}</h3>
+                          <span className="text-[9px] text-on-surface-variant/70 font-semibold">{chat.time}</span>
+                        </div>
+                        {chat.negotiation?.active && (
+                          <p className="text-[10px] text-secondary font-extrabold mt-1">Nego: {chat.negotiation.price}</p>
+                        )}
+                        <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">{chat.lastMsg}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </section>
 
@@ -471,7 +498,11 @@ function TukangChat() {
                     <div className="flex gap-2 shrink-0 w-full sm:w-auto">
                       {(activePesanan.status === "menunggu_penawaran" || activePesanan.status === "menunggu") && (
                         <button
-                          onClick={() => handleSendBid(activePesanan.id)}
+                          onClick={() => {
+                            setBiddingPesananId(activePesanan.id);
+                            setBidAmount(activePesanan.harga_penawaran ? activePesanan.harga_penawaran.toString() : "");
+                            setIsBidModalOpen(true);
+                          }}
                           className="flex-1 sm:flex-initial text-center bg-secondary hover:bg-secondary/90 text-on-secondary px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
                         >
                           Kirim Penawaran
@@ -490,7 +521,14 @@ function TukangChat() {
                 )}
 
                 {/* Chat Body messages */}
-                <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6">
+                <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6 relative">
+                  {isMessagesLoading && (
+                    <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center z-[25] transition-all">
+                      <div className="w-9 h-9 border-3 border-secondary border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-[11px] text-on-surface-variant/80 mt-3.5 font-bold tracking-wider">Memuat Percakapan...</p>
+                    </div>
+                  )}
+
                   <div className="flex justify-center">
                     <span className="text-[9px] bg-surface-container px-3.5 py-1 rounded-full text-on-surface-variant/80 uppercase tracking-widest font-extrabold">Hari Ini</span>
                   </div>
@@ -658,6 +696,59 @@ function TukangChat() {
         </div>
 
       </div>
+
+      {/* Custom Bid Modal */}
+      {isBidModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-outline-variant/20 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="font-extrabold text-lg text-secondary mb-1">Kirim Penawaran Harga</h3>
+            <p className="text-xs text-on-surface-variant/80 mb-5 leading-relaxed">
+              Tentukan harga penawaran terbaik Anda untuk pekerjaan ini. Pelanggan akan menerima notifikasi penawaran ini.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] text-secondary font-extrabold uppercase tracking-wider block mb-1.5">Nominal Penawaran (Rp)</label>
+                <input
+                  type="number"
+                  placeholder="Contoh: 150000"
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:ring-1 focus:ring-secondary/50 outline-none font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsBidModalOpen(false);
+                  setBidAmount("");
+                  setBiddingPesananId(null);
+                }}
+                className="flex-1 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  if (!bidAmount || isNaN(bidAmount) || parseInt(bidAmount) <= 0) {
+                    alert("Harap masukkan nominal harga yang valid.");
+                    return;
+                  }
+                  setIsBidModalOpen(false);
+                  handleSendBid(biddingPesananId, bidAmount);
+                  setBidAmount("");
+                  setBiddingPesananId(null);
+                }}
+                className="flex-1 py-2.5 bg-secondary text-on-secondary hover:opacity-95 transition-all rounded-xl font-bold cursor-pointer border-none"
+              >
+                Kirim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LogoutModal 
         isOpen={isLogoutModalOpen} 

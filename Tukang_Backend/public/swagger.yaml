@@ -1,0 +1,1279 @@
+openapi: 3.0.3
+info:
+  title: TukangAja API Documentation
+  description: |
+    Dokumentasi lengkap REST API untuk platform **TukangAja** — penghubung pelanggan dengan mitra tukang jasa perbaikan rumah.
+
+    ## Fitur Utama
+    - **Autentikasi** — Login & Register untuk Pelanggan, Tukang, dan Admin
+    - **Pesanan** — Pembuatan, negosiasi harga, pembayaran, dan penyelesaian pekerjaan
+    - **Chat** — Obrolan real-time antara pelanggan dan tukang
+    - **Escrow** — Sistem penahanan dana untuk keamanan transaksi
+    - **Admin** — Dashboard monitoring, verifikasi tukang, dan penyelesaian sengketa
+  version: 1.0.0
+  contact:
+    name: TukangAja Team
+    email: support@tukangaja.com
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local Development Server
+
+tags:
+  - name: Autentikasi
+    description: Login & Register untuk semua role
+  - name: Tukang
+    description: Manajemen data profil, status, dan dashboard Tukang
+  - name: Pesanan
+    description: Alur lengkap pesanan dari pembuatan hingga penyelesaian
+  - name: Chat
+    description: Sistem obrolan antara pelanggan dan tukang
+  - name: Ulasan
+    description: Penilaian dan rating dari pelanggan
+  - name: Portofolio
+    description: Portofolio hasil kerja tukang
+  - name: Dompet
+    description: Penarikan dana dan riwayat transaksi tukang
+  - name: Notifikasi
+    description: Sistem notifikasi pengguna
+  - name: Admin
+    description: Panel administrasi dan monitoring
+  - name: Pembayaran
+    description: Integrasi Midtrans dan webhook pembayaran
+
+paths:
+  # ============================================================
+  # AUTENTIKASI
+  # ============================================================
+  /auth/login:
+    post:
+      tags: [Autentikasi]
+      summary: Login Universal (Semua Role)
+      description: Endpoint login tunggal untuk Admin, Pelanggan, dan Tukang. Sistem otomatis mendeteksi role berdasarkan akun.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login berhasil sebagai pelanggan
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      tukang:
+                        $ref: '#/components/schemas/Tukang'
+        '401':
+          description: Email atau Password salah
+
+  /auth/user/register:
+    post:
+      tags: [Autentikasi]
+      summary: Register Pelanggan Baru
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation, no_hp, alamat, latitude, longitude]
+              properties:
+                name:
+                  type: string
+                  example: Budi Santoso
+                email:
+                  type: string
+                  format: email
+                no_hp:
+                  type: string
+                  example: "081234567890"
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                alamat:
+                  type: string
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+                foto_profil:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Registrasi berhasil
+        '422':
+          description: Validasi gagal
+
+  /auth/tukang/register:
+    post:
+      tags: [Autentikasi]
+      summary: Register Tukang/Mitra Baru
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation, no_hp, alamat, latitude, longitude, keahlian, tahun_pengalaman, deskripsi_pengalaman, foto_profil, nik, cv_portofolio]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                no_hp:
+                  type: string
+                keahlian:
+                  type: string
+                  example: Listrik
+                keahlian_tambahan:
+                  type: string
+                  example: Plumbing, AC
+                tahun_pengalaman:
+                  type: integer
+                  example: 5
+                deskripsi_pengalaman:
+                  type: string
+                alamat:
+                  type: string
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+                foto_profil:
+                  type: string
+                  format: binary
+                nik:
+                  type: string
+                  minLength: 16
+                  maxLength: 16
+                cv_portofolio:
+                  type: string
+                  format: binary
+                  description: File PDF maksimal 5MB
+      responses:
+        '201':
+          description: Registrasi tukang berhasil, menunggu verifikasi admin
+        '422':
+          description: Validasi gagal
+
+  /auth/admin/login:
+    post:
+      tags: [Autentikasi]
+      summary: Login Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login admin berhasil
+        '401':
+          description: Kredensial tidak valid
+
+  # ============================================================
+  # TUKANG
+  # ============================================================
+  /tukang:
+    get:
+      tags: [Tukang]
+      summary: Ambil Semua Data Tukang
+      responses:
+        '200':
+          description: Daftar semua tukang
+
+  /tukang/{id}:
+    get:
+      tags: [Tukang]
+      summary: Detail Profil Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Data profil tukang lengkap beserta relasi (ulasan, portofolio, sertifikat, layanan)
+        '404':
+          description: Tukang tidak ditemukan
+
+  /tukang/{id}/status:
+    put:
+      tags: [Tukang]
+      summary: Update Status Aktif/Non-Aktif Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_aktif]
+              properties:
+                is_aktif:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Status berhasil diubah
+
+  /tukang/{id}/profil:
+    put:
+      tags: [Tukang]
+      summary: Update Profil Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                nama:
+                  type: string
+                no_hp:
+                  type: string
+                spesialisasi:
+                  type: string
+                alamat:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                foto_profil:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Profil berhasil diperbarui
+
+  /tukang/{id}/dashboard-stats:
+    get:
+      tags: [Tukang]
+      summary: Statistik Dashboard Tukang
+      description: Mengambil jumlah pesanan aktif, pekerjaan selesai, rating rata-rata, dan pendapatan bulan ini.
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Data statistik dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Sukses
+                  data:
+                    type: object
+                    properties:
+                      pesanan_aktif:
+                        type: string
+                        example: "03"
+                      pekerjaan_selesai:
+                        type: integer
+                        example: 15
+                      rating_rata_rata:
+                        type: number
+                        example: 4.8
+                      pendapatan_bulan_ini:
+                        type: integer
+                        example: 2500000
+
+  /tukang/{id}/activities:
+    get:
+      tags: [Tukang]
+      summary: Aktivitas Terbaru Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar aktivitas terbaru
+
+  # --- Sertifikat ---
+  /tukang/{id}/sertifikat:
+    post:
+      tags: [Tukang]
+      summary: Tambah Sertifikat Keahlian
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [judul]
+              properties:
+                judul:
+                  type: string
+                penerbit:
+                  type: string
+                tahun:
+                  type: string
+                deskripsi:
+                  type: string
+      responses:
+        '201':
+          description: Sertifikat berhasil ditambahkan
+
+  /tukang/{id}/sertifikat/{sertifikat_id}:
+    delete:
+      tags: [Tukang]
+      summary: Hapus Sertifikat
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+        - name: sertifikat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sertifikat berhasil dihapus
+
+  # --- Layanan ---
+  /tukang/{id}/layanan:
+    post:
+      tags: [Tukang]
+      summary: Tambah Layanan/Jasa
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nama_layanan]
+              properties:
+                nama_layanan:
+                  type: string
+                  example: Perbaikan AC
+                harga:
+                  type: string
+                  example: "150000"
+                satuan:
+                  type: string
+                  example: per unit
+                deskripsi:
+                  type: string
+      responses:
+        '201':
+          description: Layanan berhasil ditambahkan
+
+  /tukang/{id}/layanan/{layanan_id}:
+    delete:
+      tags: [Tukang]
+      summary: Hapus Layanan
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+        - name: layanan_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Layanan berhasil dihapus
+
+  # ============================================================
+  # PESANAN
+  # ============================================================
+  /pesanan:
+    post:
+      tags: [Pesanan]
+      summary: Buat Pesanan Baru
+      description: Pelanggan membuat pesanan pekerjaan baru.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [user_id, judul, deskripsi, alamat, latitude, longitude]
+              properties:
+                user_id:
+                  type: integer
+                judul:
+                  type: string
+                  example: AC Tidak Dingin
+                deskripsi:
+                  type: string
+                  example: AC merk Daikin 1PK tidak mengeluarkan udara dingin
+                alamat:
+                  type: string
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+                estimasi_waktu:
+                  type: string
+                  example: 2 Jam
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Pesanan berhasil dibuat
+        '422':
+          description: Validasi gagal
+
+  /pesanan/available:
+    get:
+      tags: [Pesanan]
+      summary: Ambil Pesanan yang Tersedia untuk Tukang
+      description: Menampilkan pesanan berstatus `menunggu_penawaran` yang belum diambil tukang manapun, atau sudah ditujukan ke tukang tertentu.
+      parameters:
+        - name: tukang_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar pesanan tersedia
+
+  /pesanan/{id}/terima:
+    post:
+      tags: [Pesanan]
+      summary: Tukang Menerima Pekerjaan
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tukang_id]
+              properties:
+                tukang_id:
+                  type: integer
+      responses:
+        '200':
+          description: Pekerjaan berhasil diterima
+
+  /pesanan/{id}/tawar:
+    put:
+      tags: [Pesanan]
+      summary: Tukang Mengajukan Penawaran Harga
+      description: Tukang mengirimkan harga penawaran ke pelanggan. Otomatis mengirim pesan sistem di chat.
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [harga_penawaran]
+              properties:
+                harga_penawaran:
+                  type: integer
+                  example: 150000
+      responses:
+        '200':
+          description: Penawaran harga berhasil dikirim
+
+  /pesanan/{id}/tolak:
+    put:
+      tags: [Pesanan]
+      summary: Tukang Menolak Pesanan
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      responses:
+        '200':
+          description: Pesanan berhasil ditolak
+
+  /pesanan/{id}/bayar:
+    put:
+      tags: [Pesanan]
+      summary: Pelanggan Membayar Pesanan (Midtrans)
+      description: |
+        Memproses pembayaran via Midtrans Snap. Jika Midtrans aktif, mengembalikan `snap_token` untuk popup pembayaran.
+        Jika Midtrans gagal, fallback ke simulasi saldo langsung.
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      responses:
+        '200':
+          description: Pembayaran berhasil / snap_token dikembalikan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Sukses
+                  snap_token:
+                    type: string
+                    description: Token Midtrans Snap (jika Midtrans aktif)
+                  message:
+                    type: string
+        '400':
+          description: Saldo tidak mencukupi
+
+  /pesanan/{id}/bypass-midtrans:
+    put:
+      tags: [Pembayaran]
+      summary: Bypass Midtrans (Dev Only - Localhost)
+      description: |
+        **Khusus Development!** Mengubah status pesanan menjadi `menunggu_pengerjaan` tanpa melalui webhook Midtrans.
+        Digunakan saat testing di localhost karena Midtrans tidak bisa mengirim webhook ke localhost.
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      responses:
+        '200':
+          description: Status pesanan berhasil diubah
+
+  /pesanan/{id}/selesai:
+    put:
+      tags: [Pesanan]
+      summary: Tukang Melaporkan Pekerjaan Selesai
+      description: Tukang melapor bahwa pekerjaan sudah selesai dikerjakan. Menunggu konfirmasi dari pelanggan.
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      responses:
+        '200':
+          description: Laporan selesai dikirim, menunggu konfirmasi pelanggan
+        '400':
+          description: Pesanan belum dalam status pengerjaan
+
+  /pesanan/{id}/konfirmasi-selesai:
+    put:
+      tags: [Pesanan]
+      summary: Pelanggan Mengkonfirmasi Pekerjaan Selesai
+      description: Pelanggan mengkonfirmasi bahwa pekerjaan sudah selesai. Dana escrow dicairkan ke saldo tukang.
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      responses:
+        '200':
+          description: Pekerjaan selesai, dana dicairkan ke tukang
+
+  /pesanan/{id}/komplain:
+    put:
+      tags: [Pesanan]
+      summary: Pelanggan Mengajukan Komplain/Dispute
+      parameters:
+        - $ref: '#/components/parameters/PesananId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alasan_komplain, user_id]
+              properties:
+                alasan_komplain:
+                  type: string
+                  example: Hasil pekerjaan tidak sesuai deskripsi
+                user_id:
+                  type: integer
+      responses:
+        '200':
+          description: Komplain berhasil diajukan
+
+  /tukang/{id}/pesanan:
+    get:
+      tags: [Pesanan]
+      summary: Ambil Daftar Pesanan Milik Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar pesanan tukang
+
+  /user/{id}/pesanan:
+    get:
+      tags: [Pesanan]
+      summary: Ambil Daftar Pesanan Milik Pelanggan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID User (Pelanggan)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar pesanan pelanggan
+
+  /user/{id}/dashboard-stats:
+    get:
+      tags: [Pesanan]
+      summary: Statistik Dashboard Pelanggan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Statistik dashboard pelanggan
+
+  # ============================================================
+  # CHAT
+  # ============================================================
+  /tukang/{id}/chats:
+    get:
+      tags: [Chat]
+      summary: Ambil Daftar Obrolan Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar percakapan tukang dengan pelanggan
+
+  /user/{id}/chats:
+    get:
+      tags: [Chat]
+      summary: Ambil Daftar Obrolan Pelanggan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar percakapan pelanggan dengan tukang
+
+  /chat/{chat_id}/messages:
+    get:
+      tags: [Chat]
+      summary: Ambil Pesan dalam Obrolan
+      parameters:
+        - name: chat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar pesan dalam obrolan
+
+  /chat/send:
+    post:
+      tags: [Chat]
+      summary: Kirim Pesan Baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_id, sender_type, sender_id, text]
+              properties:
+                chat_id:
+                  type: integer
+                sender_type:
+                  type: string
+                  enum: [user, tukang, system]
+                sender_id:
+                  type: integer
+                text:
+                  type: string
+                  example: Halo, kapan bisa mulai dikerjakan?
+                message_type:
+                  type: string
+                  enum: [text, negotiation_offer]
+                  default: text
+      responses:
+        '201':
+          description: Pesan berhasil dikirim
+
+  /chat/start:
+    post:
+      tags: [Chat]
+      summary: Mulai Obrolan Baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, tukang_id]
+              properties:
+                user_id:
+                  type: integer
+                tukang_id:
+                  type: integer
+                pesanan_id:
+                  type: integer
+      responses:
+        '201':
+          description: Obrolan baru berhasil dibuat
+
+  /chat/{chat_id}:
+    delete:
+      tags: [Chat]
+      summary: Hapus Obrolan
+      parameters:
+        - name: chat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Obrolan berhasil dihapus
+
+  # ============================================================
+  # ULASAN
+  # ============================================================
+  /ulasan:
+    post:
+      tags: [Ulasan]
+      summary: Kirim Ulasan untuk Pesanan
+      description: Pelanggan memberikan rating dan komentar setelah pekerjaan selesai.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, tukang_id, pesanan_id, rating]
+              properties:
+                user_id:
+                  type: integer
+                tukang_id:
+                  type: integer
+                pesanan_id:
+                  type: integer
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                komentar:
+                  type: string
+                  example: Hasil pekerjaan sangat memuaskan!
+      responses:
+        '201':
+          description: Ulasan berhasil dikirim
+        '400':
+          description: Pesanan belum selesai atau sudah diulas
+
+  /tukang/{id}/ulasan:
+    get:
+      tags: [Ulasan]
+      summary: Ambil Ulasan untuk Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar ulasan dan rata-rata rating
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  rata_rata_rating:
+                    type: number
+                    example: 4.75
+                  total_ulasan:
+                    type: integer
+                    example: 12
+                  data_ulasan:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ulasan'
+
+  # ============================================================
+  # PORTOFOLIO
+  # ============================================================
+  /tukang/{id}/portofolio:
+    get:
+      tags: [Portofolio]
+      summary: Ambil Portofolio Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar portofolio tukang
+    post:
+      tags: [Portofolio]
+      summary: Tambah Portofolio Baru
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [judul, foto]
+              properties:
+                judul:
+                  type: string
+                deskripsi:
+                  type: string
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Portofolio berhasil ditambahkan
+
+  /tukang/{id}/portofolio/{portofolio_id}:
+    delete:
+      tags: [Portofolio]
+      summary: Hapus Portofolio
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+        - name: portofolio_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Portofolio berhasil dihapus
+
+  # ============================================================
+  # DOMPET (PENARIKAN DANA)
+  # ============================================================
+  /tukang/{id}/tarik-dana:
+    post:
+      tags: [Dompet]
+      summary: Tukang Menarik Saldo ke Rekening Bank
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jumlah_tarik, rekening_tujuan]
+              properties:
+                jumlah_tarik:
+                  type: integer
+                  minimum: 10000
+                  example: 500000
+                rekening_tujuan:
+                  type: string
+                  example: BCA 1234567890 a/n Budi Santoso
+      responses:
+        '200':
+          description: Penarikan berhasil diproses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  sisa_saldo:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/Penarikan'
+        '400':
+          description: Saldo tidak mencukupi
+
+  /tukang/{id}/riwayat-tarik:
+    get:
+      tags: [Dompet]
+      summary: Riwayat Penarikan Dana Tukang
+      parameters:
+        - $ref: '#/components/parameters/TukangId'
+      responses:
+        '200':
+          description: Daftar riwayat penarikan
+
+  # ============================================================
+  # NOTIFIKASI
+  # ============================================================
+  /user/{id}/notifications:
+    get:
+      tags: [Notifikasi]
+      summary: Ambil Notifikasi Pengguna
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar notifikasi pengguna
+
+  /user/{id}/notifications/read-all:
+    put:
+      tags: [Notifikasi]
+      summary: Tandai Semua Notifikasi Sudah Dibaca
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Semua notifikasi ditandai sudah dibaca
+
+  /notifications/{id}/toggle-read:
+    put:
+      tags: [Notifikasi]
+      summary: Toggle Status Baca Notifikasi
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Status notifikasi berhasil diubah
+
+  /notifications/{id}:
+    delete:
+      tags: [Notifikasi]
+      summary: Hapus Notifikasi
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notifikasi berhasil dihapus
+
+  # ============================================================
+  # ADMIN
+  # ============================================================
+  /admin/dashboard-stats:
+    get:
+      tags: [Admin]
+      summary: Statistik Dashboard Admin
+      responses:
+        '200':
+          description: Statistik keseluruhan platform
+
+  /admin/verifikasi:
+    get:
+      tags: [Admin]
+      summary: Daftar Tukang Menunggu Verifikasi
+      responses:
+        '200':
+          description: Daftar tukang yang belum diverifikasi
+
+  /admin/verifikasi/{id}:
+    put:
+      tags: [Admin]
+      summary: Verifikasi atau Tolak Pendaftaran Tukang
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status_verifikasi]
+              properties:
+                status_verifikasi:
+                  type: string
+                  enum: [Disetujui, Ditolak]
+      responses:
+        '200':
+          description: Status verifikasi berhasil diubah
+
+  /admin/tukang:
+    get:
+      tags: [Admin]
+      summary: Ambil Semua Data Tukang (Admin)
+      responses:
+        '200':
+          description: Daftar semua tukang dengan detail
+
+  /admin/tukang/{id}/status:
+    put:
+      tags: [Admin]
+      summary: Toggle Aktif/Non-Aktif Tukang oleh Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Status tukang berhasil diubah
+
+  /admin/monitoring:
+    get:
+      tags: [Admin]
+      summary: Monitoring Rating dan Performa
+      responses:
+        '200':
+          description: Data monitoring seluruh tukang
+
+  /admin/disputes:
+    get:
+      tags: [Admin]
+      summary: Daftar Sengketa/Dispute
+      responses:
+        '200':
+          description: Daftar semua dispute yang masuk
+
+  /admin/disputes/{id}/resolve:
+    put:
+      tags: [Admin]
+      summary: Selesaikan Sengketa (Resolve Dispute)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keputusan]
+              properties:
+                keputusan:
+                  type: string
+                  enum: [refund_ke_user, release_ke_tukang]
+      responses:
+        '200':
+          description: Dispute berhasil diselesaikan
+
+  # ============================================================
+  # MIDTRANS WEBHOOK
+  # ============================================================
+  /payment/notification:
+    post:
+      tags: [Pembayaran]
+      summary: Webhook Notifikasi Midtrans
+      description: |
+        Endpoint callback dari Midtrans untuk menerima notifikasi status pembayaran.
+        Midtrans akan mengirim POST request ke endpoint ini saat status transaksi berubah.
+        **Jangan dipanggil manual!**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: string
+                status_code:
+                  type: string
+                gross_amount:
+                  type: string
+                signature_key:
+                  type: string
+                transaction_status:
+                  type: string
+                  enum: [capture, settlement, pending, deny, expire, cancel]
+      responses:
+        '200':
+          description: Webhook berhasil diproses
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+components:
+  parameters:
+    TukangId:
+      name: id
+      in: path
+      required: true
+      description: ID Tukang
+      schema:
+        type: integer
+    PesananId:
+      name: id
+      in: path
+      required: true
+      description: ID Pesanan
+      schema:
+        type: integer
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [pelanggan, tukang, admin]
+        foto_profil:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        alamat:
+          type: string
+        no_hp:
+          type: string
+        saldo:
+          type: integer
+
+    Tukang:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        nama:
+          type: string
+        no_hp:
+          type: string
+        spesialisasi:
+          type: string
+        pengalaman_tahun:
+          type: integer
+        alamat:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        foto_profil:
+          type: string
+        rating:
+          type: number
+        saldo:
+          type: integer
+        is_aktif:
+          type: boolean
+        status_verifikasi:
+          type: string
+          enum: [Menunggu, Disetujui, Ditolak]
+
+    Pesanan:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        tukang_id:
+          type: integer
+        judul:
+          type: string
+        deskripsi:
+          type: string
+        alamat:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        estimasi_waktu:
+          type: string
+        harga_penawaran:
+          type: integer
+        status:
+          type: string
+          enum: [menunggu_penawaran, menunggu_persetujuan, menunggu_pembayaran, menunggu_pengerjaan, sedang_dikerjakan, menunggu_konfirmasi_selesai, selesai, dibatalkan, ditolak]
+        foto:
+          type: string
+
+    Ulasan:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        tukang_id:
+          type: integer
+        pesanan_id:
+          type: integer
+        rating:
+          type: integer
+        komentar:
+          type: string
+
+    Penarikan:
+      type: object
+      properties:
+        id:
+          type: integer
+        tukang_id:
+          type: integer
+        jumlah_tarik:
+          type: integer
+        rekening_tujuan:
+          type: string
+        status:
+          type: string
+          enum: [pending, sukses, ditolak]
+        created_at:
+          type: string
+          format: date-time

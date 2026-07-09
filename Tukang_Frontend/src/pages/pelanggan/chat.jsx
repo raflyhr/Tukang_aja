@@ -38,13 +38,20 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   });
   const [activeChatId, setActiveChatId] = useState(null);
   const [activeChatTukang, setActiveChatTukang] = useState(null);
-  
+  const [isChatsLoading, setIsChatsLoading] = useState(false);
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [payingPesananId, setPayingPesananId] = useState(null);
+  const [payingHarga, setPayingHarga] = useState(null);
+  const [payingTitle, setPayingTitle] = useState("");
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [ulasan, setUlasan] = useState("");
+  const [ratingToast, setRatingToast] = useState({ show: false, message: "", type: "success" });
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [activePesanan, setActivePesanan] = useState(null);
@@ -73,6 +80,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   }, []);
 
   const fetchChats = async (userId) => {
+    setIsChatsLoading(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${userId}/chats`);
       const chats = res.data.data || [];
@@ -148,6 +156,8 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
       }
     } catch (error) {
       console.error("Gagal mengambil chat", error);
+    } finally {
+      setIsChatsLoading(false);
     }
   };
 
@@ -155,12 +165,22 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     setActiveChatId(chat.id);
     setActiveChatTukang(chat.tukang);
     setActivePesanan(chat.pesanan || null);
+    setIsMessagesLoading(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/chat/${chat.id}/messages`);
       setMessages(res.data.data);
     } catch (error) {
       console.error("Gagal mengambil pesan", error);
+    } finally {
+      setIsMessagesLoading(false);
     }
+  };
+
+  const handleDirectPayment = (pesananId, totalHarga, title) => {
+    setPayingPesananId(pesananId);
+    setPayingHarga(totalHarga);
+    setPayingTitle(title || "Jasa Perbaikan");
+    setIsPayModalOpen(true);
   };
 
   useEffect(() => {
@@ -300,9 +320,11 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const kirimRating = async () => {
     if (!selectedPesananForReview || !currentUser) {
-      alert("Pilih pesanan yang valid untuk dinilai.");
+      setRatingToast({ show: true, message: "Pilih pesanan yang valid untuk dinilai.", type: "error" });
+      setTimeout(() => setRatingToast({ show: false, message: "", type: "success" }), 3000);
       return;
     }
+    setIsSubmittingRating(true);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/ulasan`,
@@ -315,14 +337,20 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         }
       );
 
-      alert(response.data.message || "Ulasan berhasil dikirim!");
-      setShowRatingModal(false);
-      setRating(5);
-      setUlasan("");
-      navigate("/pelanggan/dashboard");
+      setRatingToast({ show: true, message: response.data.message || "Ulasan berhasil dikirim!", type: "success" });
+      setTimeout(() => {
+        setRatingToast({ show: false, message: "", type: "success" });
+        setShowRatingModal(false);
+        setRating(5);
+        setUlasan("");
+        navigate("/pelanggan/dashboard");
+      }, 2000);
     } catch (error) {
       console.log(error);
-      alert("Gagal mengirim ulasan.");
+      setRatingToast({ show: true, message: error.response?.data?.message || "Gagal mengirim ulasan.", type: "error" });
+      setTimeout(() => setRatingToast({ show: false, message: "", type: "success" }), 3000);
+    } finally {
+      setIsSubmittingRating(false);
     }
   };
 
@@ -490,43 +518,60 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
             </div>
             
             <div className="flex-1 overflow-y-auto chat-scrollbar px-3 py-2 space-y-1">
-              {chatList.map((chat) => {
-                const isActive = activeChatId === chat.id;
-                return (
-                <div 
-                  key={chat.id}
-                  onClick={() => selectChat(chat)}
-                  className={`p-3.5 rounded-2xl flex gap-3 cursor-pointer transition-all duration-200 ${
-                    isActive 
-                      ? "bg-secondary/10 border-l-4 border-secondary" 
-                      : "hover:bg-surface-container-high"
-                  }`}
-                >
-                  <div className="relative shrink-0">
-                    <div className="w-11 h-11 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/10">
-                      <img
-                        className="w-full h-full object-cover"
-                        alt={chat.tukang?.nama || "Tukang"}
-                        src={chat.tukang?.foto_profil ? (chat.tukang.foto_profil.startsWith('http') ? chat.tukang.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${chat.tukang.foto_profil}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.tukang?.nama || 'T')}&background=random`}
-                      />
+              {isChatsLoading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="p-3.5 rounded-2xl flex gap-3 animate-pulse bg-surface-container/50">
+                    <div className="w-11 h-11 rounded-full bg-surface-container-highest shrink-0"></div>
+                    <div className="flex-grow min-w-0 space-y-2 mt-1">
+                      <div className="flex justify-between">
+                        <div className="h-3 w-20 bg-surface-container-highest rounded"></div>
+                        <div className="h-2 w-8 bg-surface-container-highest rounded"></div>
+                      </div>
+                      <div className="h-2.5 w-32 bg-surface-container-highest rounded"></div>
                     </div>
                   </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-xs text-on-surface truncate">{chat.tukang?.nama || "Tukang"}</h3>
-                      {chat.messages && chat.messages.length > 0 && (
-                        <span className="text-[9px] text-on-surface-variant/70 font-semibold">
-                          {new Date(chat.messages[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
+                ))
+              ) : chatList.length === 0 ? (
+                <div className="text-center py-8 text-xs text-on-surface-variant/60">Tidak ada chat ditemukan</div>
+              ) : (
+                chatList.map((chat) => {
+                  const isActive = chat.id === activeChatId;
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => selectChat(chat)}
+                      className={`p-3.5 rounded-2xl flex gap-3 cursor-pointer transition-all duration-200 ${
+                        isActive
+                          ? "bg-secondary/10 border-l-4 border-secondary"
+                          : "hover:bg-surface-container-high"
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <div className="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/10">
+                          <img
+                            className="w-full h-full object-cover"
+                            alt={chat.tukang?.nama || "Tukang"}
+                            src={chat.tukang?.foto_profil ? (chat.tukang.foto_profil.startsWith('http') ? chat.tukang.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${chat.tukang.foto_profil}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.tukang?.nama || 'T')}&background=random`}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-bold text-xs text-on-surface truncate">{chat.tukang?.nama || "Tukang"}</h3>
+                          {chat.messages && chat.messages.length > 0 && (
+                            <span className="text-[9px] text-on-surface-variant/70 font-semibold">
+                              {new Date(chat.messages[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">
+                          {chat.messages && chat.messages.length > 0 ? chat.messages[0].text : "Belum ada pesan"}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">
-                      {chat.messages && chat.messages.length > 0 ? chat.messages[0].text : "Belum ada pesan"}
-                    </p>
-                  </div>
-                </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </section>
 
@@ -592,8 +637,15 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
                 </div>
               )}
 
-              {/* Messages Scroll Area */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 chat-scrollbar flex flex-col">
+              {/* Chat Body messages */}
+              <div className="flex-grow overflow-y-auto chat-scrollbar p-6 space-y-6 relative">
+                {isMessagesLoading && (
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center z-[25] transition-all">
+                    <div className="w-9 h-9 border-3 border-secondary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-[11px] text-on-surface-variant/80 mt-3.5 font-bold tracking-wider">Memuat Percakapan...</p>
+                  </div>
+                )}
+
                 {messages.length === 0 ? (
                   <div className="flex-grow flex flex-col items-center justify-center text-center text-on-surface-variant">
                     <span className="material-symbols-outlined text-5xl opacity-30 mb-3 text-secondary">chat_bubble_outline</span>
@@ -608,13 +660,22 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
                     {messages.map((msg) => {
                       if (msg.sender_type === "system" && msg.message_type === "negotiation_offer") {
                         return (
-                          <div key={msg.id} className="flex justify-center my-6 w-full">
+                          <div key={msg.id} className="flex justify-center my-6 w-full animate-in fade-in slide-in-from-bottom duration-300">
                             <div className="bg-surface-container border border-secondary/25 p-5 rounded-3xl max-w-xs w-full text-center shadow-lg">
                               <span className="material-symbols-outlined text-secondary text-3xl mb-1">payments</span>
                               <h4 className="font-bold text-xs text-on-surface mb-0.5">Tawaran Harga</h4>
                               <div className="bg-surface-container-lowest py-2 px-4 rounded-xl mb-4">
                                 <span className="text-lg font-black text-secondary">{msg.text}</span>
                               </div>
+                              
+                              {activePesanan && (activePesanan.status === 'menunggu_persetujuan' || activePesanan.status === 'menunggu_pembayaran') && (
+                                <button
+                                  onClick={() => handleDirectPayment(activePesanan.id, activePesanan.harga_penawaran, activePesanan.judul)}
+                                  className="w-full py-2.5 bg-secondary text-on-secondary rounded-xl font-bold text-xs hover:opacity-95 transition-opacity cursor-pointer border-none flex items-center justify-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-sm">payments</span> Bayar Sekarang
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
@@ -702,55 +763,180 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         <div className="absolute bottom-[10%] right-[0%] w-[30%] h-[30%] bg-secondary/5 rounded-full blur-[120px]"></div>
       </div>
 
-              {showRatingModal && (
-<div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-    <div className="bg-surface-container p-6 rounded-xl w-[420px]">
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+          <div className="bg-surface-container border border-outline-variant/20 p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-300">
+            
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-secondary/15 rounded-full flex items-center justify-center mx-auto mb-4 border border-secondary/20">
+                <span className="material-symbols-outlined text-secondary text-3xl">star</span>
+              </div>
+              <h2 className="text-2xl font-black text-on-surface">Beri Penilaian</h2>
+              <p className="text-xs text-on-surface-variant mt-1.5 opacity-80">
+                Bagaimana kualitas pekerjaan {activeChatTukang?.nama || "Mitra Tukang"}?
+              </p>
+            </div>
 
-        <h2 className="text-xl font-bold mb-4">
-            Beri Penilaian
-        </h2>
+            {/* Interactive Stars */}
+            <div className="flex justify-center gap-3 mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className="transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none cursor-pointer group bg-transparent border-none p-0"
+                >
+                  <span 
+                    className={`material-symbols-outlined text-4xl transition-colors duration-200 ${
+                      star <= rating ? "text-amber-400" : "text-surface-container-highest group-hover:text-amber-400/50"
+                    }`}
+                    style={{ fontVariationSettings: star <= rating ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    star
+                  </span>
+                </button>
+              ))}
+            </div>
 
-        <select
-            className="w-full border p-2 rounded mb-4"
-            value={rating}
-            onChange={(e)=>setRating(e.target.value)}
-        >
-            <option value="5">⭐⭐⭐⭐⭐</option>
-            <option value="4">⭐⭐⭐⭐</option>
-            <option value="3">⭐⭐⭐</option>
-            <option value="2">⭐⭐</option>
-            <option value="1">⭐</option>
-        </select>
+            {/* Textarea */}
+            <div className="relative mb-6">
+              <textarea
+                className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 text-sm text-on-surface focus:ring-2 focus:ring-secondary/50 outline-none resize-none transition-all placeholder:text-on-surface-variant/50 chat-scrollbar"
+                rows="4"
+                placeholder="Ceritakan pengalaman Anda... (opsional)"
+                value={ulasan}
+                onChange={(e) => setUlasan(e.target.value)}
+              />
+            </div>
 
-        <textarea
-            className="w-full border rounded p-2"
-            rows="4"
-            placeholder="Tulis ulasan..."
-            value={ulasan}
-            onChange={(e)=>setUlasan(e.target.value)}
-        />
+            {/* Custom Toast inside Modal */}
+            {ratingToast.show && (
+              <div className={`mb-6 p-3 rounded-xl flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300 ${ratingToast.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
+                <span className="material-symbols-outlined text-sm">
+                  {ratingToast.type === 'error' ? 'error' : 'check_circle'}
+                </span>
+                <span className="text-xs font-bold">{ratingToast.message}</span>
+              </div>
+            )}
 
-        <div className="flex justify-end gap-3 mt-4">
-
-            <button
-                onClick={()=>setShowRatingModal(false)}
-                className="px-4 py-2 rounded bg-gray-500"
-            >
-                Batal
-            </button>
-
-            <button
+            {/* Actions */}
+            <div className="flex justify-end gap-3 mt-2">
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="flex-1 px-4 py-3 rounded-xl font-bold text-on-surface-variant hover:bg-surface-container-highest transition-all cursor-pointer bg-transparent border border-outline-variant/20"
+                disabled={isSubmittingRating}
+              >
+                Nanti Saja
+              </button>
+              <button
                 onClick={kirimRating}
-                className="px-4 py-2 rounded bg-orange-500"
-            >
-                Kirim
-            </button>
-
+                disabled={isSubmittingRating}
+                className="flex-1 px-4 py-3 rounded-xl font-bold bg-secondary text-on-secondary hover:opacity-90 transition-all cursor-pointer border-none shadow-lg shadow-secondary/20 flex items-center justify-center gap-2"
+              >
+                {isSubmittingRating ? (
+                  <>
+                    <span className="material-symbols-outlined text-sm animate-spin">sync</span> Mengirim...
+                  </>
+                ) : (
+                  "Kirim Ulasan"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-    </div>
-</div>
-)}
+      {/* Custom Payment Modal */}
+      {isPayModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-outline-variant/20 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200 text-center">
+            <span className="material-symbols-outlined text-secondary text-5xl mb-2 animate-bounce">payments</span>
+            <h3 className="font-extrabold text-lg text-secondary mb-1">Konfirmasi Pembayaran</h3>
+            <p className="text-xs text-on-surface-variant/80 mb-5 leading-relaxed">
+              Anda akan membayar jasa <strong>"{payingTitle}"</strong> sebesar <strong className="text-secondary">Rp {payingHarga?.toLocaleString("id-ID")}</strong>. Saldo dompet Anda akan dipotong untuk ditahan sementara di sistem escrow.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsPayModalOpen(false);
+                  setPayingPesananId(null);
+                  setPayingHarga(null);
+                  setPayingTitle("");
+                }}
+                className="flex-1 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  setIsPayModalOpen(false);
+                  setIsMessagesLoading(true);
+                  try {
+                    const res = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${payingPesananId}/bayar`);
+                    
+                    if (res.data.snap_token) {
+                      // Launch Midtrans Snap UI
+                      window.snap.pay(res.data.snap_token, {
+                        onSuccess: async function (result) {
+                          try {
+                            await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${payingPesananId}/bypass-midtrans`);
+                            alert("Pembayaran Berhasil (Bypass Localhost)!");
+                            
+                            const userId = localStorage.getItem("pelanggan_id") || currentUser?.id;
+                            if (userId) fetchChats(userId);
+                            
+                            if (activeChatId) {
+                              const msgRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/chat/${activeChatId}/messages`);
+                              setMessages(msgRes.data.data);
+                            }
+                          } catch (e) {
+                            console.error("Bypass Error:", e);
+                            alert("Berhasil bayar tapi gagal bypass status.");
+                          }
+                        },
+                        onPending: function (result) {
+                          alert("Menunggu Pembayaran Anda.");
+                        },
+                        onError: function (result) {
+                          alert("Pembayaran gagal!");
+                        },
+                        onClose: function () {
+                          alert("Anda menutup halaman pembayaran.");
+                        }
+                      });
+                    } else {
+                      alert(res.data.message || "Pembayaran berhasil dilakukan!");
+                    }
+                    
+                    // Refresh chats and messages
+                    const userId = localStorage.getItem("pelanggan_id") || currentUser?.id;
+                    if (userId) {
+                      fetchChats(userId);
+                    }
+                    
+                    if (activeChatId) {
+                      const msgRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/chat/${activeChatId}/messages`);
+                      setMessages(msgRes.data.data);
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert(err.response?.data?.message || "Gagal melakukan pembayaran.");
+                  } finally {
+                    setIsMessagesLoading(false);
+                    setPayingPesananId(null);
+                    setPayingHarga(null);
+                    setPayingTitle("");
+                  }
+                }}
+                className="flex-1 py-2.5 bg-secondary text-on-secondary hover:opacity-95 transition-all rounded-xl font-bold cursor-pointer border-none"
+              >
+                Bayar Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LogoutModal 
         isOpen={isLogoutModalOpen} 

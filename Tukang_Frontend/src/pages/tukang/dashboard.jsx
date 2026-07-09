@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoutModal from "../../components/LogoutModal";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
@@ -14,7 +14,10 @@ function TukangDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [technicianName, setTechnicianName] = useState("Tukang");
   const [avatar, setAvatar] = useState("https://64.media.tumblr.com/c9a40e15310bd677150504d378595de4/708a33221029625f-0b/s1280x1920/3304739f2245fc3c15e6e70ffff7ee91b2d2ac69.jpg");
-  const [isActiveWorking, setIsActiveWorking] = useState(true);
+  const [isActiveWorking, setIsActiveWorking] = useState(() => {
+    const saved = sessionStorage.getItem("tukang_active");
+    return saved ? JSON.parse(saved) === true : true;
+  });
   const [progressWidth, setProgressWidth] = useState(0);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
@@ -49,15 +52,37 @@ function TukangDashboard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [fullscreenImage, setFullscreenImage] = useState(null);
 
+  const [tukangSaldo, setTukangSaldo] = useState(0);
+  const [riwayatTarik, setRiwayatTarik] = useState([]);
+  const [tarikAmount, setTarikAmount] = useState("");
+  const [tarikRekening, setTarikRekening] = useState("");
+  const [isSubmittingTarik, setIsSubmittingTarik] = useState(false);
+
   // Active summary stats counters
-  const [statsCounters, setStatsCounters] = useState({
-    activeOrders: 0,
-    completedJobs: 0,
-    avgRating: 0.0,
-    monthlyIncome: "0",
+  const [statsCounters, setStatsCounters] = useState(() => {
+    const saved = sessionStorage.getItem("tukang_stats");
+    if (saved) {
+      const data = JSON.parse(saved);
+      return {
+        activeOrders: data.pesanan_aktif,
+        completedJobs: data.pekerjaan_selesai,
+        avgRating: parseFloat(data.rating_rata_rata || 0),
+        monthlyIncome: (data.pendapatan_bulan_ini / 1000000).toFixed(1) + "M",
+      };
+    }
+    return {
+      activeOrders: "00",
+      completedJobs: 0,
+      avgRating: 0.0,
+      monthlyIncome: "Rp 0.0M",
+    };
   });
 
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [recentActivities, setRecentActivities] = useState(() => {
+    const saved = sessionStorage.getItem("tukang_activities");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   const [tukangLayanans, setTukangLayanans] = useState(() => {
     try {
       const cached = sessionStorage.getItem("tukang_layanans");
@@ -68,11 +93,18 @@ function TukangDashboard() {
   });
 
   // Order List State
-  const [ordersList, setOrdersList] = useState([]);
+  const [ordersList, setOrdersList] = useState(() => {
+    const saved = sessionStorage.getItem("tukang_orders");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
   // User Location & Auth State
-  const [userLocation, setUserLocation] = useState({ lat: null, lng: null });
+  const [userLocation, setUserLocation] = useState(() => {
+    const saved = sessionStorage.getItem("tukang_location");
+    return saved ? JSON.parse(saved) : { lat: null, lng: null };
+  });
   const [tukangId, setTukangId] = useState(null);
 
   useEffect(() => {
@@ -108,9 +140,12 @@ function TukangDashboard() {
 
   const fetchDashboardData = async () => {
     if (!tukangId) return;
+
+    // 1. Fetch dashboard stats
     try {
       const statsRes = await api.get(`/tukang/${tukangId}/dashboard-stats`);
       if (statsRes.data.status === "Sukses") {
+        sessionStorage.setItem("tukang_stats", JSON.stringify(statsRes.data.data));
         setStatsCounters({
           activeOrders: statsRes.data.data.pesanan_aktif,
           completedJobs: statsRes.data.data.pekerjaan_selesai,
@@ -118,27 +153,83 @@ function TukangDashboard() {
           monthlyIncome: (statsRes.data.data.pendapatan_bulan_ini / 1000000).toFixed(1) + "M",
         });
       }
-      
+    } catch (e) {
+      console.error("Gagal memuat stats:", e);
+    }
+
+    // 2. Fetch recent activities
+    try {
       const actRes = await api.get(`/tukang/${tukangId}/activities`);
       if (actRes.data.status === "Sukses") {
+        sessionStorage.setItem("tukang_activities", JSON.stringify(actRes.data.data));
         setRecentActivities(actRes.data.data);
       }
+    } catch (e) {
+      console.error("Gagal memuat aktivitas:", e);
+    }
 
+    // 3. Fetch profile & coordinates
+    try {
       const profilRes = await api.get(`/tukang/${tukangId}`);
       if (profilRes.data.status === "Sukses") {
         setIsActiveWorking(!!profilRes.data.data.is_aktif);
+        setTukangSaldo(profilRes.data.data.saldo || 0);
+        sessionStorage.setItem("tukang_active", JSON.stringify(!!profilRes.data.data.is_aktif));
         const layanansData = profilRes.data.data.layanans || [];
         setTukangLayanans(layanansData);
         sessionStorage.setItem("tukang_layanans", JSON.stringify(layanansData));
         
-        // Geolocation fallback
-        setUserLocation({
+        const locationObj = {
           lat: parseFloat(profilRes.data.data.latitude || -7.7693966),
           lng: parseFloat(profilRes.data.data.longitude || 110.3804236)
-        });
+        };
+        sessionStorage.setItem("tukang_location", JSON.stringify(locationObj));
+        setUserLocation(locationObj);
       }
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+      console.error("Gagal memuat profil/koordinat:", error);
+      const fallbackObj = {
+        lat: -7.7693966,
+        lng: 110.3804236
+      };
+      sessionStorage.setItem("tukang_location", JSON.stringify(fallbackObj));
+      setUserLocation(fallbackObj);
+    }
+
+    // 4. Fetch Riwayat Penarikan
+    try {
+      const riwayatRes = await api.get(`/tukang/${tukangId}/riwayat-tarik`);
+      if (riwayatRes.data.status === "Sukses") {
+        setRiwayatTarik(riwayatRes.data.data);
+      }
+    } catch (e) {}
+  };
+
+  const handleTarikDana = async () => {
+    if (!tarikAmount || !tarikRekening) {
+      showToast("Harap isi nominal dan rekening tujuan!", "error");
+      return;
+    }
+    const amount = parseInt(tarikAmount.replace(/\D/g, ''));
+    if (amount < 10000) {
+      showToast("Minimal penarikan Rp 10.000", "error");
+      return;
+    }
+    setIsSubmittingTarik(true);
+    try {
+      const res = await api.post(`/tukang/${tukangId}/tarik-dana`, {
+        jumlah_tarik: amount,
+        rekening_tujuan: tarikRekening
+      });
+      showToast(res.data.message || "Penarikan berhasil diajukan!", "success");
+      setTukangSaldo(res.data.sisa_saldo);
+      setTarikAmount("");
+      setTarikRekening("");
+      fetchDashboardData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Gagal menarik dana", "error");
+    } finally {
+      setIsSubmittingTarik(false);
     }
   };
 
@@ -199,6 +290,7 @@ function TukangDashboard() {
 
   const handleToggleActiveWorking = async (checked) => {
     setIsActiveWorking(checked);
+    sessionStorage.setItem("tukang_active", JSON.stringify(checked));
     try {
       await api.put(`/tukang/${tukangId}/status`, {
         is_aktif: checked
@@ -225,6 +317,9 @@ function TukangDashboard() {
 
   const fetchAvailableOrders = async () => {
     if (!userLocation.lat || !userLocation.lng) return;
+    if (isFetchingRef.current) return;
+    
+    isFetchingRef.current = true;
     setIsOrdersLoading(true);
     try {
       const res = await api.get(`/pesanan/available`, {
@@ -246,18 +341,27 @@ function TukangDashboard() {
           lng: order.longitude,
           distance: parseFloat(order.jarak).toFixed(1),
           fee: order.harga_penawaran,
-          feeText: `Rp ${(order.harga_penawaran / 1000)}rb`,
-          image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDymauO8hECOyauQr6APO_jnNU9MKKTqBHTkSw52lJDN-lQDP_AUEbTizrRdQLZY2rOCzIhl2L8juduEkx4cUwNfl_XDpwDnECGqrNVGxNu6SNZfxvK-fsjBPcQ9uzGZ5NRCeoQQPMbNv4QZJrh8LVPbG7Jsa4G0mAbZbxmrEM2bU4CHYNsnJQ3AAKTqyYozf617f7y9Agt18uD1vW8v5BtEzdBn0MJynAsbSqoPdk9ArpVMczz6rnyiimxpUm_mmb7Zg-eS8VaBANb",
+          feeText: `Rp ${(order.harga_penawaran).toLocaleString("id-ID")}`,
+          image: order.foto_lampiran 
+            ? (order.foto_lampiran.startsWith("http") ? order.foto_lampiran : `${import.meta.env.VITE_API_BASE_URL}/storage/${order.foto_lampiran}`)
+            : "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=400&auto=format&fit=crop",
           description: order.deskripsi_masalah,
-          clientName: "Pelanggan",
+          clientName: order.user?.nama || order.user?.name || "Pelanggan",
+          clientPhone: order.user?.no_hp || "0812-xxxx-xxxx",
+          tanggalKunjungan: order.tanggal_kunjungan || "-",
+          jamKunjungan: order.jam_kunjungan || "-",
+          metodePembayaran: order.metode_pembayaran || "QRIS",
+          chatId: order.chat?.id,
           createdTime: new Date(order.created_at).getTime(),
         }));
+        sessionStorage.setItem("tukang_orders", JSON.stringify(formatted));
         setOrdersList(formatted);
       }
     } catch (e) {
       console.error("Gagal memuat pesanan tersedia:", e);
     } finally {
       setIsOrdersLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -997,7 +1101,7 @@ function TukangDashboard() {
               </div>
 
               <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10 space-y-2 text-[11px] text-on-surface-variant/90 font-medium">
-                <div className="flex items-center justify-between">
+                 <div className="flex items-center justify-between">
                   <span className="text-on-surface-variant/60">Pelanggan</span>
                   <span className="font-bold text-on-surface">{selectedOrder.clientName}</span>
                 </div>
@@ -1009,6 +1113,18 @@ function TukangDashboard() {
                   <span className="text-on-surface-variant/60">Jarak</span>
                   <span className="font-bold text-on-surface">{selectedOrder.distance} km</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-variant/60">Jadwal Kunjungan</span>
+                  <span className="font-bold text-on-surface">{selectedOrder.tanggalKunjungan}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-variant/60">Jam Kunjungan</span>
+                  <span className="font-bold text-on-surface">{selectedOrder.jamKunjungan}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-variant/60">Metode Pembayaran</span>
+                  <span className="font-bold text-secondary uppercase bg-secondary/10 px-2 py-0.5 rounded text-[10px]">{selectedOrder.metodePembayaran}</span>
+                </div>
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-on-surface-variant/60 shrink-0">Lokasi</span>
                   <span className="font-bold text-on-surface text-right">{selectedOrder.locationName}</span>
@@ -1018,11 +1134,15 @@ function TukangDashboard() {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => {
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedOrder.lat},${selectedOrder.lng}`, "_blank");
+                    navigate("/tukang/chat", { 
+                      state: { 
+                        activeChatId: selectedOrder.chatId
+                      } 
+                    });
                   }}
                   className="flex-1 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent flex items-center justify-center gap-1"
                 >
-                  <span className="material-symbols-outlined text-[15px]">near_me</span> Navigasi Maps
+                  <span className="material-symbols-outlined text-[15px]">chat</span> Tawar melalui chat
                 </button>
                 
                 <button
@@ -1201,47 +1321,46 @@ function TukangDashboard() {
               
               <div className="p-5 bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 rounded-2xl text-center space-y-1">
                 <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider block">Saldo Dompet Saya</span>
-                <h4 className="text-2xl font-extrabold text-green-400">Rp 1.850.000</h4>
+                <h4 className="text-2xl font-extrabold text-green-400">Rp {tukangSaldo.toLocaleString("id-ID")}</h4>
                 <p className="text-[9px] text-on-surface-variant/70">Dapat ditarik ke rekening bank secara instan</p>
               </div>
 
               <div className="space-y-3">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Riwayat Transaksi Terakhir</span>
-                
-                <div className="divide-y divide-outline-variant/10 max-h-48 overflow-y-auto space-y-2 pr-1">
-                  <div className="flex justify-between items-center py-2 text-[11px] font-medium">
-                    <div>
-                      <p className="text-on-surface">Pekerjaan #102 Selesai</p>
-                      <p className="text-[9px] text-on-surface-variant/60">26 Juni 2026</p>
-                    </div>
-                    <span className="text-green-400 font-bold">+Rp 450.000</span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 text-[11px] font-medium">
-                    <div>
-                      <p className="text-on-surface">Pencairan Dana Ke Mandiri</p>
-                      <p className="text-[9px] text-on-surface-variant/60">25 Juni 2026</p>
-                    </div>
-                    <span className="text-on-surface-variant/80 font-bold">-Rp 2.000.000</span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 text-[11px] font-medium">
-                    <div>
-                      <p className="text-on-surface">Pekerjaan #089 Selesai</p>
-                      <p className="text-[9px] text-on-surface-variant/60">24 Juni 2026</p>
-                    </div>
-                    <span className="text-green-400 font-bold">+Rp 350.000</span>
-                  </div>
+                <div className="space-y-2">
+                  <input type="text" placeholder="Nominal Tarik (Min 10.000)" value={tarikAmount} onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setTarikAmount(val ? "Rp " + parseInt(val).toLocaleString("id-ID") : "");
+                  }} className="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl p-3 text-xs text-on-surface focus:ring-1 focus:ring-green-500 outline-none transition-all" />
+                  <input type="text" placeholder="Rekening Tujuan (Cth: BCA 1234567890 a/n Budi)" value={tarikRekening} onChange={(e) => setTarikRekening(e.target.value)} className="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl p-3 text-xs text-on-surface focus:ring-1 focus:ring-green-500 outline-none transition-all" />
                 </div>
-              </div>
+                <div className="flex gap-2.5 pt-1 mb-4">
+                  <button
+                    onClick={handleTarikDana}
+                    disabled={isSubmittingTarik || tukangSaldo < 10000}
+                    className="flex-1 py-2.5 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-colors border-none cursor-pointer flex justify-center items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSubmittingTarik ? <span className="material-symbols-outlined text-sm animate-spin">sync</span> : "Tarik Saldo"}
+                  </button>
+                </div>
 
-              <div className="flex gap-2.5 pt-2">
-                <button
-                  onClick={() => showToast("Permintaan pencairan dana berhasil dikirim!", "success")}
-                  className="flex-1 py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:opacity-95 transition-opacity border-none cursor-pointer text-center"
-                >
-                  Tarik Saldo
-                </button>
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Riwayat Penarikan</span>
+                
+                <div className="divide-y divide-outline-variant/10 max-h-40 overflow-y-auto space-y-2 pr-1 chat-scrollbar">
+                  {riwayatTarik.length === 0 ? (
+                    <p className="text-xs text-on-surface-variant/60 text-center py-4">Belum ada riwayat penarikan.</p>
+                  ) : riwayatTarik.map(rt => (
+                    <div key={rt.id} className="flex justify-between items-center py-2 text-[11px] font-medium">
+                      <div>
+                        <p className="text-on-surface">Ke {rt.rekening_tujuan}</p>
+                        <p className="text-[9px] text-on-surface-variant/60">{new Date(rt.created_at).toLocaleDateString("id-ID", {day: 'numeric', month: 'short', year:'numeric'})}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-on-surface-variant/80 font-bold block">-Rp {parseInt(rt.jumlah_tarik).toLocaleString("id-ID")}</span>
+                        <span className={`text-[9px] font-bold ${rt.status === 'pending' ? 'text-yellow-500' : 'text-green-500'}`}>{rt.status.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

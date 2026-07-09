@@ -102,6 +102,56 @@ class PesananController extends Controller
             return response()->json(['message' => 'Pesanan belum bisa dibayar'], 400);
         }
 
+        // Midtrans Integration
+        $serverKey = env('MIDTRANS_SERVER_KEY');
+        if ($serverKey && strpos($serverKey, 'samplekey') === false) {
+            try {
+                \Midtrans\Config::$serverKey = $serverKey;
+                \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+                \Midtrans\Config::$isSanitized = env('MIDTRANS_IS_SANITIZED', true);
+                \Midtrans\Config::$is3ds = env('MIDTRANS_IS_3DS', true);
+
+                $transaction_details = [
+                    'order_id' => 'TKG-ORDER-' . $pesanan->id . '-' . time(),
+                    'gross_amount' => (int) $pesanan->harga_penawaran,
+                ];
+
+                $customer_details = [
+                    'first_name' => $pesanan->user->nama ?? $pesanan->user->name ?? 'Pelanggan',
+                    'email' => $pesanan->user->email ?? 'customer@tukangaja.com',
+                    'phone' => $pesanan->user->no_hp ?? '',
+                ];
+
+                $item_details = [[
+                    'id' => $pesanan->id,
+                    'price' => (int) $pesanan->harga_penawaran,
+                    'quantity' => 1,
+                    'name' => 'Jasa: ' . substr($pesanan->judul, 0, 45),
+                ]];
+
+                $payload = [
+                    'transaction_details' => $transaction_details,
+                    'customer_details' => $customer_details,
+                    'item_details' => $item_details,
+                ];
+
+                $snapToken = \Midtrans\Snap::getSnapToken($payload);
+
+                $pesanan->status = 'menunggu_pembayaran';
+                $pesanan->save();
+
+                return response()->json([
+                    'status' => 'Sukses',
+                    'snap_token' => $snapToken,
+                    'message' => 'Midtrans transaction created successfully'
+                ]);
+            } catch (\Exception $e) {
+                // If Midtrans API fails (e.g. invalid server key), fall back to direct simulation
+                \Illuminate\Support\Facades\Log::warning('Midtrans integration error: ' . $e->getMessage() . '. Falling back to direct wallet simulation.');
+            }
+        }
+
+        // Direct Simulation Fallback (Old Wallet Payment Code)
         $user = $pesanan->user;
         if ($user) {
             if ($user->saldo < $pesanan->harga_penawaran) {
@@ -114,11 +164,19 @@ class PesananController extends Controller
         $pesanan->status = 'menunggu_pengerjaan';
         $pesanan->save();
 
+        // Buat record Escrow
+        Escrow::create([
+            'pesanan_id' => $pesanan->id,
+            'jumlah_bayar' => $pesanan->harga_penawaran,
+            'tipe_pembayaran' => $request->tipe ?? 'full',
+            'status_escrow' => 'ditahan'
+        ]);
+
         // Buat notifikasi transaksi untuk pelanggan (user)
         \App\Models\Notification::create([
             'user_id' => $pesanan->user_id,
             'category' => 'transaksi',
-            'title' => 'Pembayaran Berhasil',
+            'title' => 'Pembayaran Berhasil (Simulasi)',
             'message' => 'Pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') telah dikonfirmasi sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '.',
             'unread' => true
         ]);
@@ -128,23 +186,124 @@ class PesananController extends Controller
             \App\Models\Notification::create([
                 'user_id' => $pesanan->tukang->user_id,
                 'category' => 'transaksi',
-                'title' => 'Pembayaran Berhasil',
+                'title' => 'Pembayaran Berhasil (Simulasi)',
                 'message' => 'Pelanggan telah melakukan pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '. Silakan segera mulai bekerja.',
                 'unread' => true
             ]);
         }
 
+        return response()->json([
+            'status' => 'Sukses',
+            'is_simulation' => true,
+            'message' => 'Pembayaran (simulasi saldo) berhasil dilakukan! Uang ditahan oleh sistem escrow.',
+            'saldo_sekarang' => $user ? $user->saldo : null
+        ], 200);
+    }
+
+    /**
+     * Bypass Midtrans (Developer Only) untuk localhost
+     */
+    public function bypassMidtrans($id)
+    {
+        $pesanan = Pesanan::find($id);
+        if (!$pesanan) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+        }
+        
+        $pesanan->status = 'menunggu_pengerjaan';
+        $pesanan->save();
+
+        // Buat record Escrow
         Escrow::create([
             'pesanan_id' => $pesanan->id,
             'jumlah_bayar' => $pesanan->harga_penawaran,
-            'tipe_pembayaran' => $request->tipe ?? 'full',
+            'tipe_pembayaran' => 'full',
             'status_escrow' => 'ditahan'
         ]);
 
-        return response()->json([
-            'message' => 'Pembayaran berhasil! Uang ditahan oleh sistem.',
-            'saldo_sekarang' => $user ? $user->saldo : null
-        ], 200);
+        // Tambahkan chat sistem untuk notifikasi di room chat
+        $chat = \App\Models\Chat::where('pesanan_id', $pesanan->id)->first();
+        if ($chat) {
+            \App\Models\Message::create([
+                'chat_id' => $chat->id,
+                'sender_type' => 'system',
+                'sender_id' => null,
+                'message_type' => 'text',
+                'text' => 'Pembayaran telah berhasil dikonfirmasi sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '. Tukang akan segera memulai pekerjaan.',
+            ]);
+        }
+
+        return response()->json(['status' => 'Sukses', 'message' => 'Pembayaran berhasil dikonfirmasi (Bypass Dev)']);
+    }
+
+    /**
+     * Handle Webhook Notification dari Midtrans
+     */
+    public function handleMidtransNotification(Request $request)
+    {
+        $payload = $request->all();
+        
+        $serverKey = env('MIDTRANS_SERVER_KEY');
+        if (!$serverKey) {
+            return response()->json(['message' => 'Server key not configured'], 500);
+        }
+
+        // Verifikasi keaslian signature key dari Midtrans
+        $signature = hash("sha512", $payload['order_id'] . $payload['status_code'] . $payload['gross_amount'] . $serverKey);
+        if ($signature !== $payload['signature_key']) {
+            return response()->json(['message' => 'Invalid signature'], 403);
+        }
+
+        // Ambil ID pesanan dari string order_id Midtrans (TKG-ORDER-{id}-timestamp)
+        $orderIdParts = explode('-', $payload['order_id']);
+        $pesananId = $orderIdParts[2] ?? null;
+
+        $pesanan = Pesanan::find($pesananId);
+        if (!$pesanan) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $transactionStatus = $payload['transaction_status'];
+
+        if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
+            // Pembayaran Berhasil!
+            $pesanan->status = 'menunggu_pengerjaan';
+            $pesanan->save();
+
+            // Buat record Escrow
+            Escrow::create([
+                'pesanan_id' => $pesanan->id,
+                'jumlah_bayar' => $pesanan->harga_penawaran,
+                'tipe_pembayaran' => 'full',
+                'status_escrow' => 'ditahan'
+            ]);
+
+            // Buat notifikasi transaksi untuk pelanggan (user)
+            \App\Models\Notification::create([
+                'user_id' => $pesanan->user_id,
+                'category' => 'transaksi',
+                'title' => 'Pembayaran Berhasil',
+                'message' => 'Pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') telah dikonfirmasi via Midtrans sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '.',
+                'unread' => true
+            ]);
+
+            // Buat notifikasi transaksi untuk tukang
+            if ($pesanan->tukang) {
+                \App\Models\Notification::create([
+                    'user_id' => $pesanan->tukang->user_id,
+                    'category' => 'transaksi',
+                    'title' => 'Pembayaran Berhasil',
+                    'message' => 'Pelanggan telah melakukan pembayaran untuk pesanan #' . $pesanan->id . ' (' . $pesanan->judul . ') sebesar Rp ' . number_format($pesanan->harga_penawaran, 0, ',', '.') . '. Silakan segera mulai bekerja.',
+                    'unread' => true
+                ]);
+            }
+        } else if ($transactionStatus == 'deny' || $transactionStatus == 'expire' || $transactionStatus == 'cancel') {
+            // Pembayaran gagal/batal/kedaluwarsa
+            $pesanan->status = 'menunggu_persetujuan';
+            $pesanan->save();
+        }
+
+        return response()->json(['message' => 'Webhook processed successfully']);
     }
 
     /**
@@ -234,6 +393,9 @@ class PesananController extends Controller
             'alamat_lengkap' => 'required|string',
             'harga_penawaran' => 'required|integer',
             'foto_lampiran' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'tanggal_kunjungan' => 'nullable|string',
+            'jam_kunjungan' => 'nullable|string',
+            'metode_pembayaran' => 'nullable|string',
         ]);
 
         $path = null;
@@ -254,6 +416,9 @@ class PesananController extends Controller
             'budget_perkiraan' => $request->budget_perkiraan ?? null,
             'status' => $request->tukang_id ? 'menunggu_penawaran' : 'menunggu',
             'foto_lampiran' => $path,
+            'tanggal_kunjungan' => $request->tanggal_kunjungan,
+            'jam_kunjungan' => $request->jam_kunjungan,
+            'metode_pembayaran' => $request->metode_pembayaran,
         ]);
 
         if ($pesanan->tukang_id) {
@@ -351,7 +516,7 @@ class PesananController extends Controller
             $query->latest();
         }
 
-        $pesanan = $query->get();
+        $pesanan = $query->with(['user', 'chat'])->get();
 
         return response()->json([
             'status' => 'Sukses',
