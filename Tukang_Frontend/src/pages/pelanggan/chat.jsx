@@ -668,7 +668,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
                                 <span className="text-lg font-black text-secondary">{msg.text}</span>
                               </div>
                               
-                              {activePesanan && (activePesanan.status === 'menunggu_persetujuan' || activePesanan.status === 'menunggu_pembayaran') && (
+                              {activePesanan && (activePesanan.status === 'menunggu_penawaran' || activePesanan.status === 'menunggu' || activePesanan.status === 'menunggu_persetujuan' || activePesanan.status === 'menunggu_pembayaran') && (
                                 <button
                                   onClick={() => handleDirectPayment(activePesanan.id, activePesanan.harga_penawaran, activePesanan.judul)}
                                   className="w-full py-2.5 bg-secondary text-on-secondary rounded-xl font-bold text-xs hover:opacity-95 transition-opacity cursor-pointer border-none flex items-center justify-center gap-1"

@@ -90,19 +90,51 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const processPaymentSim = async () => {
     setIsPaying(true);
     try {
-      // Check if it is a real database ID (numeric or is parsed as one)
       const isRealOrder = !isNaN(Number(paymentData.id));
       if (isRealOrder) {
-        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${paymentData.id}/bayar`, {
+        const res = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${paymentData.id}/bayar`, {
           tipe: 'full'
         });
+        
+        if (res.data.snap_token) {
+          window.snap.pay(res.data.snap_token, {
+            onSuccess: async function (result) {
+              await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${paymentData.id}/bypass-midtrans`);
+              setIsPaying(false);
+              setIsSuccess(true);
+              setTimeout(() => {
+                setIsSuccess(false);
+                navigate("/pelanggan/pembayaran", { 
+                  state: { 
+                    paymentSuccess: true, 
+                    paymentId: paymentData.id,
+                    serviceName: paymentData.service,
+                    methodUsed: selectedMethod
+                  } 
+                });
+              }, 1500);
+            },
+            onPending: function (result) {
+              alert("Menunggu Pembayaran Anda.");
+              setIsPaying(false);
+            },
+            onError: function (result) {
+              alert("Pembayaran gagal!");
+              setIsPaying(false);
+            },
+            onClose: function () {
+              alert("Anda menutup halaman pembayaran.");
+              setIsPaying(false);
+            }
+          });
+          return;
+        }
       }
       
       setIsPaying(false);
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
-        // Redirect back with state indicating payment was successful
         navigate("/pelanggan/pembayaran", { 
           state: { 
             paymentSuccess: true, 

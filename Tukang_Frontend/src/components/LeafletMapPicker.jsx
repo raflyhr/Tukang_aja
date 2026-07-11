@@ -343,13 +343,13 @@ export default function LeafletMapPicker({ onLocationChange }) {
 
         {/* Suggestion Dropdown */}
         {showDropdown && query.length >= 3 && (
-          <div className="absolute z-50 mt-1 w-full bg-[#2a2a2a] border border-outline-variant rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="absolute z-[9999] mt-1 w-full bg-[#2a2a2a] border border-outline-variant rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
             {loading && suggestions.length === 0 ? (
               <div className="p-3 text-sm text-on-surface-variant flex items-center gap-2">
                 <span className="material-symbols-outlined text-secondary animate-pulse">
                   search
                 </span>
-                Mencari lokasi...
+                Mencari lokasi....
               </div>
             ) : suggestions.length > 0 ? (
               suggestions.map((item, index) => (

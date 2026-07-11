@@ -40,10 +40,41 @@ function DetailPesanan() {
       return;
     }
     try {
+      if (action === 'bayar') {
+        const res = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${order.id}/bayar`);
+        if (res.data.snap_token) {
+          window.snap.pay(res.data.snap_token, {
+            onSuccess: async function (result) {
+              try {
+                await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${order.id}/bypass-midtrans`);
+                alert("Pembayaran Berhasil!");
+                setCurrentStatus('menunggu_pengerjaan');
+              } catch (e) {
+                console.error("Bypass Error:", e);
+                alert("Berhasil bayar tapi gagal bypass status.");
+              }
+            },
+            onPending: function (result) {
+              alert("Menunggu Pembayaran Anda.");
+            },
+            onError: function (result) {
+              alert("Pembayaran gagal!");
+            },
+            onClose: function () {
+              alert("Anda menutup halaman pembayaran.");
+            }
+          });
+          return;
+        } else {
+          alert(res.data.message || "Pembayaran berhasil dilakukan!");
+          setCurrentStatus('menunggu_pengerjaan');
+          return;
+        }
+      }
+
       const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pesanan/${order.id}/${action}`);
       if(response.data) {
         alert(response.data.message);
-        if(action === 'bayar') setCurrentStatus('menunggu_pengerjaan');
         if(action === 'konfirmasi-selesai') setCurrentStatus('selesai');
         if(action === 'komplain') setCurrentStatus('komplain');
       }
@@ -385,7 +416,7 @@ function DetailPesanan() {
               <div className="bg-surface-container p-6 rounded-3xl border border-surface-variant/15 shadow-xl space-y-3">
                 <h4 className="font-bold text-sm text-on-surface uppercase tracking-wider">Tindakan Pesanan</h4>
                 
-                {currentStatus === "menunggu_pembayaran" || currentStatus === "menunggu_persetujuan" ? (
+                {currentStatus === "menunggu_penawaran" || currentStatus === "menunggu" || currentStatus === "menunggu_pembayaran" || currentStatus === "menunggu_persetujuan" ? (
                   <button onClick={() => handleAction('bayar')} className="w-full bg-secondary text-background font-bold py-3 rounded-xl hover:bg-secondary/90 transition-all shadow-md cursor-pointer">
                     Bayar & Masuk Escrow
                   </button>
