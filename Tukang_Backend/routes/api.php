@@ -96,6 +96,7 @@ Route::get('/admin/verifikasi', [AdminController::class, 'getVerifications']);
 Route::put('/admin/verifikasi/{id}', [AdminController::class, 'verifyTukang']);
 Route::get('/admin/tukang', [AdminController::class, 'getAllTukang']);
 Route::put('/admin/tukang/{id}/status', [AdminController::class, 'toggleTukangStatus']);
+Route::delete('/admin/tukang/{id}', [AdminController::class, 'deleteTukang']);
 Route::get('/admin/monitoring', [AdminController::class, 'getMonitoring']);
 Route::get('/admin/disputes', [AdminController::class, 'getDisputes']);
 Route::put('/admin/disputes/{id}/resolve', [AdminController::class, 'resolveDispute']);

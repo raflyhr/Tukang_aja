@@ -47,15 +47,29 @@ function MonitoringRating() {
   };
 
   const handleDeactivate = async (id) => {
-    if (confirm(`Apakah Anda yakin ingin menonaktifkan akun dengan ID ${id}?`)) {
+    if (confirm(`Apakah Anda yakin ingin menonaktifkan/mengubah status akun dengan ID ${id}?`)) {
       try {
         const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}/status`);
         if (response.data.status === 'Sukses') {
           fetchMonitoringData();
-          alert(`Akun ${id} telah dinonaktifkan.`);
+          alert(`Status akun ${id} telah berhasil diubah.`);
         }
       } catch (e) {
         alert("Gagal mengubah status tukang.");
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm(`Apakah Anda yakin ingin MENGHAPUS akun tukang dengan ID ${id} secara permanen? Tindakan ini tidak dapat dibatalkan.`)) {
+      try {
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}`);
+        if (response.data.status === 'Sukses') {
+          fetchMonitoringData();
+          alert(response.data.message);
+        }
+      } catch (e) {
+        alert("Gagal menghapus akun tukang.");
       }
     }
   };
@@ -337,12 +351,15 @@ function MonitoringRating() {
                                   </Link>
                                   <button 
                                     onClick={() => handleDeactivate(item.id)}
-                                    disabled={item.status === "Nonaktif"}
-                                    className={`px-3 py-1 border border-red-500/30 text-red-400 rounded-lg text-[10px] font-extrabold uppercase bg-transparent cursor-pointer ${
-                                      item.status === "Nonaktif" ? "opacity-35 cursor-not-allowed" : ""
-                                    }`}
+                                    className="px-3 py-1 border border-red-500/30 text-red-400 rounded-lg text-[10px] font-extrabold uppercase bg-transparent cursor-pointer hover:bg-red-500/10"
                                   >
-                                    Nonaktifkan Akun
+                                    {item.status === 'Nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete(item.id)}
+                                    className="px-3 py-1 border border-red-600/40 text-red-500 rounded-lg text-[10px] font-extrabold uppercase bg-transparent cursor-pointer hover:bg-red-500/10"
+                                  >
+                                    Hapus
                                   </button>
                                 </>
                               ) : (
@@ -356,13 +373,17 @@ function MonitoringRating() {
                                   </Link>
                                   <button 
                                     onClick={() => handleDeactivate(item.id)}
-                                    disabled={item.status === "Nonaktif"}
-                                    className={`p-1.5 bg-surface-container border border-surface-variant/20 rounded-lg text-on-surface-variant cursor-pointer flex items-center justify-center ${
-                                      item.status === "Nonaktif" ? "opacity-35 cursor-not-allowed" : ""
-                                    }`} 
-                                    title="Nonaktifkan"
+                                    className="p-1.5 bg-surface-container border border-surface-variant/20 rounded-lg text-on-surface-variant cursor-pointer flex items-center justify-center" 
+                                    title={item.status === 'Nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
                                   >
-                                    <span className="material-symbols-outlined text-[16px]">block</span>
+                                    <span className="material-symbols-outlined text-[16px]">{item.status === 'Nonaktif' ? 'check_circle' : 'block'}</span>
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete(item.id)}
+                                    className="p-1.5 bg-surface-container border border-red-500/20 rounded-lg text-red-400 cursor-pointer flex items-center justify-center hover:bg-red-500/10" 
+                                    title="Hapus Akun"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
                                   </button>
                                 </>
                               )}

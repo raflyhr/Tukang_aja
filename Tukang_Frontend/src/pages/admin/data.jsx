@@ -14,6 +14,7 @@ function DataTukang() {
   const [tukangList, setTukangList] = useState([]);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const MOCK_TUKANG = [
     {
@@ -72,6 +73,11 @@ function DataTukang() {
     t.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredTukangs.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTukangs = filteredTukangs.slice(startIndex, startIndex + itemsPerPage);
+
   useEffect(() => {
     fetchTukangList();
   }, []);
@@ -109,6 +115,20 @@ function DataTukang() {
         }
       } catch (e) {
         alert("Gagal mengubah status tukang.");
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm(`Apakah Anda yakin ingin MENGHAPUS akun tukang dengan ID ${id} secara permanen? Tindakan ini tidak dapat dibatalkan.`)) {
+      try {
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}`);
+        if (response.data.status === 'Sukses') {
+          fetchTukangList(); // Refresh data
+          alert(response.data.message);
+        }
+      } catch (e) {
+        alert("Gagal menghapus akun tukang.");
       }
     }
   };
@@ -289,7 +309,7 @@ function DataTukang() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-variant/10 font-medium">
-                  {filteredTukangs.length === 0 ? (
+                  {paginatedTukangs.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="p-8 text-center text-on-surface-variant/65">
                         <span className="material-symbols-outlined text-3xl mb-1.5 text-secondary/45">search_off</span>
@@ -297,7 +317,7 @@ function DataTukang() {
                       </td>
                     </tr>
                   ) : (
-                    filteredTukangs.map((item) => (
+                    paginatedTukangs.map((item) => (
                       <tr key={item.id} className="border-b border-surface-variant/10">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -333,20 +353,29 @@ function DataTukang() {
                         <td className="px-6 py-4 text-on-surface-variant">{item.joinDate}</td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2.5">
-                            <Link to={`/admin/verifikasi/${item.id}`} className="px-4 py-2 rounded-xl border border-outline-variant text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer hover:bg-surface-container-highest transition-colors">
+                            <Link to={`/admin/verifikasi/${item.id}`} className="px-3 py-1.5 rounded-xl border border-outline-variant text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer hover:bg-surface-container-highest transition-colors">
                               Lihat Profil
                             </Link>
                             {item.status === "Ditinjau" ? (
-                              <Link to={`/admin/verifikasi/${item.id}`} className="px-4 py-2 rounded-xl bg-secondary text-on-secondary text-xs font-bold border-none cursor-pointer shadow-md shadow-secondary/20 flex items-center justify-center">
+                              <Link to={`/admin/verifikasi/${item.id}`} className="px-3 py-1.5 rounded-xl bg-secondary text-on-secondary text-xs font-bold border-none cursor-pointer shadow-md shadow-secondary/20 flex items-center justify-center">
                                 Verifikasi
                               </Link>
                             ) : (
-                              <button 
-                                onClick={() => handleDeactivate(item.id)}
-                                className={`px-4 py-2 rounded-xl border ${item.status === 'Aktif' ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-green-500/30 text-green-400 hover:bg-green-500/10'} text-xs font-bold bg-transparent cursor-pointer transition-colors`}
-                              >
-                                {item.status === 'Aktif' ? 'Block Akun' : 'Aktifkan Akun'}
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => handleDeactivate(item.id)}
+                                  className={`px-3 py-1.5 rounded-xl border ${item.status === 'Aktif' ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-green-500/30 text-green-400 hover:bg-green-500/10'} text-xs font-bold bg-transparent cursor-pointer transition-colors`}
+                                >
+                                  {item.status === 'Aktif' ? 'Block Akun' : 'Aktifkan Akun'}
+                                </button>
+                                <button 
+                                  onClick={() => handleDelete(item.id)}
+                                  className="px-3 py-1.5 rounded-xl border border-red-600/40 text-red-500 hover:bg-red-500/10 text-xs font-bold bg-transparent cursor-pointer transition-colors flex items-center justify-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                                  Hapus
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -359,17 +388,33 @@ function DataTukang() {
 
             {/* Pagination Footer */}
             <div className="p-5 border-t border-surface-variant/15 flex items-center justify-between bg-surface-container-high/20">
-              <span className="text-xs text-on-surface-variant font-medium">Menampilkan 1 - {filteredTukangs.length} dari 1.248 tukang</span>
+              <span className="text-xs text-on-surface-variant font-medium">
+                Menampilkan {filteredTukangs.length > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + itemsPerPage, filteredTukangs.length)} dari {filteredTukangs.length} tukang
+              </span>
               <div className="flex gap-1.5">
-                <button className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer" disabled>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                 </button>
-                <button className="w-8 h-8 rounded-lg bg-secondary text-on-secondary text-xs font-bold shadow-md shadow-secondary/10 border-none cursor-pointer">1</button>
-                <button className="w-8 h-8 rounded-lg border border-surface-variant/20 text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer">2</button>
-                <button className="w-8 h-8 rounded-lg border border-surface-variant/20 text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer">3</button>
-                <span className="flex items-end px-1 text-on-surface-variant">...</span>
-                <button className="w-8 h-8 rounded-lg border border-surface-variant/20 text-on-surface-variant text-xs font-bold bg-transparent cursor-pointer">312</button>
-                <button className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer">
+                
+                {Array.from({ length: totalPages }).map((_, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold border-none cursor-pointer ${currentPage === idx + 1 ? "bg-secondary text-on-secondary shadow-md" : "bg-transparent border border-surface-variant/20 text-on-surface-variant"}`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-surface-variant/20 text-on-surface-variant bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                 </button>
               </div>

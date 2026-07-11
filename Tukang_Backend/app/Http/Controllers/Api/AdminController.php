@@ -198,4 +198,38 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    public function deleteTukang($id)
+    {
+        $tukang = Tukang::findOrFail($id);
+        $user = \App\Models\User::find($tukang->user_id);
+
+        DB::beginTransaction();
+        try {
+            // Delete related records (portfolios, certifications, etc.) if any cascading delete is not set
+            $tukang->portofolios()->delete();
+            $tukang->sertifikats()->delete();
+            $tukang->layanans()->delete();
+            
+            // Delete the Tukang record
+            $tukang->delete();
+
+            // Delete the User record
+            if ($user) {
+                $user->delete();
+            }
+
+            DB::commit();
+            return response()->json([
+                'status' => 'Sukses',
+                'message' => 'Akun Tukang dan data terkait berhasil dihapus permanen'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => 'Gagal',
+                'message' => 'Gagal menghapus akun: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
