@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../../components/LeafletMapPicker";
 import LogoutModal from "../../components/LogoutModal";
 import ImageCropModal from "../../components/ImageCropModal";
+import api from "../../lib/axios";
 
 function Profil() {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ function Profil() {
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
     { id: "pesanan", label: "Pesanan Saya", icon: "receipt_long", path: "/pelanggan/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/pelanggan/chat" },
-    { id: "pembayaran", label: "Pembayaran", icon: "payments", path: "/pelanggan/pembayaran" },
+
     { id: "profil", label: "Profil", icon: "person", path: "/pelanggan/profil", active: true },
   ];
 
@@ -125,10 +126,32 @@ function Profil() {
     }
   };
 
-  const handleConfirmCrop = ({ file, dataUrl }) => {
-    setProfilePic(dataUrl);
-    setIsCropModalOpen(false);
-    showToast("Foto profil berhasil diperbarui!", "success");
+  const handleConfirmCrop = async ({ file, dataUrl }) => {
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      if (!savedUser) return;
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+
+      const formData = new FormData();
+      formData.append("foto_profil", file);
+
+      const response = await api.post(`/user/${userObj.id}/foto`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (response.data.data) {
+        setProfilePic(dataUrl);
+        setIsCropModalOpen(false);
+        showToast("Foto profil berhasil diperbarui!", "success");
+        // Update local storage
+        userObj.foto_profil = response.data.data.foto_profil;
+        localStorage.setItem("pelanggan_user", JSON.stringify({ ...parsed, user: userObj }));
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal mengunggah foto profil", "error");
+    }
   };
 
   // 4. Web Share / Clipboard API
@@ -195,27 +218,44 @@ function Profil() {
     showToast("Perubahan profil berhasil disimpan!", "success");
   };
 
-  const handleVerifyOTP = (e) => {
+  const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!otpVerificationState || otpVerificationState.code.length < 6) return;
 
-    // Simulate OTP validation (using "123456" as dummy valid code)
+    // Simulate OTP validation
     if (otpVerificationState.code === "123456") {
       showToast(`Verifikasi OTP untuk ${otpVerificationState.type} berhasil!`, "success");
       
       const updatedData = { ...pendingProfileUpdates };
       
-      // If we verified email first and phone was also changed, trigger phone OTP next
       if (otpVerificationState.type === "email" && updatedData.phone !== initialData.phone) {
-        setOtpVerificationState({
-          type: "phone",
-          value: updatedData.phone,
-          code: "",
-        });
+        setOtpVerificationState({ type: "phone", value: updatedData.phone, code: "" });
       } else {
-        setOtpVerificationState(null);
-        setPendingProfileUpdates(null);
-        showToast("Seluruh profil Anda berhasil diperbarui & disimpan!", "success");
+        // Save to backend
+        try {
+          const savedUser = localStorage.getItem("pelanggan_user");
+          const parsed = JSON.parse(savedUser);
+          const userObj = parsed.user || parsed;
+
+          const response = await api.put(`/user/${userObj.id}`, {
+            name: updatedData.fullName,
+            email: updatedData.email,
+            no_hp: updatedData.phone
+          });
+
+          setOtpVerificationState(null);
+          setPendingProfileUpdates(null);
+          setInitialData(updatedData);
+          showToast("Seluruh profil Anda berhasil diperbarui & disimpan!", "success");
+          
+          userObj.name = updatedData.fullName;
+          userObj.email = updatedData.email;
+          userObj.no_hp = updatedData.phone;
+          localStorage.setItem("pelanggan_user", JSON.stringify({ ...parsed, user: userObj }));
+        } catch (err) {
+          console.error(err);
+          showToast("Gagal menyimpan profil", "error");
+        }
       }
     } else {
       showToast("Kode OTP salah! Gunakan kode dummy: 123456", "error");
@@ -223,7 +263,7 @@ function Profil() {
   };
 
   // 7. Change Password modal action
-  const handleChangePasswordSubmit = (e) => {
+  const handleChangePasswordSubmit = async (e) => {
     e.preventDefault();
     const { oldPassword, newPassword, confirmPassword } = passwordFields;
 
@@ -244,9 +284,24 @@ function Profil() {
       return;
     }
 
-    showToast("Kata sandi Anda berhasil diperbarui!", "success");
-    setIsPasswordModalOpen(false);
-    setPasswordFields({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      await api.put(`/user/${userObj.id}/password`, {
+        old_password: oldPassword,
+        new_password: newPassword
+      });
+      showToast("Kata sandi Anda berhasil diperbarui!", "success");
+      setIsPasswordModalOpen(false);
+      setPasswordFields({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      if (err.response && err.response.data.message) {
+        showToast(err.response.data.message, "error");
+      } else {
+        showToast("Gagal memperbarui kata sandi", "error");
+      }
+    }
   };
 
   // 8 & 9. Add or Edit Address with Leaflet Map Callback
@@ -337,38 +392,54 @@ function Profil() {
   };
 
   // 13. Delete Account multi-step trigger
-  const handleDeleteAccountSubmit = (e) => {
+  const handleDeleteAccountSubmit = async (e) => {
     e.preventDefault();
 
     if (deleteAccountStep === 1) {
-      // Validate Password
       if (!deletePasswordInput) {
         showToast("Masukkan kata sandi untuk verifikasi!", "error");
         return;
       }
-      // Simulating correct password match
-      if (deletePasswordInput === "password") {
-        setDeleteAccountStep(2);
-        showToast("Verifikasi OTP telah dikirim ke ponsel Anda.", "success");
-      } else {
-        showToast("Kata sandi salah! Gunakan: password", "error");
-      }
-    } else if (deleteAccountStep === 2) {
-      // Validate OTP
-      if (deleteOtpInput === "123456") {
-        setDeleteAccountStep(3);
-      } else {
-        showToast("Kode OTP salah! Gunakan kode dummy: 123456", "error");
+      
+      try {
+        const savedUser = localStorage.getItem("pelanggan_user");
+        const parsed = JSON.parse(savedUser);
+        const userObj = parsed.user || parsed;
+        
+        await api.delete(`/user/${userObj.id}`, { data: { password: deletePasswordInput } });
+        
+        showToast("Akun Anda telah berhasil dihapus permanen.", "success");
+        setDeleteAccountStep(0);
+        setDeletePasswordInput("");
+        localStorage.removeItem("pelanggan_token"); localStorage.removeItem("pelanggan_user"); localStorage.removeItem("pelanggan_id"); localStorage.removeItem("pelanggan_role");
+        navigate("/");
+      } catch (err) {
+        if (err.response && err.response.data.message) {
+          showToast(err.response.data.message, "error");
+        } else {
+          showToast("Kata sandi salah atau terjadi kesalahan", "error");
+        }
       }
     }
   };
 
-  const handleFinalDeleteAccount = () => {
-    showToast("Akun Anda telah berhasil dihapus permanent.", "success");
-    setDeleteAccountStep(0);
-    setDeletePasswordInput("");
-    setDeleteOtpInput("");
-    navigate("/");
+  const handleFinalDeleteAccount = async () => {
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      await api.delete(`/user/${userObj.id}`);
+      
+      showToast("Akun Anda telah berhasil dihapus permanent.", "success");
+      setDeleteAccountStep(0);
+      setDeletePasswordInput("");
+      setDeleteOtpInput("");
+      localStorage.removeItem("pelanggan_token"); localStorage.removeItem("pelanggan_user"); localStorage.removeItem("pelanggan_id"); localStorage.removeItem("pelanggan_role");
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menghapus akun", "error");
+    }
   };
 
   return (
@@ -639,12 +710,12 @@ function Profil() {
                         <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Pantau sesi perangkat aktif Anda</p>
                       </div>
                     </div>
-                    <Link 
-                      to="/pelanggan/riwayat-login"
-                      className="text-secondary text-xs font-bold hover:underline cursor-pointer"
+                    <button 
+                      onClick={() => showToast("Fitur Riwayat Login sedang dalam pengembangan", "info")}
+                      className="text-secondary text-xs font-bold hover:underline cursor-pointer bg-transparent border-none"
                     >
                       Lihat Sesi
-                    </Link>
+                    </button>
                   </div>
 
                   {/* Verifikasi Email */}
@@ -1102,7 +1173,7 @@ function Profil() {
             <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
               <h3 className="text-sm font-extrabold text-red-400 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-lg">dangerous</span>
-                Hapus Akun (Langkah {deleteAccountStep}/3)
+                Hapus Akun Permanen
               </h3>
               <button 
                 onClick={() => {
@@ -1128,7 +1199,7 @@ function Profil() {
                   <label className="text-[10px] text-on-surface-variant uppercase font-bold">Kata Sandi</label>
                   <input 
                     type="password"
-                    placeholder="Masukkan sandi (dummy: password)"
+                    placeholder="Masukkan sandi Anda"
                     className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
                     value={deletePasswordInput}
                     onChange={(e) => setDeletePasswordInput(e.target.value)}
@@ -1139,69 +1210,11 @@ function Profil() {
                   type="submit"
                   className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-2"
                 >
-                  Lanjut Ke Langkah 2
+                  Ya, Hapus Permanen
                 </button>
               </form>
             )}
 
-            {deleteAccountStep === 2 && (
-              <form onSubmit={handleDeleteAccountSubmit} className="p-6 space-y-4 text-center">
-                <div className="space-y-1">
-                  <h4 className="font-bold text-on-surface text-sm">Masukkan Kode OTP Hapus Akun</h4>
-                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                    Masukkan 6 digit OTP konfirmasi pembatalan akun yang telah dikirim ke ponsel Anda.
-                  </p>
-                </div>
-                
-                <input 
-                  type="text"
-                  placeholder="Dummy OTP: 123456"
-                  maxLength="6"
-                  className="w-48 mx-auto tracking-[10px] text-center bg-surface-container-high border border-outline-variant rounded-xl p-3 text-sm text-on-surface outline-none focus:border-secondary font-bold"
-                  value={deleteOtpInput}
-                  onChange={(e) => setDeleteOtpInput(e.target.value)}
-                  required
-                />
-
-                <button 
-                  type="submit"
-                  className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-4"
-                >
-                  Lanjut Ke Langkah 3
-                </button>
-              </form>
-            )}
-
-            {deleteAccountStep === 3 && (
-              <div className="p-6 space-y-4 text-center">
-                <span className="material-symbols-outlined text-red-500 text-5xl animate-bounce">warning</span>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-red-400 text-sm">Tindakan Ini Bersifat Permanen!</h4>
-                  <p className="text-[11px] text-on-surface-variant leading-relaxed px-2">
-                    Menghapus akun Anda akan membatalkan seluruh pesanan aktif, menghapus saldo dompet, riwayat transaksi, dan profil secara permanen. Data tidak dapat dipulihkan kembali.
-                  </p>
-                </div>
-                
-                <div className="flex gap-3 w-full pt-2">
-                  <button
-                    onClick={() => {
-                      setDeleteAccountStep(0);
-                      setDeletePasswordInput("");
-                      setDeleteOtpInput("");
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer bg-transparent"
-                  >
-                    Batalkan Hapus
-                  </button>
-                  <button
-                    onClick={handleFinalDeleteAccount}
-                    className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer border-none"
-                  >
-                    Ya, Hapus Permanen
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
