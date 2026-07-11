@@ -40,7 +40,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
     { id: "pesanan", label: "Pesanan Saya", icon: "receipt_long", path: "/pelanggan/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/pelanggan/chat" },
-    { id: "pembayaran", label: "Pembayaran", icon: "payments", path: "/pelanggan/pembayaran" },
+
     { id: "profil", label: "Profil", icon: "person", path: "/pelanggan/profil" },
   ];
 
