@@ -60,4 +60,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pesanan::class);
     }
+
+    public function getFotoProfilAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
+        $baseUrl = rtrim(url('/'), '/');
+        if (str_starts_with($value, '/storage/')) {
+            return $baseUrl . $value;
+        }
+        return $baseUrl . '/storage/' . $value;
+    }
 }

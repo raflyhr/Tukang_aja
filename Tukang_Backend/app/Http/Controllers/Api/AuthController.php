@@ -12,6 +12,7 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use App\Services\SupabaseStorageService;
 
 class AuthController extends Controller
 {
@@ -84,24 +85,25 @@ class AuthController extends Controller
             'cv_portofolio' => 'required|file|mimes:pdf|max:5120',
         ]);
 
-        // 1. Handle upload file (simpan ke folder storage/app/public/...)
+        // 1. Handle upload file (simpan ke Supabase Storage bucket)
         $fotoProfilPath = null;
         if ($request->hasFile('foto_profil')) {
+            $supabase = new SupabaseStorageService();
+            $filename = Str::random(40) . '.webp';
+            $storagePath = 'tukang/profil/' . $filename;
+
             if (extension_loaded('gd')) {
                 $manager = new ImageManager(new Driver());
-                $filename = Str::random(40) . '.webp';
-                $fotoProfilPath = 'tukang/profil/' . $filename;
-                
                 $image = $manager->decode($request->file('foto_profil'));
-                $image->scaleDown(width: 300); // Resize kecil agar makin enteng
-                
-                // Kompres ekstrem ke 5% sesuai permintaan
+                $image->scaleDown(width: 300);
                 $encoded = $image->encode(new WebpEncoder(5));
-                Storage::disk('public')->put($fotoProfilPath, (string) $encoded);
+                $fileContent = (string) $encoded;
             } else {
-                // Fallback jika GD extension tidak aktif
-                $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
+                $fileContent = file_get_contents($request->file('foto_profil')->getRealPath());
             }
+
+            $publicUrl = $supabase->upload($fileContent, $storagePath, 'image/webp');
+            $fotoProfilPath = $publicUrl ?? $storagePath;
         }
 
         $cvPath = null;
@@ -213,8 +215,20 @@ class AuthController extends Controller
 
     $fotoProfilPath = null;
     if ($request->hasFile('foto_profil')) {
-        // Fallback langsung menggunakan store Laravel untuk menghindari error Intervention Image
-        $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+        if (extension_loaded('gd')) {
+            $manager = new ImageManager(new Driver());
+            $filename = Str::random(40) . '.webp';
+            $fotoProfilPath = 'pelanggan/profil/' . $filename;
+            
+            $image = $manager->read($request->file('foto_profil'));
+            $image->scaleDown(width: 300); // Resize kecil
+            
+            // Kompres ekstrem ke 5% sesuai permintaan
+            Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+        } else {
+            // Fallback jika GD extension tidak aktif
+            $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+        }
     }
 
     $user = User::create([
