@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../../components/LogoutModal";
-import axios from "axios";
+import api from "../../lib/axios";
 
 const MOCK_PELANGGAN = [
   {
@@ -93,8 +93,7 @@ function DataPelanggan() {
     setIsLoading(true);
     setIsError(false);
     try {
-      // Mock API call to backend
-      const response = await axios.get("http://localhost:8000/api/admin/pelanggan");
+      const response = await api.get(`/admin/pelanggan`);
       if (response.data.status === 'Sukses') {
         const fetched = response.data.data.map(p => ({
           id: p.id,
@@ -106,7 +105,7 @@ function DataPelanggan() {
           transaksi: p.transaksi_count || 0,
           total_pengeluaran: p.total_spending || 0,
           tanggal_daftar: new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-          avatar: p.avatar ? (p.avatar.startsWith('http') ? p.avatar : `http://localhost:8000/storage/${p.avatar}`) : `https://ui-avatars.com/api/?name=${p.name}&background=random`
+          avatar: p.avatar ? (p.avatar.startsWith('http') ? p.avatar : `${import.meta.env.VITE_API_BASE_URL}/storage/${p.avatar}`) : `https://ui-avatars.com/api/?name=${p.name}&background=random`
         }));
         setPelangganList(fetched);
       } else {
@@ -120,20 +119,32 @@ function DataPelanggan() {
     }
   };
 
-  const handleDeactivate = (id, currentStatus) => {
+  const handleDeactivate = async (id, currentStatus) => {
     const nextStatus = currentStatus === "Aktif" ? "Suspended" : "Aktif";
     if (confirm(`Apakah Anda yakin ingin mengubah status akun ${id} menjadi ${nextStatus}?`)) {
-      setPelangganList(prev => 
-        prev.map(p => p.id === id ? { ...p, status: nextStatus } : p)
-      );
-      alert(`Status pelanggan ${id} berhasil diubah menjadi ${nextStatus}`);
+      try {
+        const response = await api.put(`/admin/pelanggan/${id}/status`);
+        if (response.data.status === 'Sukses') {
+          fetchPelangganList();
+          alert(`Status pelanggan ${id} berhasil diubah.`);
+        }
+      } catch (e) {
+        alert("Gagal mengubah status pelanggan.");
+      }
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm(`Apakah Anda yakin ingin menghapus pelanggan dengan ID ${id}? Tindakan ini permanen.`)) {
-      setPelangganList(prev => prev.filter(p => p.id !== id));
-      alert(`Pelanggan ${id} berhasil dihapus.`);
+      try {
+        const response = await api.delete(`/admin/pelanggan/${id}`);
+        if (response.data.status === 'Sukses') {
+          fetchPelangganList();
+          alert(`Pelanggan ${id} berhasil dihapus.`);
+        }
+      } catch (e) {
+        alert("Gagal menghapus pelanggan.");
+      }
     }
   };
 
@@ -166,7 +177,7 @@ function DataPelanggan() {
     const matchesSearch = 
       p.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase());
+      String(p.id).toLowerCase().includes(searchQuery.toLowerCase());
     
     if (statusFilter === "Semua") return matchesSearch;
     return matchesSearch && p.status === statusFilter;

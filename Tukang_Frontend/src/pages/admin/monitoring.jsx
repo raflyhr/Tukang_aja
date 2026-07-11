@@ -33,7 +33,7 @@ function MonitoringRating() {
           id: p.id,
           name: p.nama,
           specialty: p.keahlian,
-          rating: p.rating || 0.0,
+          rating: Number(p.rating || 0.0),
           reviews: p.ulasans_count || 0,
           complaints: 0, // Mock for now, maybe add logic in backend later
           status: p.status_verifikasi === 'Menunggu' ? 'Ditinjau' : (p.status_verifikasi || (p.is_aktif ? 'Aktif' : 'Nonaktif')),
