@@ -20,10 +20,63 @@ class AdminController extends Controller
         $inactiveCount = Tukang::where('is_aktif', false)->where('status_verifikasi', '!=', 'Menunggu')->count();
         $problemCount = Tukang::where('rating', '<', 4.0)->where('is_aktif', true)->count();
         
+        $totalPelanggan = \App\Models\User::where('role', 'pelanggan')->count();
+        $activeOrders = \App\Models\Pesanan::whereNotIn('status', ['selesai', 'dibatalkan', 'ditolak'])->count();
+        $completedOrders = \App\Models\Pesanan::where('status', 'selesai')->count();
+        $platformRevenue = \App\Models\Pesanan::where('status', 'selesai')->sum('harga_penawaran') ?? 0;
+        $incomingReports = \App\Models\Dispute::where('status_dispute', 'pending')->count();
+        
         $recentVerifications = Tukang::where('status_verifikasi', 'Menunggu')
                                      ->orderBy('created_at', 'desc')
                                      ->limit(5)
                                      ->get();
+
+        // Fetch dynamic activities
+        $activities = [];
+        
+        $recentUsers = \App\Models\User::orderBy('created_at', 'desc')->limit(3)->get();
+        foreach ($recentUsers as $u) {
+            $activities[] = [
+                'id' => 'u_' . $u->id,
+                'text' => 'Pelanggan ' . $u->name . ' mendaftar ke platform',
+                'time' => $u->created_at ? $u->created_at->diffForHumans() : 'Baru saja',
+                'icon' => 'group',
+                'color' => 'text-green-400 bg-green-500/10',
+                'timestamp' => $u->created_at ? $u->created_at->timestamp : 0
+            ];
+        }
+
+        $recentTukangs = Tukang::where('status_verifikasi', 'Aktif')->orderBy('updated_at', 'desc')->limit(3)->get();
+        foreach ($recentTukangs as $t) {
+            $activities[] = [
+                'id' => 't_' . $t->id,
+                'text' => 'Mitra Tukang ' . $t->nama . ' berhasil diverifikasi',
+                'time' => $t->updated_at ? $t->updated_at->diffForHumans() : 'Baru saja',
+                'icon' => 'verified',
+                'color' => 'text-secondary bg-secondary/10',
+                'timestamp' => $t->updated_at ? $t->updated_at->timestamp : 0
+            ];
+        }
+
+        $recentOrders = \App\Models\Pesanan::with('user')->orderBy('created_at', 'desc')->limit(3)->get();
+        foreach ($recentOrders as $o) {
+            $activities[] = [
+                'id' => 'o_' . $o->id,
+                'text' => 'Pesanan baru masuk dari ' . ($o->user->name ?? 'Pelanggan') . ' untuk ' . $o->kategori_layanan,
+                'time' => $o->created_at ? $o->created_at->diffForHumans() : 'Baru saja',
+                'icon' => 'pending_actions',
+                'color' => 'text-blue-400 bg-blue-500/10',
+                'timestamp' => $o->created_at ? $o->created_at->timestamp : 0
+            ];
+        }
+
+        // Sort activities by timestamp descending
+        usort($activities, function($a, $b) {
+            return $b['timestamp'] <=> $a['timestamp'];
+        });
+
+        // Slice to top 6 activities
+        $activities = array_slice($activities, 0, 6);
                                      
         return response()->json([
             'status' => 'Sukses',
@@ -32,7 +85,13 @@ class AdminController extends Controller
                 'activeCount' => $activeCount,
                 'inactiveCount' => $inactiveCount,
                 'problemCount' => $problemCount,
-                'recentVerifications' => $recentVerifications
+                'totalPelanggan' => $totalPelanggan,
+                'activeOrders' => $activeOrders,
+                'completedOrders' => $completedOrders,
+                'platformRevenue' => $platformRevenue,
+                'incomingReports' => $incomingReports,
+                'recentVerifications' => $recentVerifications,
+                'recentActivities' => $activities
             ]
         ]);
     }
