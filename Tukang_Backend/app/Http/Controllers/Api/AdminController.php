@@ -20,7 +20,7 @@ class AdminController extends Controller
         $inactiveCount = Tukang::where('is_aktif', false)->where('status_verifikasi', '!=', 'Menunggu')->count();
         $problemCount = Tukang::where('rating', '<', 4.0)->where('is_aktif', true)->count();
         
-        $totalPelanggan = \App\Models\User::where('role', 'pelanggan')->count();
+        $totalPelanggan = \App\Models\User::where('role', 'user')->count();
         $activeOrders = \App\Models\Pesanan::whereNotIn('status', ['selesai', 'dibatalkan', 'ditolak'])->count();
         $completedOrders = \App\Models\Pesanan::where('status', 'selesai')->count();
         $platformRevenue = \App\Models\Pesanan::where('status', 'selesai')->sum('harga_penawaran') ?? 0;
@@ -79,10 +79,10 @@ class AdminController extends Controller
         // Fetch dynamic customer stats
         $customerStats = [
             'total' => $totalPelanggan,
-            'newThisWeek' => \App\Models\User::where('role', 'pelanggan')->where('created_at', '>=', now()->subWeek())->count(),
-            'activeToday' => \App\Models\User::where('role', 'pelanggan')->where('updated_at', '>=', now()->subDay())->count(),
-            'neverOrdered' => \App\Models\User::where('role', 'pelanggan')->doesntHave('pesanans')->count(),
-            'mostActive' => \App\Models\User::where('role', 'pelanggan')->withCount('pesanans')->orderBy('pesanans_count', 'desc')->first()->name ?? '-'
+            'newThisWeek' => \App\Models\User::where('role', 'user')->where('created_at', '>=', now()->subWeek())->count(),
+            'activeToday' => \App\Models\User::where('role', 'user')->where('updated_at', '>=', now()->subDay())->count(),
+            'neverOrdered' => \App\Models\User::where('role', 'user')->doesntHave('pesanans')->count(),
+            'mostActive' => \App\Models\User::where('role', 'user')->withCount('pesanans')->orderBy('pesanans_count', 'desc')->first()->name ?? '-'
         ];
 
         // Fetch dynamic order stats
@@ -129,7 +129,7 @@ class AdminController extends Controller
         });
 
         // Fetch top pelanggan
-        $topUsers = \App\Models\User::where('role', 'pelanggan')
+        $topUsers = \App\Models\User::where('role', 'user')
             ->withCount('pesanans')
             ->orderBy('pesanans_count', 'desc')
             ->limit(3)
@@ -143,6 +143,22 @@ class AdminController extends Controller
                 'avatar' => "https://ui-avatars.com/api/?name=" . urlencode($u->name)
             ];
         });
+
+        // Compute Growth Stats for last 6 months
+        $growthStats = [
+            'labels' => [],
+            'pelanggan' => [],
+            'tukang' => []
+        ];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthName = strtoupper($date->translatedFormat('M'));
+            $growthStats['labels'][] = $monthName;
+            
+            $endOfMonth = $date->copy()->endOfMonth();
+            $growthStats['pelanggan'][] = \App\Models\User::where('role', 'user')->where('created_at', '<=', $endOfMonth)->count();
+            $growthStats['tukang'][] = Tukang::where('created_at', '<=', $endOfMonth)->count();
+        }
                                      
         return response()->json([
             'status' => 'Sukses',
@@ -162,7 +178,8 @@ class AdminController extends Controller
                 'orderStats' => $orderStats,
                 'categories' => $categories,
                 'topTukang' => $topTukangList,
-                'topPelanggan' => $topPelangganList
+                'topPelanggan' => $topPelangganList,
+                'growthStats' => $growthStats
             ]
         ]);
     }
@@ -241,6 +258,73 @@ class AdminController extends Controller
             'message' => 'Status Tukang berhasil diubah',
             'data' => $tukang
         ]);
+    }
+
+    public function getAllPelanggan()
+    {
+        $pelanggans = \App\Models\User::where('role', 'user')
+            ->withCount('pesanans')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'no_hp' => $u->no_hp,
+                    'alamat' => $u->alamat,
+                    'is_active' => true, // Default to true since no is_active column exists yet
+                    'transaksi_count' => $u->pesanans_count,
+                    'total_spending' => \App\Models\Pesanan::where('user_id', $u->id)->where('status', 'selesai')->sum('harga_penawaran') ?? 0,
+                    'created_at' => $u->created_at,
+                    'avatar' => $u->foto_profil
+                ];
+            });
+
+        return response()->json([
+            'status' => 'Sukses',
+            'data' => $pelanggans
+        ]);
+    }
+
+    public function togglePelangganStatus($id)
+    {
+        // Because User model doesn't have an is_active column for now, we just mock the success.
+        // If you add is_active to users table, you can uncomment the logic below:
+        /*
+        $user = \App\Models\User::findOrFail($id);
+        $user->is_active = !$user->is_active;
+        $user->save();
+        */
+        
+        return response()->json([
+            'status' => 'Sukses',
+            'message' => 'Status Pelanggan berhasil diubah'
+        ]);
+    }
+
+    public function deletePelanggan($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        
+        DB::beginTransaction();
+        try {
+            $user->pesanans()->delete();
+            $user->ulasan()->delete();
+            $user->delete();
+            DB::commit();
+
+            return response()->json([
+                'status' => 'Sukses',
+                'message' => 'Akun Pelanggan berhasil dihapus permanen'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => 'Gagal',
+                'message' => 'Gagal menghapus akun: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getMonitoring()

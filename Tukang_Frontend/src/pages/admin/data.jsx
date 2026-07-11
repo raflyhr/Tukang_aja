@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminData } from "./adminData";
 import LogoutModal from "../../components/LogoutModal";
-import axios from "axios";
+import api from "../../lib/axios";
 
 function DataTukang() {
   const navigate = useNavigate();
@@ -84,7 +84,7 @@ function DataTukang() {
 
   const fetchTukangList = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang`);
+      const response = await api.get(`/admin/tukang`);
       if (response.data.status === 'Sukses') {
         const fetchedList = response.data.data.map(t => ({
           id: t.id,
@@ -92,7 +92,7 @@ function DataTukang() {
           specialty: t.keahlian,
           location: t.alamat,
           status: t.status_verifikasi === 'Menunggu' ? 'Ditinjau' : (t.status_verifikasi || (t.is_aktif ? 'Aktif' : 'Tidak Aktif')),
-          rating: t.rating || 0.0,
+          rating: Number(t.rating || 0.0),
           reviews: t.total_reviews || 0,
           joinDate: new Date(t.created_at).toLocaleDateString('id-ID'),
           avatar: t.foto_profil ? (t.foto_profil.startsWith('http') ? t.foto_profil : `${import.meta.env.VITE_API_BASE_URL}/storage/${t.foto_profil}`) : `https://ui-avatars.com/api/?name=${t.nama}&background=random`
@@ -108,7 +108,7 @@ function DataTukang() {
   const handleDeactivate = async (id) => {
     if (confirm(`Apakah Anda yakin ingin mengubah status akun dengan ID ${id}?`)) {
       try {
-        const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}/status`);
+        const response = await api.put(`/admin/tukang/${id}/status`);
         if (response.data.status === 'Sukses') {
           fetchTukangList(); // Refresh data
           alert(response.data.message);
@@ -122,7 +122,7 @@ function DataTukang() {
   const handleDelete = async (id) => {
     if (confirm(`Apakah Anda yakin ingin MENGHAPUS akun tukang dengan ID ${id} secara permanen? Tindakan ini tidak dapat dibatalkan.`)) {
       try {
-        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/tukang/${id}`);
+        const response = await api.delete(`/admin/tukang/${id}`);
         if (response.data.status === 'Sukses') {
           fetchTukangList(); // Refresh data
           alert(response.data.message);

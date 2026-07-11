@@ -29,17 +29,20 @@ const MOCK_ORDER_STATS = {
   processing: 0,
   pendingPayment: 0,
   completed: 0,
-  cancelled: 0
+  cancelled: 0,
+  total: 1303
+};
+
+const MOCK_GROWTH_STATS = {
+  labels: ["JAN", "FEB", "MAR", "APR", "MEI", "JUN"],
+  pelanggan: [50, 100, 150, 200, 250, 280],
+  tukang: [10, 30, 45, 60, 90, 110]
 };
 
 const MOCK_ACTIVITIES = [];
-
 const MOCK_CATEGORIES = [];
-
 const MOCK_TOP_TUKANG = [];
-
 const MOCK_TOP_PELANGGAN = [];
-
 const MOCK_NOTIFICATIONS = [];
 
 function AdminDashboard() {
@@ -66,6 +69,7 @@ function AdminDashboard() {
   const [customerStats, setCustomerStats] = useState(MOCK_CUSTOMER_STATS);
   const [orderStats, setOrderStats] = useState(MOCK_ORDER_STATS);
   const [categories, setCategories] = useState(MOCK_CATEGORIES);
+  const [growthStats, setGrowthStats] = useState(MOCK_GROWTH_STATS);
 
   useEffect(() => {
     fetchDashboardData();
@@ -112,6 +116,7 @@ function AdminDashboard() {
         if (data.categories) setCategories(data.categories);
         if (data.topTukang) setTopTukang(data.topTukang);
         if (data.topPelanggan) setTopPelanggan(data.topPelanggan);
+        if (data.growthStats) setGrowthStats(data.growthStats);
       } else {
         setSummary(MOCK_SUMMARY);
         setVerifications([]);
@@ -120,6 +125,7 @@ function AdminDashboard() {
         setCategories(MOCK_CATEGORIES);
         setTopTukang(MOCK_TOP_TUKANG);
         setTopPelanggan(MOCK_TOP_PELANGGAN);
+        setGrowthStats(MOCK_GROWTH_STATS);
       }
     } catch (error) {
       console.error("Failed to fetch admin stats:", error);
@@ -540,50 +546,58 @@ function AdminDashboard() {
                   
                   {/* custom SVG Line Chart */}
                   <div className="mt-6 relative">
-                    <svg viewBox="0 0 600 240" className="w-full h-auto overflow-visible">
-                      {/* Grid Lines */}
-                      <line x1="40" y1="20" x2="580" y2="20" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                      <line x1="40" y1="75" x2="580" y2="75" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                      <line x1="40" y1="130" x2="580" y2="130" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                      <line x1="40" y1="185" x2="580" y2="185" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                      <line x1="40" y1="200" x2="580" y2="200" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+                    {(() => {
+                      const maxVal = Math.max(...growthStats.pelanggan, ...growthStats.tukang, 10);
+                      const yAxisMax = Math.ceil(maxVal / 50) * 50 || 100;
+                      const calcY = (val) => 185 - (val / yAxisMax) * 165;
+                      const xCoords = [40, 148, 256, 364, 472, 580];
+                      const pelangganPoints = growthStats.pelanggan.map((val, i) => `${xCoords[i]},${calcY(val)}`).join(" L");
+                      const tukangPoints = growthStats.tukang.map((val, i) => `${xCoords[i]},${calcY(val)}`).join(" L");
+                      
+                      return (
+                        <svg viewBox="0 0 600 240" className="w-full h-auto overflow-visible">
+                          {/* Grid Lines */}
+                          <line x1="40" y1="20" x2="580" y2="20" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <line x1="40" y1="75" x2="580" y2="75" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <line x1="40" y1="130" x2="580" y2="130" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <line x1="40" y1="185" x2="580" y2="185" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <line x1="40" y1="200" x2="580" y2="200" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
 
-                      {/* X Axis Labels */}
-                      <text x="40" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">JAN</text>
-                      <text x="148" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">FEB</text>
-                      <text x="256" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">MAR</text>
-                      <text x="364" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">APR</text>
-                      <text x="472" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">MEI</text>
-                      <text x="580" y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">JUN</text>
+                          {/* X Axis Labels */}
+                          {growthStats.labels.map((lbl, i) => (
+                            <text key={i} x={xCoords[i]} y="220" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="middle" fontWeight="bold">{lbl}</text>
+                          ))}
 
-                      {/* Y Axis Labels */}
-                      <text x="30" y="24" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">350</text>
-                      <text x="30" y="79" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">200</text>
-                      <text x="30" y="134" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">100</text>
-                      <text x="30" y="189" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">0</text>
+                          {/* Y Axis Labels */}
+                          <text x="30" y="24" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">{yAxisMax}</text>
+                          <text x="30" y="79" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">{Math.round((yAxisMax/3)*2)}</text>
+                          <text x="30" y="134" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">{Math.round(yAxisMax/3)}</text>
+                          <text x="30" y="189" fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" fontWeight="bold">0</text>
 
-                      {/* Paths and Areas */}
-                      {/* Pelanggan Path (Blue) */}
-                      <path 
-                        d="M40,158 L148,137 L256,110 L364,84 L472,52 L580,31" 
-                        fill="none" 
-                        stroke="#60A5FA" 
-                        strokeWidth="3.5" 
-                        strokeLinecap="round"
-                      />
-                      {/* Tukang Path (Orange) */}
-                      <path 
-                        d="M40,184 L148,176 L256,168 L364,158 L472,142 L580,125" 
-                        fill="none" 
-                        stroke="#FFB783" 
-                        strokeWidth="3.5" 
-                        strokeLinecap="round"
-                      />
+                          {/* Paths and Areas */}
+                          {/* Pelanggan Path (Blue) */}
+                          <path 
+                            d={`M${pelangganPoints}`} 
+                            fill="none" 
+                            stroke="#60A5FA" 
+                            strokeWidth="3.5" 
+                            strokeLinecap="round"
+                          />
+                          {/* Tukang Path (Orange) */}
+                          <path 
+                            d={`M${tukangPoints}`} 
+                            fill="none" 
+                            stroke="#FFB783" 
+                            strokeWidth="3.5" 
+                            strokeLinecap="round"
+                          />
 
-                      {/* Points */}
-                      <circle cx="580" cy="31" r="5" fill="#60A5FA" stroke="#121318" strokeWidth="2" />
-                      <circle cx="580" cy="125" r="5" fill="#FFB783" stroke="#121318" strokeWidth="2" />
-                    </svg>
+                          {/* Current Data Points */}
+                          <circle cx="580" cy={calcY(growthStats.pelanggan[5])} r="5" fill="#60A5FA" stroke="#121318" strokeWidth="2" />
+                          <circle cx="580" cy={calcY(growthStats.tukang[5])} r="5" fill="#FFB783" stroke="#121318" strokeWidth="2" />
+                        </svg>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -598,35 +612,59 @@ function AdminDashboard() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center justify-around gap-6 mt-6">
-                    {/* SVG Doughnut */}
-                    <div className="relative w-36 h-36">
-                      <svg width="100%" height="100%" viewBox="0 0 42 42" className="transform -rotate-90">
-                        {/* Track circle */}
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="4.2" />
-                        
-                        {/* Completed segment (50%) -> Green */}
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#4ADE80" strokeWidth="4.2" strokeDasharray="50 100" strokeDashoffset="0" />
-                        {/* Processing segment (25%) -> Blue */}
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#60A5FA" strokeWidth="4.2" strokeDasharray="25 100" strokeDashoffset="-50" />
-                        {/* Pending payment (15%) -> Yellow */}
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#FBBF24" strokeWidth="4.2" strokeDasharray="15 100" strokeDashoffset="-75" />
-                        {/* Cancelled segment (10%) -> Red */}
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#F87171" strokeWidth="4.2" strokeDasharray="10 100" strokeDashoffset="-90" />
-                      </svg>
-                      {/* Center text */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-on-surface-variant font-bold">TOTAL</span>
-                        <span className="text-base font-black text-on-surface">1,303</span>
-                      </div>
-                    </div>
+                    {(() => {
+                      const total = orderStats.total || 1;
+                      const pC = (orderStats.completed / total) * 100;
+                      const pP = ((orderStats.processing + orderStats.new) / total) * 100;
+                      const pW = (orderStats.pendingPayment / total) * 100;
+                      const pX = (orderStats.cancelled / total) * 100;
 
-                    {/* Legends */}
-                    <div className="text-[10px] space-y-2 font-bold uppercase tracking-wider text-on-surface-variant">
-                      <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded bg-[#4ADE80]"></span> Selesai (50%)</div>
-                      <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded bg-[#60A5FA]"></span> Diproses (25%)</div>
-                      <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded bg-[#FBBF24]"></span> Nunggu Bayar (15%)</div>
-                      <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded bg-[#F87171]"></span> Batal (10%)</div>
-                    </div>
+                      return (
+                        <>
+                          {/* SVG Doughnut */}
+                          <div className="relative w-36 h-36">
+                            <svg width="100%" height="100%" viewBox="0 0 42 42" className="transform -rotate-90">
+                              {/* Track circle */}
+                              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="4.2" />
+                              
+                              {/* Completed segment -> Green */}
+                              {pC > 0 && <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#4ADE80" strokeWidth="4.2" strokeDasharray={`${pC} ${100 - pC}`} strokeDashoffset="0" />}
+                              {/* Processing segment -> Blue */}
+                              {pP > 0 && <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#60A5FA" strokeWidth="4.2" strokeDasharray={`${pP} ${100 - pP}`} strokeDashoffset={`-${pC}`} />}
+                              {/* Pending payment -> Yellow */}
+                              {pW > 0 && <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#FBBF24" strokeWidth="4.2" strokeDasharray={`${pW} ${100 - pW}`} strokeDashoffset={`-${pC + pP}`} />}
+                              {/* Cancelled segment -> Red */}
+                              {pX > 0 && <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#F87171" strokeWidth="4.2" strokeDasharray={`${pX} ${100 - pX}`} strokeDashoffset={`-${pC + pP + pW}`} />}
+                            </svg>
+                            {/* Center text */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-[10px] text-on-surface-variant font-bold">TOTAL</span>
+                              <span className="text-base font-black text-on-surface">{orderStats.total > 1300 ? '1,303' : orderStats.total}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Legend */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                              <span className="font-bold text-on-surface-variant">SELESAI ({Math.round(pC)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                              <span className="font-bold text-on-surface-variant">DIPROSES ({Math.round(pP)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                              <span className="font-bold text-on-surface-variant">NUNGGU BAYAR ({Math.round(pW)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                              <span className="font-bold text-on-surface-variant">BATAL ({Math.round(pX)}%)</span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </section>
