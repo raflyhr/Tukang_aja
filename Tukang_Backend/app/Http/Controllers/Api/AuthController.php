@@ -9,6 +9,7 @@ use App\Models\Tukang;
 use Illuminate\Support\Facades\Hash;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Encoders\WebpEncoder;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
@@ -91,11 +92,12 @@ class AuthController extends Controller
                 $filename = Str::random(40) . '.webp';
                 $fotoProfilPath = 'tukang/profil/' . $filename;
                 
-                $image = $manager->read($request->file('foto_profil'));
+                $image = $manager->decode($request->file('foto_profil'));
                 $image->scaleDown(width: 300); // Resize kecil agar makin enteng
                 
                 // Kompres ekstrem ke 5% sesuai permintaan
-                Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+                $encoded = $image->encode(new WebpEncoder(5));
+                Storage::disk('public')->put($fotoProfilPath, (string) $encoded);
             } else {
                 // Fallback jika GD extension tidak aktif
                 $fotoProfilPath = $request->file('foto_profil')->store('tukang/profil', 'public');
