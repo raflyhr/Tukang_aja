@@ -85,10 +85,9 @@ class AuthController extends Controller
             'cv_portofolio' => 'required|file|mimes:pdf|max:5120',
         ]);
 
-        // 1. Handle upload file (simpan ke Supabase Storage bucket)
+        // 1. Handle upload file (coba Supabase dulu, fallback ke local storage)
         $fotoProfilPath = null;
         if ($request->hasFile('foto_profil')) {
-            $supabase = new SupabaseStorageService();
             $filename = Str::random(40) . '.webp';
             $storagePath = 'tukang/profil/' . $filename;
 
@@ -102,8 +101,18 @@ class AuthController extends Controller
                 $fileContent = file_get_contents($request->file('foto_profil')->getRealPath());
             }
 
+            // Coba upload ke Supabase
+            $supabase = new SupabaseStorageService();
             $publicUrl = $supabase->upload($fileContent, $storagePath, 'image/webp');
-            $fotoProfilPath = $publicUrl ?? $storagePath;
+
+            if ($publicUrl) {
+                // Supabase berhasil, simpan URL publik langsung
+                $fotoProfilPath = $publicUrl;
+            } else {
+                // Supabase gagal, fallback ke local storage
+                Storage::disk('public')->put($storagePath, $fileContent);
+                $fotoProfilPath = $storagePath;
+            }
         }
 
         $cvPath = null;
@@ -215,19 +224,29 @@ class AuthController extends Controller
 
     $fotoProfilPath = null;
     if ($request->hasFile('foto_profil')) {
+        $filename = Str::random(40) . '.webp';
+        $storagePath = 'pelanggan/profil/' . $filename;
+
         if (extension_loaded('gd')) {
             $manager = new ImageManager(new Driver());
-            $filename = Str::random(40) . '.webp';
-            $fotoProfilPath = 'pelanggan/profil/' . $filename;
-            
             $image = $manager->read($request->file('foto_profil'));
-            $image->scaleDown(width: 300); // Resize kecil
-            
-            // Kompres ekstrem ke 5% sesuai permintaan
-            Storage::disk('public')->put($fotoProfilPath, (string) $image->toWebp(5));
+            $image->scaleDown(width: 300);
+            $fileContent = (string) $image->toWebp(5);
         } else {
-            // Fallback jika GD extension tidak aktif
-            $fotoProfilPath = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+            $fileContent = file_get_contents($request->file('foto_profil')->getRealPath());
+        }
+
+        // Coba upload ke Supabase
+        $supabase = new SupabaseStorageService();
+        $publicUrl = $supabase->upload($fileContent, $storagePath, 'image/webp');
+
+        if ($publicUrl) {
+            // Supabase berhasil, simpan URL publik langsung
+            $fotoProfilPath = $publicUrl;
+        } else {
+            // Supabase gagal, fallback ke local storage
+            Storage::disk('public')->put($storagePath, $fileContent);
+            $fotoProfilPath = $storagePath;
         }
     }
 
