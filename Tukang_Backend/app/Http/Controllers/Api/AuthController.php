@@ -37,6 +37,13 @@ class AuthController extends Controller
         // Bikin token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser' // Simplified for now
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Login berhasil sebagai ' . $user->role,
@@ -183,6 +190,13 @@ class AuthController extends Controller
         // Bikinin Token Akses baru
         $token = $user->createToken('auth_token_tukang')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
+
         return response()->json([
             'message' => 'Login Berhasil!',
             'data' => [
@@ -268,6 +282,13 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token_user')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
+
         return response()->json([
             'message' => 'Login Pelanggan Berhasil!',
             'data' => $user,
@@ -302,6 +323,13 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token_admin')->plainTextToken;
+
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
 
         return response()->json([
             'message' => 'Login Admin Berhasil!',
@@ -379,5 +407,18 @@ class AuthController extends Controller
 
         $user->delete();
         return response()->json(['message' => 'Akun berhasil dihapus']);
+    }
+
+    public function getSessions($id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+
+        $sessions = \App\Models\LoginSession::where('user_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return response()->json(['data' => $sessions]);
     }
 }
