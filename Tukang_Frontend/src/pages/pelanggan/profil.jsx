@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import LeafletMapPicker from "../../components/LeafletMapPicker";
 import LogoutModal from "../../components/LogoutModal";
 import ImageCropModal from "../../components/ImageCropModal";
+import api from "../../lib/axios";
 
 function Profil() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  
+
   // Sidebar open/close
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -16,7 +17,7 @@ function Profil() {
 
   // Toast Notification State
   const [toasts, setToasts] = useState([]);
-  
+
   const showToast = (message, type = "success") => {
     const id = Date.now().toString() + Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -78,7 +79,7 @@ function Profil() {
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState("");
   const [cropZoom, setCropZoom] = useState(1);
-  
+
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordFields, setPasswordFields] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
@@ -103,7 +104,7 @@ function Profil() {
     { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/pelanggan/dashboard" },
     { id: "pesanan", label: "Pesanan Saya", icon: "receipt_long", path: "/pelanggan/pesanan" },
     { id: "chat", label: "Chat", icon: "chat", path: "/pelanggan/chat" },
-    { id: "pembayaran", label: "Pembayaran", icon: "payments", path: "/pelanggan/pembayaran" },
+
     { id: "profil", label: "Profil", icon: "person", path: "/pelanggan/profil", active: true },
   ];
 
@@ -125,10 +126,32 @@ function Profil() {
     }
   };
 
-  const handleConfirmCrop = ({ file, dataUrl }) => {
-    setProfilePic(dataUrl);
-    setIsCropModalOpen(false);
-    showToast("Foto profil berhasil diperbarui!", "success");
+  const handleConfirmCrop = async ({ file, dataUrl }) => {
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      if (!savedUser) return;
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+
+      const formData = new FormData();
+      formData.append("foto_profil", file);
+
+      const response = await api.post(`/user/${userObj.id}/foto`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (response.data.data) {
+        setProfilePic(dataUrl);
+        setIsCropModalOpen(false);
+        showToast("Foto profil berhasil diperbarui!", "success");
+        // Update local storage
+        userObj.foto_profil = response.data.data.foto_profil;
+        localStorage.setItem("pelanggan_user", JSON.stringify({ ...parsed, user: userObj }));
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal mengunggah foto profil", "error");
+    }
   };
 
   // 4. Web Share / Clipboard API
@@ -195,27 +218,44 @@ function Profil() {
     showToast("Perubahan profil berhasil disimpan!", "success");
   };
 
-  const handleVerifyOTP = (e) => {
+  const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!otpVerificationState || otpVerificationState.code.length < 6) return;
 
-    // Simulate OTP validation (using "123456" as dummy valid code)
+    // Simulate OTP validation
     if (otpVerificationState.code === "123456") {
       showToast(`Verifikasi OTP untuk ${otpVerificationState.type} berhasil!`, "success");
-      
+
       const updatedData = { ...pendingProfileUpdates };
-      
-      // If we verified email first and phone was also changed, trigger phone OTP next
+
       if (otpVerificationState.type === "email" && updatedData.phone !== initialData.phone) {
-        setOtpVerificationState({
-          type: "phone",
-          value: updatedData.phone,
-          code: "",
-        });
+        setOtpVerificationState({ type: "phone", value: updatedData.phone, code: "" });
       } else {
-        setOtpVerificationState(null);
-        setPendingProfileUpdates(null);
-        showToast("Seluruh profil Anda berhasil diperbarui & disimpan!", "success");
+        // Save to backend
+        try {
+          const savedUser = localStorage.getItem("pelanggan_user");
+          const parsed = JSON.parse(savedUser);
+          const userObj = parsed.user || parsed;
+
+          const response = await api.put(`/user/${userObj.id}`, {
+            name: updatedData.fullName,
+            email: updatedData.email,
+            no_hp: updatedData.phone
+          });
+
+          setOtpVerificationState(null);
+          setPendingProfileUpdates(null);
+          setInitialData(updatedData);
+          showToast("Seluruh profil Anda berhasil diperbarui & disimpan!", "success");
+
+          userObj.name = updatedData.fullName;
+          userObj.email = updatedData.email;
+          userObj.no_hp = updatedData.phone;
+          localStorage.setItem("pelanggan_user", JSON.stringify({ ...parsed, user: userObj }));
+        } catch (err) {
+          console.error(err);
+          showToast("Gagal menyimpan profil", "error");
+        }
       }
     } else {
       showToast("Kode OTP salah! Gunakan kode dummy: 123456", "error");
@@ -223,7 +263,7 @@ function Profil() {
   };
 
   // 7. Change Password modal action
-  const handleChangePasswordSubmit = (e) => {
+  const handleChangePasswordSubmit = async (e) => {
     e.preventDefault();
     const { oldPassword, newPassword, confirmPassword } = passwordFields;
 
@@ -244,9 +284,24 @@ function Profil() {
       return;
     }
 
-    showToast("Kata sandi Anda berhasil diperbarui!", "success");
-    setIsPasswordModalOpen(false);
-    setPasswordFields({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      await api.put(`/user/${userObj.id}/password`, {
+        old_password: oldPassword,
+        new_password: newPassword
+      });
+      showToast("Kata sandi Anda berhasil diperbarui!", "success");
+      setIsPasswordModalOpen(false);
+      setPasswordFields({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      if (err.response && err.response.data.message) {
+        showToast(err.response.data.message, "error");
+      } else {
+        showToast("Gagal memperbarui kata sandi", "error");
+      }
+    }
   };
 
   // 8 & 9. Add or Edit Address with Leaflet Map Callback
@@ -363,18 +418,29 @@ function Profil() {
     }
   };
 
-  const handleFinalDeleteAccount = () => {
-    showToast("Akun Anda telah berhasil dihapus permanent.", "success");
-    setDeleteAccountStep(0);
-    setDeletePasswordInput("");
-    setDeleteOtpInput("");
-    navigate("/");
+  const handleFinalDeleteAccount = async () => {
+    try {
+      const savedUser = localStorage.getItem("pelanggan_user");
+      const parsed = JSON.parse(savedUser);
+      const userObj = parsed.user || parsed;
+      await api.delete(`/user/${userObj.id}`);
+
+      showToast("Akun Anda telah berhasil dihapus permanent.", "success");
+      setDeleteAccountStep(0);
+      setDeletePasswordInput("");
+      setDeleteOtpInput("");
+      localStorage.removeItem("pelanggan_token"); localStorage.removeItem("pelanggan_user"); localStorage.removeItem("pelanggan_id"); localStorage.removeItem("pelanggan_role");
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menghapus akun", "error");
+    }
   };
 
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-secondary/30 selection:text-secondary font-sans relative overflow-x-hidden flex">
       {/* File input (Hidden) */}
-      <input 
+      <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
@@ -395,13 +461,12 @@ function Profil() {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto p-4 rounded-xl shadow-2xl border flex items-center gap-3 animate-slide-in text-xs font-semibold ${
-              t.type === "success"
+            className={`pointer-events-auto p-4 rounded-xl shadow-2xl border flex items-center gap-3 animate-slide-in text-xs font-semibold ${t.type === "success"
                 ? "bg-green-500/10 border-green-500/30 text-green-400"
                 : t.type === "error"
                   ? "bg-red-500/10 border-red-500/30 text-red-400"
                   : "bg-surface-container border-outline-variant/30 text-on-surface"
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-sm">
               {t.type === "success" ? "check_circle" : t.type === "error" ? "error" : "info"}
@@ -429,11 +494,10 @@ function Profil() {
               <Link
                 key={item.id}
                 to={item.path}
-                className={`w-full flex items-center gap-4 py-3 px-4 transition-colors duration-200 ease-in-out font-semibold rounded-xl text-left cursor-pointer ${
-                  isActive
+                className={`w-full flex items-center gap-4 py-3 px-4 transition-colors duration-200 ease-in-out font-semibold rounded-xl text-left cursor-pointer ${isActive
                     ? "text-secondary border-r-4 border-secondary bg-surface-container-highest shadow-[10px_0_20px_-10px_rgba(255,183,131,0.3)]"
                     : "text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{item.icon}</span>
                 <span className="text-sm font-semibold">{item.label}</span>
@@ -499,11 +563,11 @@ function Profil() {
 
         {/* Canvas */}
         <div className="pt-28 pb-12 px-6 md:px-12 max-w-5xl w-full mx-auto space-y-8 flex-grow page-transition">
-          
+
           {/* Header Profil (Section 1) */}
           <section className="bg-surface-container rounded-3xl p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 border border-surface-variant/15 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-[100px] pointer-events-none"></div>
-            
+
             <div className="relative group cursor-pointer" onClick={() => setIsFullscreenPicOpen(true)} title="Klik untuk perbesar">
               <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-surface-container-high overflow-hidden shadow-xl">
                 <img
@@ -512,7 +576,7 @@ function Profil() {
                   src={profilePic}
                 />
               </div>
-              <button 
+              <button
                 onClick={handleEditPicClick}
                 className="absolute bottom-0 right-0 bg-secondary text-on-secondary p-1.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer border-none flex items-center justify-center"
                 title="Ganti Foto Profil"
@@ -520,7 +584,7 @@ function Profil() {
                 <span className="material-symbols-outlined text-[16px]">edit</span>
               </button>
             </div>
-            
+
             <div className="text-center sm:text-left space-y-1 flex-1">
               <h3 className="text-xl font-extrabold text-on-surface">{profileData.fullName}</h3>
               <p className="text-xs text-on-surface-variant/80">{profileData.email}</p>
@@ -530,14 +594,14 @@ function Profil() {
             </div>
 
             <div className="flex gap-2 w-full sm:w-auto">
-              <button 
+              <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface-variant px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-transparent flex items-center justify-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-sm">share</span>
                 Bagikan Profil
               </button>
-              <button 
+              <button
                 onClick={handleEditPicClick}
                 className="border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface-variant px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-transparent"
               >
@@ -548,10 +612,10 @@ function Profil() {
 
           {/* Grid Layout for Personal Info & Security vs Address */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
+
             {/* Left Column (Personal Info & Security) */}
             <div className="lg:col-span-7 space-y-6">
-              
+
               {/* Informasi Pribadi (Section 2) */}
               <div className="bg-surface-container rounded-3xl border border-surface-variant/15 overflow-hidden shadow-lg">
                 <div className="px-6 py-4 bg-surface-container-high/60 border-b border-surface-variant/10 flex justify-between items-center">
@@ -608,7 +672,7 @@ function Profil() {
                   <h4 className="font-bold text-sm text-on-surface">Keamanan Akun</h4>
                 </div>
                 <div className="p-6 space-y-4">
-                  
+
                   {/* Ubah Password */}
                   <div className="flex items-center justify-between p-3.5 border border-outline-variant/20 rounded-2xl bg-surface-container-low/50 hover:border-secondary/15 transition-all">
                     <div className="flex items-center gap-3">
@@ -620,7 +684,7 @@ function Profil() {
                         <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Terakhir diubah 3 bulan lalu</p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setIsPasswordModalOpen(true)}
                       className="text-secondary text-xs font-bold hover:underline bg-transparent border-none cursor-pointer"
                     >
@@ -639,7 +703,7 @@ function Profil() {
                         <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Pantau sesi perangkat aktif Anda</p>
                       </div>
                     </div>
-                    <Link 
+                    <Link
                       to="/pelanggan/riwayat-login"
                       className="text-secondary text-xs font-bold hover:underline cursor-pointer"
                     >
@@ -690,7 +754,7 @@ function Profil() {
                         <p className="text-[10px] text-on-surface-variant/60 mt-0.5">Menghapus seluruh riwayat dan data profil Anda</p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setDeleteAccountStep(1)}
                       className="text-red-400 text-xs font-bold hover:underline cursor-pointer border-none bg-transparent"
                     >
@@ -705,7 +769,7 @@ function Profil() {
 
             {/* Right Column (Addresses Section 4) */}
             <div className="lg:col-span-5 space-y-6">
-              
+
               <div className="bg-surface-container rounded-3xl border border-surface-variant/15 overflow-hidden shadow-lg h-full flex flex-col justify-between">
                 <div>
                   <div className="px-6 py-4 bg-surface-container-high/60 border-b border-surface-variant/10 flex justify-between items-center">
@@ -744,7 +808,7 @@ function Profil() {
                         <p className="text-[11px] text-on-surface-variant/80 leading-relaxed">
                           {addr.details}
                         </p>
-                        
+
                         {/* Address Actions */}
                         <div className="mt-3 flex gap-3">
                           <button
@@ -787,7 +851,7 @@ function Profil() {
               <span className="material-symbols-outlined text-sm">security</span>
               <p className="text-[10px]">Data Anda dilindungi penuh oleh kebijakan privasi TukangAja.</p>
             </div>
-            
+
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
                 onClick={() => setIsLogoutModalOpen(true)}
@@ -812,16 +876,16 @@ function Profil() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
           <div className="absolute inset-0" onClick={() => setIsFullscreenPicOpen(false)}></div>
           <div className="relative max-w-lg w-full overflow-hidden rounded-3xl shadow-2xl flex flex-col items-center">
-            <button 
+            <button
               onClick={() => setIsFullscreenPicOpen(false)}
               className="absolute top-4 right-4 bg-black/60 p-2 rounded-full text-white hover:bg-black/80 transition-colors z-10 cursor-pointer border-none flex items-center justify-center"
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
-            <img 
-              src={profilePic} 
-              alt="Profile Fullscreen" 
-              className="max-h-[80vh] max-w-full object-contain rounded-2xl" 
+            <img
+              src={profilePic}
+              alt="Profile Fullscreen"
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl"
             />
           </div>
         </div>
@@ -842,7 +906,7 @@ function Profil() {
             <div className="w-12 h-12 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center border border-secondary/25">
               <span className="material-symbols-outlined text-lg">share</span>
             </div>
-            
+
             <div>
               <h4 className="font-bold text-sm text-on-surface">Bagikan Profil Saya</h4>
               <p className="text-[11px] text-on-surface-variant/80 mt-1 leading-relaxed">
@@ -852,7 +916,7 @@ function Profil() {
 
             <div className="w-full bg-surface-container-low border border-outline-variant/20 p-2.5 rounded-xl flex items-center justify-between text-xs">
               <span className="truncate text-on-surface-variant font-medium select-all">https://tukangaja.com/u/reze-customer</span>
-              <button 
+              <button
                 onClick={handleShareProfile}
                 className="text-secondary font-bold hover:underline ml-2 bg-transparent border-none cursor-pointer"
               >
@@ -860,7 +924,7 @@ function Profil() {
               </button>
             </div>
 
-            <button 
+            <button
               onClick={() => setIsShareModalOpen(false)}
               className="w-full py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
             >
@@ -879,7 +943,7 @@ function Profil() {
                 <span className="material-symbols-outlined text-secondary">lock_reset</span>
                 Ubah Kata Sandi
               </h3>
-              <button 
+              <button
                 onClick={() => setIsPasswordModalOpen(false)}
                 className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
               >
@@ -890,7 +954,7 @@ function Profil() {
             <form onSubmit={handleChangePasswordSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-on-surface-variant text-[11px]">Kata Sandi Lama</label>
-                <input 
+                <input
                   type="password"
                   className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
                   value={passwordFields.oldPassword}
@@ -901,7 +965,7 @@ function Profil() {
 
               <div className="space-y-1.5">
                 <label className="text-on-surface-variant text-[11px]">Kata Sandi Baru</label>
-                <input 
+                <input
                   type="password"
                   placeholder="Min 6 Karakter"
                   className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
@@ -913,7 +977,7 @@ function Profil() {
 
               <div className="space-y-1.5">
                 <label className="text-on-surface-variant text-[11px]">Konfirmasi Kata Sandi Baru</label>
-                <input 
+                <input
                   type="password"
                   className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
                   value={passwordFields.confirmPassword}
@@ -922,7 +986,7 @@ function Profil() {
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full mt-2 bg-secondary text-on-secondary font-bold py-3.5 rounded-xl hover:scale-[1.01] transition-transform border-none cursor-pointer"
               >
@@ -939,7 +1003,7 @@ function Profil() {
           <div className="bg-surface-container border border-surface-variant/15 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-scale-up text-xs font-semibold">
             <div className="p-5 border-b border-surface-variant/10 flex justify-between items-center bg-surface-container-high">
               <h3 className="text-sm font-extrabold text-on-surface">Verifikasi Keamanan</h3>
-              <button 
+              <button
                 onClick={() => {
                   setOtpVerificationState(null);
                   setPendingProfileUpdates(null);
@@ -960,7 +1024,7 @@ function Profil() {
                 </p>
               </div>
 
-              <input 
+              <input
                 type="text"
                 placeholder="Dummy code: 123456"
                 maxLength="6"
@@ -970,7 +1034,7 @@ function Profil() {
                 required
               />
 
-              <button 
+              <button
                 type="submit"
                 className="w-full bg-secondary text-on-secondary font-bold py-3 rounded-xl hover:scale-[1.01] transition-transform border-none cursor-pointer mt-4"
               >
@@ -990,7 +1054,7 @@ function Profil() {
                 <span className="material-symbols-outlined text-secondary">location_on</span>
                 {editingAddressId ? "Ubah Alamat Tersimpan" : "Tambah Alamat Baru"}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsAddressModalOpen(false)}
                 className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center"
               >
@@ -1002,7 +1066,7 @@ function Profil() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-on-surface-variant text-[11px]">Label Alamat</label>
-                  <input 
+                  <input
                     type="text"
                     placeholder="Contoh: Rumah Utama, Kantor, Kos"
                     className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none font-bold"
@@ -1014,7 +1078,7 @@ function Profil() {
 
                 <div className="space-y-1.5">
                   <label className="text-on-surface-variant text-[11px]">Alamat Lengkap (Nominatim Geocoded)</label>
-                  <textarea 
+                  <textarea
                     rows="4"
                     placeholder="Pilih lokasi pada peta atau ketik alamat..."
                     className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none font-bold resize-none"
@@ -1043,14 +1107,14 @@ function Profil() {
               </div>
 
               <div className="md:col-span-2 pt-4 border-t border-surface-variant/10 flex justify-end gap-2.5">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(false)}
                   className="px-4 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-all rounded-xl font-bold cursor-pointer bg-transparent"
                 >
                   Batal
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="px-4 py-2.5 bg-secondary text-on-secondary hover:bg-secondary/90 transition-all rounded-xl font-bold cursor-pointer border-none"
                 >
@@ -1104,7 +1168,7 @@ function Profil() {
                 <span className="material-symbols-outlined text-lg">dangerous</span>
                 Hapus Akun (Langkah {deleteAccountStep}/3)
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setDeleteAccountStep(0);
                   setDeletePasswordInput("");
@@ -1126,7 +1190,7 @@ function Profil() {
                 </div>
                 <div className="space-y-1 text-left">
                   <label className="text-[10px] text-on-surface-variant uppercase font-bold">Kata Sandi</label>
-                  <input 
+                  <input
                     type="password"
                     placeholder="Masukkan sandi (dummy: password)"
                     className="w-full bg-surface-container-high border border-outline-variant rounded-xl p-3 text-xs text-on-surface outline-none"
@@ -1135,7 +1199,7 @@ function Profil() {
                     required
                   />
                 </div>
-                <button 
+                <button
                   type="submit"
                   className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-2"
                 >
@@ -1152,8 +1216,8 @@ function Profil() {
                     Masukkan 6 digit OTP konfirmasi pembatalan akun yang telah dikirim ke ponsel Anda.
                   </p>
                 </div>
-                
-                <input 
+
+                <input
                   type="text"
                   placeholder="Dummy OTP: 123456"
                   maxLength="6"
@@ -1163,7 +1227,7 @@ function Profil() {
                   required
                 />
 
-                <button 
+                <button
                   type="submit"
                   className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors border-none cursor-pointer mt-4"
                 >
@@ -1181,7 +1245,7 @@ function Profil() {
                     Menghapus akun Anda akan membatalkan seluruh pesanan aktif, menghapus saldo dompet, riwayat transaksi, dan profil secara permanen. Data tidak dapat dipulihkan kembali.
                   </p>
                 </div>
-                
+
                 <div className="flex gap-3 w-full pt-2">
                   <button
                     onClick={() => {

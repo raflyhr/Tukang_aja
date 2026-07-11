@@ -22,6 +22,11 @@ Route::post('/auth/tukang/login', [AuthController::class, 'loginTukang']);
 // --- Rute Otentikasi Pelanggan / User Biasa ---
 Route::post('/auth/user/register', [AuthController::class, 'registerUser']);
 Route::post('/auth/user/login', [AuthController::class, 'loginUser']);
+Route::put('/user/{id}', [AuthController::class, 'updateUser']);
+Route::put('/user/{id}/password', [AuthController::class, 'updatePassword']);
+Route::post('/user/{id}/foto', [AuthController::class, 'updateFoto']);
+Route::delete('/user/{id}', [AuthController::class, 'deleteUser']);
+Route::get('/user/{id}/sessions', [AuthController::class, 'getSessions']);
 
 // --- Rute Otentikasi Admin ---
 Route::post('/auth/admin/login', [AuthController::class, 'loginAdmin']);

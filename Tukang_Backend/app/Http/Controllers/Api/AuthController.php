@@ -37,6 +37,13 @@ class AuthController extends Controller
         // Bikin token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser' // Simplified for now
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Login berhasil sebagai ' . $user->role,
@@ -183,6 +190,13 @@ class AuthController extends Controller
         // Bikinin Token Akses baru
         $token = $user->createToken('auth_token_tukang')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
+
         return response()->json([
             'message' => 'Login Berhasil!',
             'data' => [
@@ -268,6 +282,13 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token_user')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
+
         return response()->json([
             'message' => 'Login Pelanggan Berhasil!',
             'data' => $user,
@@ -303,11 +324,101 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token_admin')->plainTextToken;
 
+        \App\Models\LoginSession::create([
+            'user_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'device_name' => 'Web Browser'
+        ]);
+
         return response()->json([
             'message' => 'Login Admin Berhasil!',
             'data' => $user,
             'access_token' => $token,
             'token_type' => 'Bearer'
         ], 200);
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$id,
+            'no_hp' => 'nullable|string|max:20',
+        ]);
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+        if($request->has('no_hp')) $user->no_hp = $request->no_hp;
+        $user->save();
+
+        return response()->json(['message' => 'Profil berhasil diperbarui', 'data' => $user]);
+    }
+
+    public function updatePassword(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+
+        $request->validate([
+            'old_password' => 'required',
+            'new_password' => 'required|min:6'
+        ]);
+
+        if (!Hash::check($request->old_password, $user->password)) {
+            return response()->json(['message' => 'Kata sandi lama salah'], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'Kata sandi berhasil diperbarui']);
+    }
+
+    public function updateFoto(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+
+        $request->validate([
+            'foto_profil' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+        ]);
+
+        if ($request->hasFile('foto_profil')) {
+            $path = $request->file('foto_profil')->store('pelanggan/profil', 'public');
+            $user->foto_profil = $path;
+            $user->save();
+        }
+
+        return response()->json(['message' => 'Foto profil berhasil diperbarui', 'data' => $user]);
+    }
+
+    public function deleteUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+        
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Kata sandi salah'], 400);
+        }
+
+        $user->delete();
+        return response()->json(['message' => 'Akun berhasil dihapus']);
+    }
+
+    public function getSessions($id)
+    {
+        $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
+
+        $sessions = \App\Models\LoginSession::where('user_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return response()->json(['data' => $sessions]);
     }
 }
