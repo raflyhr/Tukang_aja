@@ -295,6 +295,8 @@ function VerifikasiTukang() {
     cvValid: false,
     lokasiDipilih: false
   });
+  const [dataDiriStatus, setDataDiriStatus] = useState("Belum Divalidasi");
+  const [alamatStatus, setAlamatStatus] = useState("Belum Divalidasi");
 
   // Action Modals State
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
@@ -432,6 +434,8 @@ function VerifikasiTukang() {
       cvValid: false,
       lokasiDipilih: false
     });
+    setDataDiriStatus("Belum Divalidasi");
+    setAlamatStatus("Belum Divalidasi");
   };
 
   // Filtering Logic
@@ -994,6 +998,44 @@ function VerifikasiTukang() {
 
                     </div>
                   </div>
+
+                  {/* Validation Control for Data Diri */}
+                  <div className="pt-3 border-t border-surface-variant/15 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-on-surface-variant">Kelayakan Data Diri:</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        dataDiriStatus === "Valid" 
+                          ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                          : dataDiriStatus === "Tidak Valid"
+                          ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                          : "bg-surface-container-highest border border-surface-variant/20 text-on-surface-variant"
+                      }`}>
+                        {dataDiriStatus}
+                      </span>
+                    </div>
+                    {selectedTukang.status_verifikasi === "Menunggu" && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            setDataDiriStatus("Tidak Valid");
+                            setChecklist(prev => ({ ...prev, nikValid: false, fotoProfilSesuai: false }));
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-bold border transition-colors cursor-pointer ${dataDiriStatus === "Tidak Valid" ? "bg-red-500 text-white border-red-500" : "bg-transparent border-red-500/30 text-red-400 hover:bg-red-500/10"}`}
+                        >
+                          Tidak Layak
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setDataDiriStatus("Valid");
+                            setChecklist(prev => ({ ...prev, nikValid: true, fotoProfilSesuai: true }));
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-bold border transition-colors cursor-pointer ${dataDiriStatus === "Valid" ? "bg-green-500 text-white border-green-500" : "bg-transparent border-green-500/30 text-green-400 hover:bg-green-500/10"}`}
+                        >
+                          Layak &amp; Sesuai
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Card 2: Keahlian */}
@@ -1070,6 +1112,44 @@ function VerifikasiTukang() {
                         </MapContainer>
                       </div>
                     )}
+
+                    {/* Validation Control for Alamat */}
+                    <div className="pt-3 border-t border-surface-variant/15 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-on-surface-variant">Kelayakan Alamat:</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          alamatStatus === "Valid" 
+                            ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                            : alamatStatus === "Tidak Valid"
+                            ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                            : "bg-surface-container-highest border border-surface-variant/20 text-on-surface-variant"
+                        }`}>
+                          {alamatStatus}
+                        </span>
+                      </div>
+                      {selectedTukang.status_verifikasi === "Menunggu" && (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              setAlamatStatus("Tidak Valid");
+                              setChecklist(prev => ({ ...prev, lokasiDipilih: false }));
+                            }}
+                            className={`px-3 py-1.5 rounded-lg font-bold border transition-colors cursor-pointer ${alamatStatus === "Tidak Valid" ? "bg-red-500 text-white border-red-500" : "bg-transparent border-red-500/30 text-red-400 hover:bg-red-500/10"}`}
+                          >
+                            Tidak Layak
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setAlamatStatus("Valid");
+                              setChecklist(prev => ({ ...prev, lokasiDipilih: true }));
+                            }}
+                            className={`px-3 py-1.5 rounded-lg font-bold border transition-colors cursor-pointer ${alamatStatus === "Valid" ? "bg-green-500 text-white border-green-500" : "bg-transparent border-green-500/30 text-green-400 hover:bg-green-500/10"}`}
+                          >
+                            Alamat Sesuai Peta
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
