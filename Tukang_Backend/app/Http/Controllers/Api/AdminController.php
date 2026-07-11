@@ -74,9 +74,75 @@ class AdminController extends Controller
         usort($activities, function($a, $b) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
-
-        // Slice to top 6 activities
         $activities = array_slice($activities, 0, 6);
+
+        // Fetch dynamic customer stats
+        $customerStats = [
+            'total' => $totalPelanggan,
+            'newThisWeek' => \App\Models\User::where('role', 'pelanggan')->where('created_at', '>=', now()->subWeek())->count(),
+            'activeToday' => \App\Models\User::where('role', 'pelanggan')->where('updated_at', '>=', now()->subDay())->count(),
+            'neverOrdered' => \App\Models\User::where('role', 'pelanggan')->doesntHave('pesanans')->count(),
+            'mostActive' => \App\Models\User::where('role', 'pelanggan')->withCount('pesanans')->orderBy('pesanans_count', 'desc')->first()->name ?? '-'
+        ];
+
+        // Fetch dynamic order stats
+        $totalOrders = \App\Models\Pesanan::count();
+        $orderStats = [
+            'new' => \App\Models\Pesanan::where('status', 'menunggu')->count(),
+            'processing' => \App\Models\Pesanan::whereIn('status', ['menunggu_pengerjaan', 'proses_pengerjaan'])->count(),
+            'pendingPayment' => \App\Models\Pesanan::where('status', 'menunggu_pembayaran')->count(),
+            'completed' => $completedOrders,
+            'cancelled' => \App\Models\Pesanan::whereIn('status', ['dibatalkan', 'ditolak'])->count(),
+            'total' => $totalOrders > 0 ? $totalOrders : 1
+        ];
+
+        // Fetch top categories
+        $categoriesData = \App\Models\Pesanan::selectRaw('kategori_layanan, count(*) as count')
+            ->groupBy('kategori_layanan')
+            ->orderBy('count', 'desc')
+            ->limit(5)
+            ->get();
+        $categories = $categoriesData->map(function($cat) use ($totalOrders) {
+            return [
+                'name' => $cat->kategori_layanan,
+                'count' => $cat->count,
+                'percentage' => round(($cat->count / ($totalOrders > 0 ? $totalOrders : 1)) * 100)
+            ];
+        });
+
+        // Fetch top tukang
+        $topTukangs = Tukang::withCount('pesanans')
+            ->orderBy('rating', 'desc')
+            ->orderBy('pesanans_count', 'desc')
+            ->limit(3)
+            ->get();
+        $topTukangList = $topTukangs->map(function($t) {
+            return [
+                'name' => $t->nama,
+                'specialty' => $t->keahlian,
+                'orders' => $t->pesanans_count,
+                'rating' => (float)$t->rating,
+                'revenue' => $t->saldo ?? 0,
+                'avatar' => $t->foto_profil ? (str_starts_with($t->foto_profil, 'http') ? $t->foto_profil : asset('storage/' . $t->foto_profil)) : "https://ui-avatars.com/api/?name=" . urlencode($t->nama),
+                'online' => $t->is_aktif
+            ];
+        });
+
+        // Fetch top pelanggan
+        $topUsers = \App\Models\User::where('role', 'pelanggan')
+            ->withCount('pesanans')
+            ->orderBy('pesanans_count', 'desc')
+            ->limit(3)
+            ->get();
+        $topPelangganList = $topUsers->map(function($u) {
+            return [
+                'name' => $u->name,
+                'orders' => $u->pesanans_count,
+                'spending' => \App\Models\Pesanan::where('user_id', $u->id)->where('status', 'selesai')->sum('harga_penawaran') ?? 0,
+                'lastActive' => $u->updated_at ? $u->updated_at->diffForHumans() : '-',
+                'avatar' => "https://ui-avatars.com/api/?name=" . urlencode($u->name)
+            ];
+        });
                                      
         return response()->json([
             'status' => 'Sukses',
@@ -91,7 +157,12 @@ class AdminController extends Controller
                 'platformRevenue' => $platformRevenue,
                 'incomingReports' => $incomingReports,
                 'recentVerifications' => $recentVerifications,
-                'recentActivities' => $activities
+                'recentActivities' => $activities,
+                'customerStats' => $customerStats,
+                'orderStats' => $orderStats,
+                'categories' => $categories,
+                'topTukang' => $topTukangList,
+                'topPelanggan' => $topPelangganList
             ]
         ]);
     }
