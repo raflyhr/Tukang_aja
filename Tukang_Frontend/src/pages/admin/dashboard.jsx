@@ -63,6 +63,9 @@ function AdminDashboard() {
   const [recentActivities, setRecentActivities] = useState(MOCK_ACTIVITIES);
   const [topTukang, setTopTukang] = useState(MOCK_TOP_TUKANG);
   const [topPelanggan, setTopPelanggan] = useState(MOCK_TOP_PELANGGAN);
+  const [customerStats, setCustomerStats] = useState(MOCK_CUSTOMER_STATS);
+  const [orderStats, setOrderStats] = useState(MOCK_ORDER_STATS);
+  const [categories, setCategories] = useState(MOCK_CATEGORIES);
 
   useEffect(() => {
     fetchDashboardData();
@@ -103,9 +106,20 @@ function AdminDashboard() {
         if (data.recentActivities && data.recentActivities.length > 0) {
           setRecentActivities(data.recentActivities);
         }
+        
+        if (data.customerStats) setCustomerStats(data.customerStats);
+        if (data.orderStats) setOrderStats(data.orderStats);
+        if (data.categories) setCategories(data.categories);
+        if (data.topTukang) setTopTukang(data.topTukang);
+        if (data.topPelanggan) setTopPelanggan(data.topPelanggan);
       } else {
         setSummary(MOCK_SUMMARY);
         setVerifications([]);
+        setCustomerStats(MOCK_CUSTOMER_STATS);
+        setOrderStats(MOCK_ORDER_STATS);
+        setCategories(MOCK_CATEGORIES);
+        setTopTukang(MOCK_TOP_TUKANG);
+        setTopPelanggan(MOCK_TOP_PELANGGAN);
       }
     } catch (error) {
       console.error("Failed to fetch admin stats:", error);
@@ -628,11 +642,11 @@ function AdminDashboard() {
                   </h4>
                   <div className="space-y-3 font-medium">
                     {[
-                      { key: "Total Pelanggan", val: MOCK_CUSTOMER_STATS.total, icon: "people" },
-                      { key: "Pelanggan Baru Minggu Ini", val: MOCK_CUSTOMER_STATS.newThisWeek, icon: "person_add" },
-                      { key: "Aktif Hari Ini", val: MOCK_CUSTOMER_STATS.activeToday, icon: "bolt" },
-                      { key: "Belum Pernah Memesan", val: MOCK_CUSTOMER_STATS.neverOrdered, icon: "person_off" },
-                      { key: "Pelanggan Paling Aktif", val: MOCK_CUSTOMER_STATS.mostActive, icon: "military_tech" }
+                      { key: "Total Pelanggan", val: customerStats.total, icon: "people" },
+                      { key: "Pelanggan Baru Minggu Ini", val: customerStats.newThisWeek, icon: "person_add" },
+                      { key: "Aktif Hari Ini", val: customerStats.activeToday, icon: "bolt" },
+                      { key: "Belum Pernah Memesan", val: customerStats.neverOrdered, icon: "person_off" },
+                      { key: "Pelanggan Paling Aktif", val: customerStats.mostActive, icon: "military_tech" }
                     ].map((row, idx) => (
                       <div key={idx} className="flex justify-between items-center bg-surface-container-high/40 p-3 rounded-xl border border-surface-variant/10 text-xs">
                         <div className="flex items-center gap-2.5">
@@ -654,11 +668,11 @@ function AdminDashboard() {
                     </h4>
                     <div className="space-y-4">
                       {[
-                        { label: "Pesanan Baru", current: MOCK_ORDER_STATS.new, total: 1303, percentage: 3, color: "bg-yellow-500" },
-                        { label: "Sedang Diproses", current: MOCK_ORDER_STATS.processing, total: 1303, percentage: 12, color: "bg-blue-500" },
-                        { label: "Menunggu Pembayaran", current: MOCK_ORDER_STATS.pendingPayment, total: 1303, percentage: 6, color: "bg-purple-500" },
-                        { label: "Selesai", current: MOCK_ORDER_STATS.completed, total: 1303, percentage: 85, color: "bg-green-500" },
-                        { label: "Dibatalkan", current: MOCK_ORDER_STATS.cancelled, total: 1303, percentage: 4, color: "bg-red-500" }
+                        { label: "Pesanan Baru", current: orderStats.new, total: orderStats.total, percentage: Math.round((orderStats.new / (orderStats.total || 1)) * 100), color: "bg-yellow-500" },
+                        { label: "Sedang Diproses", current: orderStats.processing, total: orderStats.total, percentage: Math.round((orderStats.processing / (orderStats.total || 1)) * 100), color: "bg-blue-500" },
+                        { label: "Menunggu Pembayaran", current: orderStats.pendingPayment, total: orderStats.total, percentage: Math.round((orderStats.pendingPayment / (orderStats.total || 1)) * 100), color: "bg-purple-500" },
+                        { label: "Selesai", current: orderStats.completed, total: orderStats.total, percentage: Math.round((orderStats.completed / (orderStats.total || 1)) * 100), color: "bg-green-500" },
+                        { label: "Dibatalkan", current: orderStats.cancelled, total: orderStats.total, percentage: Math.round((orderStats.cancelled / (orderStats.total || 1)) * 100), color: "bg-red-500" }
                       ].map((item, idx) => (
                         <div key={idx}>
                           <div className="flex justify-between text-xs mb-1 font-bold">
@@ -685,7 +699,7 @@ function AdminDashboard() {
                     Top Kategori Layanan
                   </h4>
                   <div className="space-y-4">
-                    {MOCK_CATEGORIES.map((cat, idx) => (
+                    {categories.length > 0 ? categories.map((cat, idx) => (
                       <div key={idx}>
                         <div className="flex justify-between text-xs mb-1 font-bold">
                           <span className="text-on-surface-variant">{cat.name} ({cat.count} order)</span>
@@ -695,7 +709,7 @@ function AdminDashboard() {
                           <div className="bg-secondary h-full" style={{ width: `${cat.percentage}%` }}></div>
                         </div>
                       </div>
-                    ))}
+                    )) : <p className="text-xs text-on-surface-variant">Belum ada data pesanan</p>}
                   </div>
                 </div>
 
@@ -706,7 +720,7 @@ function AdminDashboard() {
                     Mitra Tukang Berprestasi
                   </h4>
                   <div className="space-y-3 font-medium">
-                    {topTukang.map((item, idx) => (
+                    {topTukang.length > 0 ? topTukang.map((item, idx) => (
                       <div key={idx} className="bg-surface-container-high/40 p-3 rounded-xl border border-surface-variant/10 flex items-center gap-3 text-xs justify-between">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="relative shrink-0">
@@ -726,7 +740,7 @@ function AdminDashboard() {
                           <span className="text-[9px] text-on-surface-variant/80 font-bold block mt-0.5">Rp {(item.revenue/1000000).toFixed(1)}jt</span>
                         </div>
                       </div>
-                    ))}
+                    )) : <p className="text-xs text-on-surface-variant">Belum ada data</p>}
                   </div>
                 </div>
 
@@ -737,7 +751,7 @@ function AdminDashboard() {
                     Top Pelanggan
                   </h4>
                   <div className="space-y-3 font-medium">
-                    {topPelanggan.map((item, idx) => (
+                    {topPelanggan.length > 0 ? topPelanggan.map((item, idx) => (
                       <div key={idx} className="bg-surface-container-high/40 p-3 rounded-xl border border-surface-variant/10 flex items-center gap-3 text-xs justify-between">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <img className="w-9 h-9 rounded-full object-cover shrink-0" src={item.avatar} alt={item.name} />
@@ -751,7 +765,7 @@ function AdminDashboard() {
                           <span className="text-[8px] uppercase tracking-wider text-green-400 font-bold block mt-1">Loyal Member</span>
                         </div>
                       </div>
-                    ))}
+                    )) : <p className="text-xs text-on-surface-variant">Belum ada data</p>}
                   </div>
                 </div>
 

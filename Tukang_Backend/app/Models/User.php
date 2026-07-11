@@ -52,8 +52,12 @@ class User extends Authenticatable
         ];
     }
     public function ulasan()
-{
-    return $this->hasMany(Ulasan::class);
-}
+    {
+        return $this->hasMany(Ulasan::class);
+    }
 
+    public function pesanans()
+    {
+        return $this->hasMany(Pesanan::class);
+    }
 }
