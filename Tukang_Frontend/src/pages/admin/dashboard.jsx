@@ -4,71 +4,43 @@ import { adminData } from "./adminData";
 import LogoutModal from "../../components/LogoutModal";
 import api from "../../lib/axios";
 
-// Fallback Mock Data
+// Initial Empty Data
 const MOCK_SUMMARY = {
-  pendingVerifications: 5,
-  totalTukang: 142,
-  totalPelanggan: 320,
-  activeOrders: 18,
-  completedOrders: 1240,
-  platformRevenue: 45230000,
-  problematicRatings: 3,
-  incomingReports: 2
+  pendingVerifications: 0,
+  totalTukang: 0,
+  totalPelanggan: 0,
+  activeOrders: 0,
+  completedOrders: 0,
+  platformRevenue: 0,
+  problematicRatings: 0,
+  incomingReports: 0
 };
 
 const MOCK_CUSTOMER_STATS = {
-  total: 320,
-  newThisWeek: 24,
-  activeToday: 85,
-  neverOrdered: 42,
-  mostActive: "Budi Pratama (18x)"
+  total: 0,
+  newThisWeek: 0,
+  activeToday: 0,
+  neverOrdered: 0,
+  mostActive: "-"
 };
 
 const MOCK_ORDER_STATS = {
-  new: 3,
-  processing: 10,
-  pendingPayment: 5,
-  completed: 1240,
-  cancelled: 45
+  new: 0,
+  processing: 0,
+  pendingPayment: 0,
+  completed: 0,
+  cancelled: 0
 };
 
-const MOCK_ACTIVITIES = [
-  { id: 1, text: "Pelanggan Rian Hidayat mendaftar ke platform", time: "13:15 WIB", icon: "group", color: "text-green-400 bg-green-500/10" },
-  { id: 2, text: "Mitra Tukang Joko Susilo berhasil diverifikasi", time: "12:40 WIB", icon: "verified", color: "text-secondary bg-secondary/10" },
-  { id: 3, text: "Pembayaran TRX-9982 sebesar Rp 150.000 berhasil diterima", time: "11:30 WIB", icon: "check_circle", color: "text-green-400 bg-green-500/10" },
-  { id: 4, text: "Laporan aduan baru masuk dari Dewi Lestari terkait keterlambatan", time: "10:15 WIB", icon: "warning", color: "text-red-400 bg-red-500/10" },
-  { id: 5, text: "Pendaftaran Tukang Ahmad ditolak karena KTP tidak terbaca", time: "09:45 WIB", icon: "block", color: "text-red-400 bg-red-500/10" },
-  { id: 6, text: "Rating buruk (2.0) diterima oleh Agus Prasetyo", time: "Kemarin", icon: "star", color: "text-red-400 bg-red-500/10" }
-];
+const MOCK_ACTIVITIES = [];
 
-const MOCK_CATEGORIES = [
-  { name: "AC", percentage: 45, count: 560 },
-  { name: "Listrik", percentage: 30, count: 370 },
-  { name: "Pipa & Air", percentage: 15, count: 185 },
-  { name: "Cat Rumah", percentage: 12, count: 150 },
-  { name: "Cleaning Service", percentage: 10, count: 125 },
-  { name: "Pertukangan", percentage: 8, count: 100 }
-];
+const MOCK_CATEGORIES = [];
 
-const MOCK_TOP_TUKANG = [
-  { name: "Budi Santoso", specialty: "AC", rating: 4.9, orders: 84, revenue: 12600000, online: true, avatar: "https://ui-avatars.com/api/?name=Budi+Santoso&background=random" },
-  { name: "Agus Prasetyo", specialty: "Listrik", rating: 4.8, orders: 62, revenue: 9300000, online: true, avatar: "https://ui-avatars.com/api/?name=Agus+Prasetyo&background=random" },
-  { name: "Hendra Wijaya", specialty: "Pipa", rating: 4.7, orders: 55, revenue: 8250000, online: false, avatar: "https://ui-avatars.com/api/?name=Hendra+Wijaya&background=random" }
-];
+const MOCK_TOP_TUKANG = [];
 
-const MOCK_TOP_PELANGGAN = [
-  { name: "Budi Pratama", orders: 18, spending: 4100000, lastActive: "Hari Ini", avatar: "https://ui-avatars.com/api/?name=Budi+Pratama&background=random" },
-  { name: "Rian Hidayat", orders: 14, spending: 2450000, lastActive: "Hari Ini", avatar: "https://ui-avatars.com/api/?name=Rian+Hidayat&background=random" },
-  { name: "Dewi Lestari", orders: 8, spending: 1250000, lastActive: "Kemarin", avatar: "https://ui-avatars.com/api/?name=Dewi+Lestari&background=random" }
-];
+const MOCK_TOP_PELANGGAN = [];
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, text: "5 Mitra Tukang menunggu verifikasi", icon: "how_to_reg", path: "/admin/verifikasi" },
-  { id: 2, text: "2 Laporan pengaduan baru masuk", icon: "report", path: "/admin/laporan" },
-  { id: 3, text: "Pembayaran gagal dari TRX-9977 (Dewi Lestari)", icon: "error", path: "/admin/pembayaran" },
-  { id: 4, text: "1 Akun terdeteksi rating bermasalah (< 3.0)", icon: "star_half", path: "/admin/rating" },
-  { id: 5, text: "Pesanan baru TRX-9983 memerlukan alokasi", icon: "pending_actions", path: "/admin/pesanan" }
-];
+const MOCK_NOTIFICATIONS = [];
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -105,16 +77,16 @@ function AdminDashboard() {
       if (response.data.status === 'Sukses') {
         const data = response.data.data;
         
-        // Populate dashboard stats from API, fallback where needed
+        // Populate dashboard stats from API
         setSummary({
           pendingVerifications: data.pendingCount || 0,
           totalTukang: (data.activeCount || 0) + (data.inactiveCount || 0),
-          totalPelanggan: MOCK_SUMMARY.totalPelanggan,
-          activeOrders: MOCK_SUMMARY.activeOrders,
-          completedOrders: MOCK_SUMMARY.completedOrders,
-          platformRevenue: MOCK_SUMMARY.platformRevenue,
+          totalPelanggan: data.totalPelanggan || 0,
+          activeOrders: data.activeOrders || 0,
+          completedOrders: data.completedOrders || 0,
+          platformRevenue: data.platformRevenue || 0,
           problematicRatings: data.problemCount || 0,
-          incomingReports: MOCK_SUMMARY.incomingReports
+          incomingReports: data.incomingReports || 0
         });
 
         const fetchedVerifications = data.recentVerifications.map(v => ({
@@ -127,14 +99,17 @@ function AdminDashboard() {
           status: "pending"
         }));
         setVerifications(fetchedVerifications);
+        
+        if (data.recentActivities && data.recentActivities.length > 0) {
+          setRecentActivities(data.recentActivities);
+        }
       } else {
         setSummary(MOCK_SUMMARY);
         setVerifications([]);
       }
     } catch (error) {
-      console.error("Failed to fetch admin stats, using fallbacks:", error);
-      // Since backend might be offline, we gracefully fallback
-      setSummary(MOCK_SUMMARY);
+      console.error("Failed to fetch admin stats:", error);
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
