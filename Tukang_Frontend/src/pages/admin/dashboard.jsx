@@ -71,6 +71,7 @@ function AdminDashboard() {
   const [categories, setCategories] = useState(MOCK_CATEGORIES);
   const [growthStats, setGrowthStats] = useState(MOCK_GROWTH_STATS);
 
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -116,6 +117,7 @@ function AdminDashboard() {
         if (data.categories) setCategories(data.categories);
         if (data.topTukang) setTopTukang(data.topTukang);
         if (data.topPelanggan) setTopPelanggan(data.topPelanggan);
+
         if (data.growthStats) setGrowthStats(data.growthStats);
       } else {
         setSummary(MOCK_SUMMARY);
@@ -126,6 +128,7 @@ function AdminDashboard() {
         setTopTukang(MOCK_TOP_TUKANG);
         setTopPelanggan(MOCK_TOP_PELANGGAN);
         setGrowthStats(MOCK_GROWTH_STATS);
+
       }
     } catch (error) {
       console.error("Failed to fetch admin stats:", error);

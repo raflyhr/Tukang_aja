@@ -79,10 +79,10 @@ class AdminController extends Controller
         // Fetch dynamic customer stats
         $customerStats = [
             'total' => $totalPelanggan,
-            'newThisWeek' => \App\Models\User::where('role', 'user')->where('created_at', '>=', now()->subWeek())->count(),
-            'activeToday' => \App\Models\User::where('role', 'user')->where('updated_at', '>=', now()->subDay())->count(),
-            'neverOrdered' => \App\Models\User::where('role', 'user')->doesntHave('pesanans')->count(),
-            'mostActive' => \App\Models\User::where('role', 'user')->withCount('pesanans')->orderBy('pesanans_count', 'desc')->first()->name ?? '-'
+            'newThisWeek' => \App\Models\User::where('role', 'pelanggan')->where('created_at', '>=', now()->subWeek())->count(),
+            'activeToday' => \App\Models\User::where('role', 'pelanggan')->where('updated_at', '>=', now()->subDay())->count(),
+            'neverOrdered' => \App\Models\User::where('role', 'pelanggan')->doesntHave('pesanans')->count(),
+            'mostActive' => \App\Models\User::where('role', 'pelanggan')->withCount('pesanans')->orderBy('pesanans_count', 'desc')->first()->name ?? '-'
         ];
 
         // Fetch dynamic order stats
@@ -129,7 +129,8 @@ class AdminController extends Controller
         });
 
         // Fetch top pelanggan
-        $topUsers = \App\Models\User::where('role', 'user')
+        $topUsers = \App\Models\User::where('role', 'pelanggan')
+
             ->withCount('pesanans')
             ->orderBy('pesanans_count', 'desc')
             ->limit(3)
@@ -180,6 +181,7 @@ class AdminController extends Controller
                 'topTukang' => $topTukangList,
                 'topPelanggan' => $topPelangganList,
                 'growthStats' => $growthStats
+
             ]
         ]);
     }
