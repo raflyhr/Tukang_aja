@@ -98,7 +98,7 @@ class PesananController extends Controller
         $pesanan = Pesanan::find($id);
         if (!$pesanan) return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
 
-        if ($pesanan->status !== 'menunggu' && $pesanan->status !== 'menunggu_persetujuan' && $pesanan->status !== 'menunggu_pembayaran') {
+        if ($pesanan->status !== 'menunggu' && $pesanan->status !== 'menunggu_persetujuan' && $pesanan->status !== 'menunggu_pembayaran' && $pesanan->status !== 'menunggu_penawaran') {
             return response()->json(['message' => 'Pesanan belum bisa dibayar'], 400);
         }
 
@@ -392,7 +392,7 @@ class PesananController extends Controller
             'longitude' => 'required|numeric',
             'alamat_lengkap' => 'required|string',
             'harga_penawaran' => 'required|integer',
-            'foto_lampiran' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'foto_lampiran' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tanggal_kunjungan' => 'nullable|string',
             'jam_kunjungan' => 'nullable|string',
             'metode_pembayaran' => 'nullable|string',
