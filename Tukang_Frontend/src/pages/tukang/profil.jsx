@@ -151,6 +151,22 @@ function TukangProfil() {
         area_cakupan: coverageArea,
         keahlian_tambahan: skills
       });
+      
+      // Real-time update to localStorage so it persists across reloads 
+      // and triggers any active listeners without manual refresh
+      const userDataStr = localStorage.getItem("tukang_user");
+      if (userDataStr) {
+        const parsed = JSON.parse(userDataStr);
+        if (parsed.tukang) {
+          parsed.tukang.nama = profileData.fullName;
+          parsed.tukang.nomor_telepon = profileData.phone;
+          parsed.tukang.keahlian = profileData.category;
+          parsed.tukang.radius_layanan = radius;
+          parsed.tukang.area_cakupan = coverageArea;
+          parsed.tukang.keahlian_tambahan = skills;
+          localStorage.setItem("tukang_user", JSON.stringify(parsed));
+        }
+      }
       alert("Perubahan profil teknisi berhasil disimpan!");
     } catch (err) {
       alert("Gagal menyimpan profil.");
